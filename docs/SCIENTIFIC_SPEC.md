@@ -1,0 +1,213 @@
+# Scientific Specification — Organoid Pipeline
+
+Version: 1.0.0
+Date: 2026-09-02
+Classification: S2 (Analytical)
+
+## 1. Scientific Objective and Question
+
+**Primary objective:** Quantitative 3D morphological analysis of organoid structures from microscopy Z-stack images.
+
+**Scientific question:** How do organoid size, shape, internal organization, and cellular composition vary across experimental conditions?
+
+**Scope:** This software provides morphological measurements and descriptive statistics. It does not perform hypothesis testing, causal inference, or predictive modeling. Biological interpretation remains with the researcher.
+
+## 2. Intended Users and Permitted Research Use
+
+**Intended users:**
+- Research scientists in biology, pharmacology, and related fields
+- Lab technicians performing organoid assays
+- Computational biologists analyzing organoid data
+
+**Permitted research use:**
+- Characterizing organoid morphology in controlled experiments
+- Comparing morphological features across treatment conditions
+- Quality control of organoid cultures
+- Method development for organoid analysis
+
+**Explicitly NOT permitted:**
+- Clinical diagnosis or patient stratification
+- Treatment selection or go/no-go decisions without independent validation
+- Regulatory submissions without separate regulatory assessment
+- Any use where morphological measurements directly drive clinical decisions
+
+## 3. Supported and Unsupported Input Domain
+
+### Supported inputs
+- **Image format:** 3D TIFF or OME-TIFF Z-stacks
+- **Axes:** CZYX (canonized internally)
+- **Spacing:** Uniform Z-step with known physical spacing (µm/voxel)
+- **Channels:** Structural fluorescence (required), Calcein/PI viability dyes (optional)
+- **Bit depth:** 8-bit, 12-bit, 16-bit integer; 32-bit float
+- **Organoid type:** Spherical or near-spherical organoids with clear boundaries
+- **Size range:** 2,000 µm³ to ~10⁶ µm³ (configurable)
+
+### Unsupported inputs
+- 2D images or single optical sections
+- Non-uniform Z-spacing
+- Multi-well plate images without per-field processing
+- Organoids with complex internal architecture (lumen, branching)
+- Brightfield images without probability maps (exploratory only)
+- Tissue samples, organoids >1 mm diameter, or non-organoid biological structures
+- Images with motion artifacts, significant drift, or poor registration
+
+## 4. Sample/Specimen/Organism/Assay Platform Context
+
+**Biological system:** 3D organoid cultures derived from:
+- Stem cells (iPSC, ESC)
+- Primary tissue
+- Cell lines
+- Patient-derived samples
+
+**Assay platforms:**
+- Confocal microscopy (preferred)
+- Light-sheet microscopy
+- Two-photon microscopy
+- Spinning disk confocal
+
+**Staining:**
+- Nuclear stain (Hoechst, DAPI) — required for Cellpose segmentation
+- Viability dyes (Calcein AM, PI) — optional for state classification
+- Structural markers — optional for feature extraction
+
+**Acquisition requirements:**
+- Isotropic or near-isotropic XY resolution (≤1 µm/pixel recommended)
+- Z-step ≤2 µm for reliable 3D reconstruction
+- Minimum 5 Z-slices per organoid
+- No saturation in intensity channels
+
+## 5. Scientific/Experimental Unit
+
+**Primary unit:** Individual organoid instance
+
+**Secondary units:**
+- Individual cell instance (within organoid)
+- Individual nucleus instance (within cell)
+- Well (group of organoids from same culture well)
+- Biological replicate (independent culture preparation)
+- Condition (experimental treatment group)
+
+**Independence structure:**
+- Organoids within a well are pseudo-replicates (shared culture conditions)
+- Wells within a batch are technical replicates
+- Biological replicates are independent culture preparations
+- Statistical inference should use biological replicate as the unit of analysis
+
+## 6. Biological vs Technical Replicate Structure
+
+**Biological replicates:** Independent culture preparations from the same or different donors. These capture biological variability and should be used for inference.
+
+**Technical replicates:** Multiple images from the same well or culture. These capture measurement variability but not biological variability.
+
+**Common mistake:** Treating organoids or technical replicates as biological replicates (pseudoreplication). The software outputs per-organoid measurements but does not perform statistical tests. Researchers must account for the nested structure in downstream analysis.
+
+## 7. Output Semantics
+
+### Direct measurements (from label masks)
+- Volume (µm³)
+- Surface area (µm²)
+- Sphericity (dimensionless, π^(1/3)(6V)^(2/3)/A)
+- Principal axes lengths (µm)
+- Elongation ratios
+- Surface-to-volume ratio
+- Centroid position (physical coordinates)
+
+### Derived measurements
+- Nucleus-to-cell volume ratio
+- Cell-nucleus count
+- Radial position (normalized to organoid equivalent radius)
+- Distance to organoid centroid/surface (µm)
+- Contact area between adjacent cells (µm²)
+- Cell degree (number of neighbors)
+
+### Intensity measurements (when raw channel provided)
+- Mean/min/max nuclear intensity
+- Integrated nuclear intensity
+- Coefficient of variation (CV) of chromatin intensity
+
+### Classification outputs
+- Viability state (viable-like, compromised-like, indeterminate)
+- QC flags (border touch, fragmentation, size outliers, etc.)
+
+### Statistical summaries
+- Well-level medians
+- Condition-level means and bootstrap CIs
+- State fractions
+
+## 8. Downstream Consequence
+
+**Immediate downstream use:**
+- Feature tables for statistical analysis
+- Quality control reports
+- Visualization and exploration
+
+**Indirect downstream use (researcher responsibility):**
+- Statistical testing across conditions
+- Dose-response modeling
+- Correlation with other assays
+- Biological interpretation and reporting
+
+**Consequence of error:**
+- Morphological mischaracterization could lead to:
+  - Incorrect biological conclusions
+  - Misleading treatment effects
+  - Wasted resources on follow-up experiments
+
+**Mitigation:**
+- Explicit QC flags for potentially unreliable measurements
+- Transparent reporting of measurement uncertainty
+- Clear documentation of assumptions and limitations
+
+## 9. Acceptable Reference Standard
+
+### For segmentation accuracy
+- **Reference:** Manually annotated 3D instance masks by domain expert
+- **Independence:** Annotations must be independent of algorithm development
+- **Matching criterion:** Hungarian assignment at IoU ≥ 0.5
+- **Metrics:** Precision, recall, Dice, IoU, panoptic quality
+
+### For morphological measurements
+- **Reference:** Analytical phantoms with known geometry (spheres, ellipsoids)
+- **Validation:** Compare measured volume/area to analytical values
+- **Tolerance:** Volume error <1%, area error <5% for analytical shapes
+
+### For biological validity
+- **Reference:** Independent biological measurements (e.g., dry weight, cell count)
+- **Status:** NOT ASSESSED — requires separate biological validation study
+- **Limitation:** Synthetic validation does not establish biological accuracy
+
+## 10. Explicit Limitations and Unresolved Assumptions
+
+### Known limitations
+1. **Segmentation accuracy:** Depends on image quality, staining, and organoid density. No claim of general accuracy without independent validation.
+2. **Envelope geometry:** Measures outer envelope, not internal structure. Enclosed lumens are filled by default.
+3. **Sphericity bias:** Voxel discretization can produce values >1.0. Values >1.05 are flagged but not corrected.
+4. **Intensity measurements:** Raw intensities are not normalized across experiments. Cross-experiment comparison requires separate normalization.
+5. **Viability states:** Calcein/PI states describe signal patterns, not cell viability fraction. States are not validated against independent viability assays.
+6. **Statistical summaries:** Bootstrap CIs are exploratory with small samples. No inferential tests are provided.
+7. **Spatial features:** Contact area is voxel-face based. Centroid distance and kNN are not used for contact definition.
+
+### Unresolved assumptions
+1. **Isotropic voxels:** Algorithm assumes near-isotropic spacing. Highly anisotropic data may produce biased measurements.
+2. **Single time point:** No temporal tracking or dynamic analysis.
+3. **Homogeneous staining:** Assumes uniform dye penetration. Edge effects or incomplete staining are not modeled.
+4. **Independent organoids:** Assumes organoids do not touch or overlap. Overlapping organoids may be merged or split incorrectly.
+
+### What this software does NOT claim
+- Clinical accuracy or diagnostic utility
+- Biological validity without independent validation
+- Generalizability to all organoid types or imaging conditions
+- Replacement for expert manual analysis
+- Statistical significance of observed differences
+
+## 11. Revision History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0.0 | 2026-09-02 | Initial scientific specification |
+
+## 12. References
+
+1. scikit-image measurement API: https://scikit-image.org/docs/stable/api/skimage.measure.html
+2. Cellpose: https://cellpose.readthedocs.io/
+3. Thermo Fisher viability dyes: https://www.thermofisher.com/uk/en/home/life-science/cell-analysis/cell-viability-and-regulation/cell-viability.html

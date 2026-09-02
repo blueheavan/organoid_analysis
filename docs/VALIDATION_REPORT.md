@@ -1,0 +1,126 @@
+# Validation Report — Multilevel 3D Analysis
+
+Version: 1.0.0
+Date: 2026-09-02
+Classification: S2 (Analytical)
+Audit separation tier: **Tier D** (same agent and context as implementation) → `LIMITED INDEPENDENCE`.
+
+This report records the scientific V&V of the `analyze-3d` multilevel 3D organoid analysis against `docs/VALIDATION_PLAN.md`. It separates **software correctness** (verification, this pass) from **biological validity** (which remains NOT ASSESSED / INSUFFICIENT EVIDENCE unless a fully independent real-data study is performed). The classical morphology/viability workflow is validated separately in `docs/VALIDATION.md` and is not re-validated here.
+
+> **Bounded verdict caveat:** This pass evaluates algorithmic/numerical correctness on controlled phantoms. It does **not** establish biological or clinical accuracy on real organoid tissue. Real-data V&V is required before the multilevel outputs are used to draw biological conclusions.
+
+---
+
+## Intended-use scope (from SCIENTIFIC_SPEC.md §2)
+
+Research-use quantitative morphology of registered 3D organoid→cell→nucleus label hierarchies. Not for clinical diagnosis, treatment selection, or go/no-go decisions.
+
+---
+
+## Evidence statuses
+
+Per item: `PASS`, `PARTIAL`, `FAIL`, `NOT ASSESSED`, `INSUFFICIENT EVIDENCE`, `NOT APPLICABLE`.
+
+## 1. Software correctness (verification)
+
+| Item | Result | Evidence |
+|---|---|---|
+| Data-contract enforcement (VR-1) | `PASS` | `validation.py` rejects shape mismatch, non-3D, negative/bool labels, non-finite intensity; covered by `test_multilevel3d.py` |
+| Hierarchy assignment (VR-2) | `PASS` | independent phantom: cell101/102→organoid7 (overlap 1.0); nucleus1001→cell101, nucleus1002→cell102; both cells fully within organoid 7 |
+| Physical volume + centroid (VR-3) | `PASS` | 512-voxel organoid (spacing 2,1,1) → volume exactly 1024.0 µm³; 64-voxel cell → 128.0 µm³; exact integer×spacing products |
+| Surface area/sphericity formula (VR-4) | `PARTIAL` | analytical 15-voxel sphere: volume ratio 1.013, area ratio 1.098, sphericity 0.919 — documented discretization bias; >1.05 flagged not clipped. Absolute real-tissue area accuracy: `INSUFFICIENT EVIDENCE` |
+| Face-contact topology (VR-5) | `PASS` | independent phantom: 4×4 shared X-normal face → contact area exactly 16×(Z×Y)=32.0 µm²; degree=1 |
+| Spatial features (VR-6) | `PARTIAL` | computational correctness PASS on phantom; biological meaning of core/periphery bins `NOT ASSESSED` |
+| Formal QC flags (VR-7) | `PASS` | border, MAD-outlier, too-small, parent-failed, anucleate, multinucleated, direct-mismatch all produced; MAD==0 path handled |
+| Reproducibility/determinism (VR-9) | `PASS` | identical feature tables across two runs (organoid/cell/nucleus/topology/qc) |
+| Failure modes / out-of-domain (VR-10) | `PASS` | missing spacing, conflicting metadata, shape mismatch, non-finite intensity handled explicitly |
+| Full automated suite | `PASS` | `pixi run analysis-test`: 78 passed; `pixi run test`: 64 passed (post-change) |
+
+### Independent-oracle note (VR-2/3/5)
+
+Hierarchy, volume, and contact-area acceptance were computed **independently by hand** from the phantom geometry, not from the implementation itself. This satisfies the "independent evidence where feasible" principle for those items.
+
+## 2. Numerical correctness details (VR-4)
+
+Analytical sphere, radius 15 voxels, spacing 1:
+- `V_measured / V_true = 1.013` (voxel discretization).
+- `A_measured / A_true = 1.098` (marching-cubes discretization bias, documented).
+- `sphericity = 0.919`.
+
+The pipeline does not force sphericity into [0,1]; values >1.05 are flagged. This is the documented and intended behavior, not a defect.
+
+## 3. Representative real-data validation (VR-8)
+
+**Result: `INSUFFICIENT EVIDENCE — NOT ASSESSED` for biological accuracy.** Real registered organoid/cell/nucleus volumes were not available and a fully independent real-data study was not performed in this pass. The synthetic phantom over-estimates real-tissue conditions (high contrast, regular ellipsoids). No real-data claim is made.
+
+## 4. Parameter / calibration validity
+
+- All consequential parameters are catalogued with provenance in `docs/PARAMETERS.md` (status: `Partially validated` / `Not validated on real data`).
+- Thresholds such as `mad_z_threshold=3.5`, core/peripheral radial bins (0.5/0.8), and `low_parent_overlap_fraction=0.5` are heuristic operational definitions, **not** biologically calibrated cutoffs. Sensitivity analysis on real data: `NOT ASSESSED`.
+
+## 5. Statistical validity
+
+The multilevel measurement step makes no inferential claims (no hypothesis tests, no predictive models). Statistical summaries for the classical workflow are addressed in `docs/VALIDATION.md`. Statistical unit and pseudoreplication caveats are documented in `docs/SCIENTIFIC_SPEC.md` §5–6 (`NOT APPLICABLE` to the measurement-only multilevel step in this pass).
+
+## 6. Data integrity
+
+Metadata supplied by the caller is preserved verbatim and never invented (`_add_metadata`). Units are explicit (µm, µm², µm³). Axes are canonicalized to ZYX.
+
+## 7. Audit separation
+
+**Tier D** — performed by the same agent and context as the implementation review. `LIMITED INDEPENDENCE`. Compensating evidence: controlled-phantom acceptance criteria were independently computed by hand for the main claims (hierarchy, volume, topology), reducing (but not eliminating) the self-referential risk.
+
+## 8. Known failure modes / unsupported claims / limitations
+
+- Surface-area absolute accuracy on real tissue is not established (known discretization and segmentation dependence).
+- A cell centroid outside its organoid reports `distance_to_organoid_surface_um = 0` (on/outside surface) — operational definition, documented.
+- Real-data segmentation/registration quality is an upstream dependency not controlled by this module; the module refuses mismatched grids rather than resampling silently.
+- No clinical, diagnostic, or biological-endpoint claim is made.
+
+## 9. Unresolved findings
+
+| ID | Severity | Description | Status |
+|---|---|---|---|
+| F-1 | P4 | `cli.py` had a no-op `key.replace("_","_")` — misleading, fixed | Resolved (P3/P4, no scientific impact) |
+| F-2 | P4 | In-progress uncommitted label-compaction refactor (`src/analysis/labels.py`) deduplicates logic across 4 files; behavior preserved (all tests green) | Open — refactor itself is beneficial; commit when ready |
+
+No P0/P1 findings. No scientific algorithm/threshold was changed to satisfy tests.
+
+## 10. Overall verdict
+
+For the **specified research use** (research-use quantitative morphology of registered 3D organoid hierarchies, scoped per SCIENTIFIC_SPEC.md):
+
+> **READY FOR THE SPECIFIED RESEARCH USE WITH LIMITATIONS**
+
+Rationale: Software/numerical correctness is established (PASS) on controlled phantoms for hierarchy, volume, topology, QC, determinism, and failure modes. Real-data biological accuracy and parameter sensitivity are **NOT ASSESSED / INSUFFICIENT EVIDENCE**, and audit separation is **Tier D / LIMITED INDEPENDENCE**. The verdict is bounded to the controlled phantom evidence and research-use scope; it must be lifted (or downgraded) as real-data V&V evidence is gathered.
+
+This is a research-readiness assessment only. It does not establish conformity with IEC 62304, ISO 13485, ISO 14971, GAMP 5, CLIA LDT, IVDR, or any SaMD regulatory pathway. If the software is intended to support clinical decisions, a separate regulatory assessment is required and has not been performed here.
+
+## Reproducibility / baseline (Gate 11)
+
+| Component | Version |
+|---|---|
+| Git commit | `280bd06` |
+| Platform | macOS Apple Silicon (osx-arm64), pixi environment |
+| Python | 3.12 (pixi `python = "3.12.*"`) |
+| NumPy | 2.5.2 |
+| SciPy | 1.17.1 |
+| scikit-image | 0.26.0 |
+| tifffile | 2026.3.3 |
+| pandas | 2.3.3 |
+| Matplotlib | 3.8+ |
+| PyYAML | 6.0.3 |
+
+Environment is pinned via `pixi.lock`. The multilevel measurement step is deterministic (no RNG); determinism re-verified in this pass (VR-9).
+
+## Traceability matrix
+
+| Deliverable | Path |
+|---|---|
+| Scientific specification | `docs/SCIENTIFIC_SPEC.md` |
+| Algorithm decisions | `docs/ALGORITHM_DECISIONS.md` |
+| Parameters catalog | `docs/PARAMETERS.md` |
+| Validation plan | `docs/VALIDATION_PLAN.md` |
+| This report | `docs/VALIDATION_REPORT.md` |
+| Classical validation record | `docs/VALIDATION.md` |
+| Tests | `src/analysis/tests/test_multilevel3d.py` |

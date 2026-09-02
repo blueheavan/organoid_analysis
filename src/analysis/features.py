@@ -1,0 +1,184 @@
+"""Physical morphology and raw fluorescence readouts; no inferred cell fractions."""
+from __future__ import annotations
+
+from pathlib import Path
+import numpy as np
+from scipy import ndimage as ndi
+from skimage.measure import marching_cubes, mesh_surface_area
+
+from .labels import bbox_touches_volume_boundary
+
+GEOMETRY_COLUMNS = ["organoid_id", "original_label_id", "segmented_voxels", "envelope_voxels",
+                    "segmented_volume_um3", "volume_um3", "surface_area_um2", "sphericity",
+                    "equivalent_diameter_um", "enclosed_void_fraction", "centroid_z_um", "centroid_y_um",
+                    "centroid_x_um", "extent_z_um", "extent_y_um", "extent_x_um", "principal_axis_major_um",
+                    "principal_axis_intermediate_um", "principal_axis_minor_um", "axis_ratio_minor_to_major", "n_z_slices",
+                    "touches_border", "morphology_eligible", "morphology_flags"]
+MARKER_COLUMNS = ["background_voxels"] + [f"{marker}_{field}" for marker in ["calcein", "pi"]
+                  for field in ["mean_raw", "background_median", "background_noise_mad", "mean_bg_corrected",
+                                "integrated_bg_corrected", "saturated_fraction"]] + ["viability_measurement_eligible", "viability_measurement_flags"]
+
+
+def outer_envelope(mask: np.ndarray) -> np.ndarray:
+    return ndi.binary_fill_holes(np.pad(mask, 1))[1:-1, 1:-1, 1:-1]
+
+
+def surface_mesh(mask: np.ndarray, spacing: tuple, origin_zyx=(0, 0, 0), step_size=1) -> tuple:
+    # Padding closes the mesh at the crop boundary; clipped image objects remain QC-excluded.
+    vertices, faces, _, _ = marching_cubes(np.pad(mask.astype(np.float32), 1), level=0.5,
+                                          spacing=spacing, step_size=step_size, allow_degenerate=False)
+    vertices += np.asarray(origin_zyx) * spacing - np.asarray(spacing)
+    return vertices, faces
+
+
+def geometry(mask: np.ndarray, spacing: tuple, origin_zyx=(0, 0, 0), *, fill_holes: bool = True) -> tuple[dict, tuple]:
+    """Return physical geometry for a nonempty 3D mask.
+
+    The established organoid pipeline measures the filled outer envelope by
+    default.  Instance-level multilevel analysis can opt out so its reported
+    voxel count, volume, surface area and sphericity describe the same raw
+    label voxels.
+    """
+    if mask.ndim != 3 or not mask.any():
+        raise ValueError("Geometry needs a nonempty 3D instance mask")
+    spacing = np.asarray(spacing, float)
+    if spacing.shape != (3,) or not np.isfinite(spacing).all() or (spacing <= 0).any():
+        raise ValueError("Geometry needs three positive finite spacings")
+    envelope = outer_envelope(mask) if fill_holes else mask.astype(bool, copy=False)
+    segmented = int(mask.sum())
+    count = int(envelope.sum())
+    volume = float(count * np.prod(spacing))
+    vertices, faces = surface_mesh(envelope, tuple(spacing), origin_zyx)
+    area = float(mesh_surface_area(vertices, faces))
+    sphericity = float(np.cbrt(np.pi) * (6.0 * volume) ** (2 / 3) / area)
+    points = np.argwhere(envelope)
+    center = (points.mean(axis=0) + origin_zyx) * spacing
+    extent = (points.max(axis=0) - points.min(axis=0) + 1) * spacing
+    centered = (points-points.mean(axis=0))*spacing
+    # Include each voxel's intrinsic second moment; axes describe a moment-equivalent ellipsoid.
+    covariance = centered.T @ centered / len(points) + np.diag(spacing**2/12)
+    lengths = 2*np.sqrt(5*np.linalg.eigvalsh(covariance)[::-1])
+    values = {"segmented_voxels": segmented, "envelope_voxels": count,
+              "segmented_volume_um3": float(segmented * np.prod(spacing)), "volume_um3": volume,
+              "surface_area_um2": area, "sphericity": sphericity,
+              "equivalent_diameter_um": float(np.cbrt(6 * volume / np.pi)),
+              "enclosed_void_fraction": float((count - segmented) / count),
+              "principal_axis_major_um": float(lengths[0]), "principal_axis_intermediate_um": float(lengths[1]),
+              "principal_axis_minor_um": float(lengths[2]), "axis_ratio_minor_to_major": float(lengths[2]/lengths[0]),
+              "n_z_slices": int(np.any(envelope, axis=(1, 2)).sum())}
+    for axis, value, width in zip("zyx", center, extent):
+        values[f"centroid_{axis}_um"] = float(value)
+        values[f"extent_{axis}_um"] = float(width)
+    return values, (vertices, faces)
+
+
+def write_ply(path: Path, vertices_zyx: np.ndarray, faces: np.ndarray) -> None:
+    with path.open("w", encoding="ascii") as handle:
+        handle.write("ply\nformat ascii 1.0\ncomment coordinates XYZ in micrometres\n")
+        handle.write(f"element vertex {len(vertices_zyx)}\nproperty float x\nproperty float y\nproperty float z\n")
+        handle.write(f"element face {len(faces)}\nproperty list uchar int vertex_indices\nend_header\n")
+        np.savetxt(handle, vertices_zyx[:, ::-1], fmt="%.6f")
+        np.savetxt(handle, np.column_stack([np.full(len(faces), 3), faces]), fmt="%d")
+
+
+def marker_measurements(labels: np.ndarray, object_id: int, bbox: tuple,
+                        channels: dict, spacing: tuple, cfg: dict) -> dict:
+    fields = ["mean_raw", "background_median", "background_noise_mad", "mean_bg_corrected",
+              "integrated_bg_corrected", "saturated_fraction"]
+    result = {
+        f"{marker}_{field}": np.nan
+        for marker in channels
+        for field in fields
+    }
+    missing = [marker for marker, channel in channels.items() if channel is None]
+    # Structure-only runs do not need a per-object distance transform. Preserve
+    # the same ineligible/missing-channel semantics while avoiding the dominant
+    # marker-measurement cost entirely.
+    if len(missing) == len(channels):
+        result.update(background_voxels=0, viability_measurement_eligible=False,
+                      viability_measurement_flags=";".join(f"missing_{m}_channel" for m in missing))
+        return result
+
+    pad = np.ceil(cfg["background_outer_um"] / np.asarray(spacing)).astype(int) + 1
+    sl = tuple(slice(max(0, box.start - p), min(length, box.stop + p)) for box, p, length in zip(bbox, pad, labels.shape))
+    local_labels = labels[sl]
+    roi = outer_envelope(local_labels == object_id)
+    outside_distance = ndi.distance_transform_edt(~roi, sampling=spacing)
+    shell = (outside_distance > cfg["background_inner_um"]) & (outside_distance <= cfg["background_outer_um"]) & (local_labels == 0)
+    background_n = int(shell.sum())
+    result["background_voxels"] = background_n
+    flags = []
+    if background_n < cfg["min_background_voxels"]:
+        flags.append("insufficient_local_background")
+    for marker, channel in channels.items():
+        if channel is None:
+            flags.append(f"missing_{marker}_channel")
+            continue
+        foreground_values = channel[sl][roi].astype(np.float64)
+        result[f"{marker}_mean_raw"] = float(foreground_values.mean())
+        limit = cfg[f"{marker}_saturation_value"]
+        if limit is None and np.issubdtype(channel.dtype, np.integer):
+            limit = float(np.iinfo(channel.dtype).max)
+        if limit is None:
+            flags.append(f"{marker}_saturation_limit_unknown")
+        else:
+            saturated = float(np.mean(foreground_values >= limit))
+            result[f"{marker}_saturated_fraction"] = saturated
+            if saturated > cfg["max_saturated_fraction"]:
+                flags.append(f"{marker}_saturated")
+        if background_n >= cfg["min_background_voxels"]:
+            background = channel[sl][shell].astype(np.float64)
+            median = float(np.median(background))
+            noise = float(1.4826 * np.median(np.abs(background - median)))
+            # Keep negative corrected means. Per-voxel clipping would bias dim objects upward.
+            corrected = float(foreground_values.mean() - median)
+            result[f"{marker}_background_median"] = median
+            result[f"{marker}_background_noise_mad"] = noise
+            result[f"{marker}_mean_bg_corrected"] = corrected
+            result[f"{marker}_integrated_bg_corrected"] = float(corrected * roi.sum())
+    result["viability_measurement_eligible"] = not flags
+    result["viability_measurement_flags"] = ";".join(flags)
+    return result
+
+
+def measure_instances(sample, segmentation, cfg: dict, mesh_dir: Path | None = None) -> tuple[list[dict], list[tuple]]:
+    labels = segmentation.labels
+    rows, preview_meshes = [], []
+    if mesh_dir:
+        mesh_dir.mkdir(parents=True, exist_ok=True)
+    for object_id, bbox in enumerate(ndi.find_objects(labels), start=1):
+        if bbox is None:
+            continue
+        mask = labels[bbox] == object_id
+        origin = tuple(s.start for s in bbox)
+        metrics, mesh = geometry(mask, sample.spacing, origin)
+        touches = bbox_touches_volume_boundary(bbox, labels.shape)
+        flags = []
+        if touches:
+            flags.append("border_truncated")
+        if metrics["n_z_slices"] < cfg["quality"]["min_z_slices"]:
+            flags.append("too_few_z_slices")
+        if metrics["volume_um3"] < cfg["segmentation"]["min_volume_um3"]:
+            flags.append("below_minimum_volume")
+        maximum = cfg["quality"]["max_volume_um3"]
+        if maximum is not None and metrics["volume_um3"] > maximum:
+            flags.append("above_maximum_volume")
+        if metrics["sphericity"] > 1.05:
+            flags.append("sphericity_above_geometric_range")
+        if "excess_foreground_review_segmentation" in segmentation.flags:
+            flags.append("excess_foreground_review_segmentation")
+        envelope = outer_envelope(mask)
+        if ((labels[bbox] != object_id) & (labels[bbox] != 0) & envelope).any():
+            flags.append("encloses_other_instance")
+        excluded = [flag for flag in flags if flag != "border_truncated" or cfg["quality"]["exclude_border"]]
+        metrics.update({"organoid_id": object_id, "original_label_id": segmentation.original_ids[object_id],
+                        "touches_border": touches, "morphology_eligible": not excluded,
+                        "morphology_flags": ";".join(flags)})
+        metrics.update(marker_measurements(labels, object_id, bbox, {"calcein": sample.calcein, "pi": sample.pi}, sample.spacing, cfg["quality"]))
+        rows.append(metrics)
+        if mesh_dir:
+            write_ply(mesh_dir / f"organoid_{object_id:04d}.ply", *mesh)
+        if len(preview_meshes) < cfg["report"]["max_meshes_in_preview"]:
+            # Only the preview uses a coarser mesh. Measurements and PLYs use step_size=1.
+            preview_meshes.append((object_id, *surface_mesh(envelope, sample.spacing, origin, step_size=2)))
+    return rows, preview_meshes

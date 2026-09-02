@@ -1,0 +1,53 @@
+# Methods and interpretation boundaries
+
+## Scope and provenance
+
+This version analyzes uniformly spaced, registered 3D TIFF/OME-TIFF fields. Axes are canonicalized to CZYX and then channels are selected as ZYX arrays. Ambiguous non-singleton dimensions and unsupported 2D inputs are rejected. Physical spacing comes from explicit micrometre manifest values or complete OME metadata; conflicting complete metadata is rejected. Available OME Z-plane positions are checked against a uniform grid. Images are processed one field at a time, but an individual TIFF series is loaded in memory. Data hashes, code hashes, exact dependencies, the resolved configuration and run status are saved.
+
+## Boundary segmentation
+
+The classical route smooths an independent structural volume with a Gaussian whose standard deviation is specified in micrometres. Optional large-scale background subtraction and polarity inversion are explicit configuration choices. A global Otsu or fixed threshold generates the foreground. Physical-radius binary closing is optional. Fully enclosed holes can be filled to define an outer envelope. Small connected components are removed using a minimum volume in µm³.
+
+Touching objects are split using a spacing-aware Euclidean distance transform. Distance-map h-maxima provide candidate seeds; a physical minimum separation suppresses nearby seeds within each connected component. Every component retains at least one seed. A masked watershed of the negative distance map returns instances, with a further minimum-volume filter after splitting. The number removed is reported. Dense foreground occupancy produces a QC flag and excludes morphology until parameters are reviewed.
+
+External foreground probabilities must be finite [0,1] values on the same grid; Cellpose logits are not automatically converted. Imported label volumes must be nonnegative integers, with one connected component per ID. IDs are compacted safely and original IDs are retained. Model selection, training, prediction and expert correction are upstream tasks and are not performed by the import route.
+
+When an imported-label or probability-map primary mask uses `qc_reference_method: watershed`, the pipeline also runs the independent classical watershed on the structural channel. It compares object counts and median physical Z extents and marks large disagreement for review. The primary mask is never silently replaced because those agreement heuristics do not identify the correct mask. `segmentation_qc.csv` records both summaries and any review flags.
+
+An optional `truth_labels_path` supplies a separately annotated, registered instance mask for evaluation only. Hungarian matching at IoU >= 0.5 reports per-instance TP/FN/FP records plus precision, recall, matched Dice/IoU, panoptic quality and possible split/merge events. Annotations must be independent of parameter tuning to support a meaningful real-image validation claim.
+
+## Morphology
+
+Each instance is cropped to its bounding box. A closed-hole-filled outer envelope defines volume `V=N×sz×sy×sx`. The original label volume is retained separately as segmented volume. Marching cubes uses level 0.5, native physical spacing, one-voxel zero padding, no mesh smoothing, and step size 1. Its triangular mesh defines area A in µm². Sphericity is `π^(1/3)(6V)^(2/3)/A`; equivalent diameter is `(6V/π)^(1/3)`. The mesh may produce discretization bias, so the code never silently forces sphericity into [0,1]. Values above 1.05 are flagged. Principal axes derive from the covariance of physical voxel locations, including each voxel's intrinsic second moment, and describe a moment-equivalent ellipsoid.
+
+The zero padding closes a crop's surface; it cannot restore an image-truncated object. Image-border contact, too few occupied Z slices, configured size exclusions, excess foreground, or an envelope enclosing another instance produce geometry QC flags. By default border objects are excluded. Every detected instance remains in the object table. Small components removed during segmentation are represented by a removal count rather than a geometry row.
+
+These definitions are envelope geometry, not a direct measurement of viable tissue volume. Label connectivity, physical resolution, optical blurring, meshing and segmentation all affect area, sphericity and apparent cavities. The default watershed envelope filling intentionally removes enclosed lumens. Users investigating lumen morphology need an additional tissue/lumen segmentation and separate validation.
+
+## Marker measurements and control-scaled states
+
+Calcein and PI intensities are measured independently on the unnormalized image arrays within each outer envelope. Background is the median in a physical shell at configurable inner/outer radii, excluding all labeled organoids. Its robust spread is `1.4826×MAD`. The corrected mean is foreground mean minus background median; negative results are retained. Integrated corrected signal is corrected mean multiplied by ROI voxel count. This is intensity summed over voxels, not a cell count or physical signal-volume integral. Per-image display normalization is confined to QC pictures.
+
+Saturation uses explicit camera limits if supplied or integer dtype maxima. Floating-point inputs require an explicit limit for classification. Insufficient background, missing markers and excessive saturation invalidate the marker measurement for state classification. This package does not perform spectral compensation, flat-field correction, dye-penetration adjustment or registration.
+
+In control mode, calibration occurs separately per acquisition batch. For each control class, object marker means are reduced to within-well medians, then equal-well medians within biological replicates. The median across biological replicate summaries defines the endpoint. At least two independently identified control replicates per state are required by default. Calcein low/high endpoints use dead/live controls, respectively; PI low/high endpoints use live/dead controls. Endpoint separation must exceed a configurable multiple of the larger within-control replicate MAD or median background voxel noise. The contrast check is a conservative software gate, not an experimentally validated assay quality statistic.
+
+Each marker is scaled as `(object mean − low)/(high − low)`. Starting gates of 0.60 and 0.30 yield viable-like, compromised-like or mixed-signal states, with both-low and invalid measurements remaining indeterminate. Out-of-control-range values are flagged but not clipped. These states describe organoid-level signal patterns. The method neither estimates the fraction of viable cells nor distinguishes death pathways, stressed/recoverable states, or future response. Calcein/PI compartment and mechanism differences preclude interpreting a raw cross-channel ratio as percent viability.
+
+## Treatment summaries
+
+For each well, fields are pooled and QC-eligible organoid measurements yield a well median. For each condition/biological replicate, the median of well medians is the morphology endpoint. The condition estimate is the mean of these replicate endpoints. Percentile bootstrap CIs resample biological replicates, use a saved seed and are reported only with at least three size-evaluable replicates. The small-sample CI is exploratory and can be unstable. Reusing a biological replicate across acquisition batches does not increment the biological n. Independent culture preparations and donors must be identified according to the intended inference; the code cannot determine independence from filenames.
+
+State fractions are computed among all geometry-eligible organoids, retaining indeterminate as a category; they are averaged equally over nonempty complete wells within a replicate, then equally over size-evaluable replicates. Empty wells remain in count summaries but have no organoid size or state fraction. Missing objects caused by disintegration or failed segmentation are not silently classified as dead. Counts across unequal imaging areas or depths are not densities and should not be compared without exposure normalization. Incomplete wells from partial runs are excluded from replicate summaries.
+
+The pooled ECDF is descriptive and is labeled as such. It can overweight organoid-rich wells; the adjacent replicate panel displays the independent-unit analysis. No automatic inferential tests are included without a known experimental design. Suitable future models may include log-volume hierarchical models, paired replicate analyses or count-based models of marker-state proportions, with appropriate dependence, overdispersion and small-sample handling.
+
+## Synthetic verification
+
+The example generates 15 three-channel fields: three synthetic treatment groups and separate live/dead controls, each across three synthetic biological replicate IDs. Six randomly sized ellipsoids occupy each field (90 total). Fields use 32×128×144 voxels, 3×1×1 µm spacing, independent structural signal, configurable synthetic marker patterns, mild Gaussian blur, Gaussian noise and fixed random seeds. Conditions intentionally change size and state mixtures. The simulator is an easy numerical phantom, not a physically realistic brightfield imaging model, and has no claim of representing clinical tissue.
+
+Ground-truth labels are matched to predictions by maximum-cardinality, maximum-IoU Hungarian assignment at IoU≥0.5. Reports include true/false positives, false negatives, precision, recall, matched Dice/IoU, possible split/merge counts, panoptic quality, and matched per-object volume error. Synthetic state agreement is a software check on known marker patterns, not cross-validated learned-classifier accuracy. The controls and generator deliberately share simplified marker assumptions. Dedicated unit/integration tests cover analytical geometry, scaling laws, disconnected masks, false-positive/merged instances, empty stacks, failed QC, and hierarchical summaries.
+
+## References
+
+Implementation follows the documented [scikit-image measurement API](https://scikit-image.org/docs/stable/api/skimage.measure.html), [watershed API](https://scikit-image.org/docs/stable/api/skimage.segmentation.html#skimage.segmentation.watershed), and [tifffile metadata API](https://www.cgohlke.com/docs/tifffile/). Marker interpretation is grounded in [Thermo Fisher's viability-dye descriptions](https://www.thermofisher.com/uk/en/home/life-science/cell-analysis/cell-viability-and-regulation/cell-viability.html). The specific gates, simulator and summary endpoints are explicit implementation choices, not published clinical validation criteria.

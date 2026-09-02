@@ -1,0 +1,1 @@
+All images, treatment assignments, marker states, and differences in this folder are deliberately simulated. They are software test inputs, not biological evidence.

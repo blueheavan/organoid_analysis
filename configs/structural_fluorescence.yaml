@@ -1,0 +1,25 @@
+# A structural stain/channel must delineate entire organoids independently of viability.
+# These starting parameters require calibration on representative real images.
+channels:
+  structure: 0
+  calcein: 1
+  pi: 2
+segmentation:
+  method: watershed
+  polarity: bright
+  gaussian_sigma_um: 1.0
+  threshold: otsu
+  min_volume_um3: 2000
+  seed_min_distance_um: 15
+  seed_h_um: 2
+  fill_enclosed_holes: true
+viability:
+  mode: controls
+  min_control_replicates: 2
+  high_gate: 0.60
+  low_gate: 0.30
+# If your camera records 12-bit values in a 16-bit TIFF, set both saturation values to 4095.
+# The dtype maximum (65535 for uint16) is used when these are null.
+quality:
+  calcein_saturation_value: null
+  pi_saturation_value: null

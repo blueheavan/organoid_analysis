@@ -1,0 +1,11 @@
+.DS_Store
+.pixi/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Local analysis outputs and downloaded microscope images.
+results/
+data/images/*
+!data/images/.gitkeep

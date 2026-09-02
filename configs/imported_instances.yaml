@@ -1,0 +1,13 @@
+# One positive integer label per connected 3D organoid; background=0.
+# Supply labels_path plus registered structural and optional fluorescence images.
+channels:
+  structure: 0
+  calcein: null
+  pi: null
+segmentation:
+  method: labels
+  # Compare imported instances with an independent watershed pass. Disagreement
+  # is recorded for review; imported labels remain the measured primary mask.
+  qc_reference_method: watershed
+viability:
+  mode: controls

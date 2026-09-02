@@ -1,0 +1,39 @@
+channels:
+  structure: 0
+  calcein: 1
+  pi: 2
+segmentation:
+  method: watershed
+  polarity: bright
+  gaussian_sigma_um: 0.6
+  background_sigma_um: 0.0
+  threshold: otsu
+  probability_threshold: 0.5
+  closing_radius_um: 0.0
+  fill_enclosed_holes: true
+  min_volume_um3: 1000.0
+  seed_h_um: 2.0
+  seed_min_distance_um: 12.0
+  split_touching: true
+  max_foreground_fraction: 0.7
+quality:
+  exclude_border: true
+  min_z_slices: 5
+  max_volume_um3: null
+  background_inner_um: 2.0
+  background_outer_um: 7.0
+  min_background_voxels: 100
+  max_saturated_fraction: 0.01
+  calcein_saturation_value: null
+  pi_saturation_value: null
+viability:
+  mode: controls
+  min_control_replicates: 2
+  min_control_separation_snr: 3.0
+  high_gate: 0.6
+  low_gate: 0.3
+report:
+  bootstrap_iterations: 2000
+  seed: 20260831
+  save_meshes: true
+  max_meshes_in_preview: 20

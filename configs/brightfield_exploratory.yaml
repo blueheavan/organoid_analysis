@@ -1,0 +1,15 @@
+# Exploratory baseline ONLY: suitable only if organoids are consistently dark 3D foreground.
+# Defocus/halos in brightfield do not automatically represent physical object boundaries.
+# Prefer validated masks/probabilities for hollow, irregular, dense, or low-contrast organoids.
+channels:
+  structure: 0
+  calcein: null
+  pi: null
+segmentation:
+  method: watershed
+  polarity: dark
+  background_sigma_um: 0
+  gaussian_sigma_um: 1
+  threshold: otsu
+viability:
+  mode: uncalibrated

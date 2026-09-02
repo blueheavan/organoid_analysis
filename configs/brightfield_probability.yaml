@@ -1,0 +1,15 @@
+# Main image: brightfield ZYX. Supply registered calcein_path and pi_path as separate TIFFs.
+# Foreground probabilities must come from an organoid-boundary model fitted/validated on brightfield.
+# Export float [0,1] probabilities, not untransformed Cellpose flow/cellprob logits.
+channels:
+  structure: 0
+  calcein: null
+  pi: null
+segmentation:
+  method: probability
+  probability_threshold: 0.5
+  min_volume_um3: 2000
+  seed_min_distance_um: 15
+  fill_enclosed_holes: true
+viability:
+  mode: controls
