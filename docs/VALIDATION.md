@@ -29,7 +29,7 @@ The excellent demo overlap is a consequence of simple, high-contrast ellipsoids,
 | PyYAML | 6.0.3 |
 | pytest | 9.1.1 |
 
-The run emitted 64 upstream deprecation warnings because scikit-image currently assigns NumPy array shapes in places deprecated by NumPy 2.5. No tests failed; warnings were not suppressed. This should be revisited before upgrading those dependencies further. `requirements-tested.txt` records the tested direct Python packages; it is not a fully resolved cross-platform lock. Generate and retain `pixi.lock` on the target platform.
+The run emitted 64 upstream deprecation warnings because scikit-image currently assigns NumPy array shapes in places deprecated by NumPy 2.5. No tests failed; warnings were not suppressed. This should be revisited before upgrading those dependencies further. The table above records the tested direct Python packages for this validation run (Python 3.12.13 / Linux x86_64, i.e. not the target osx-arm64 pixi environment); it is not itself a lock file. `pixi.lock` (committed at the repository root, generated and pinned on osx-arm64) is the actual fully resolved, cross-run-reproducible lock for the pixi environment used elsewhere in this repository (`docs/VALIDATION_REPORT.md`'s Gate 11 baseline). There is no separate `requirements-tested.txt` file in this repository; do not rely on such a file existing.
 
 ## What still requires real data
 

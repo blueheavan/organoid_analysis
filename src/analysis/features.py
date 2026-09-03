@@ -8,6 +8,15 @@ from skimage.measure import marching_cubes, mesh_surface_area
 
 from .labels import bbox_touches_volume_boundary
 
+# Consistency constant rescaling MAD into a sigma-equivalent robust scale
+# estimator under a Gaussian assumption (Rousseeuw & Croux, 1993, J. Am. Stat.
+# Assoc. 88(424):1273-1283, https://doi.org/10.1080/01621459.1993.10476408).
+# See docs/ALGORITHM_DECISIONS.md D5. `multilevel3d/qc.py` uses the reciprocal
+# form (0.67448975 x ...) of the same statistical concept, at a different
+# rounding precision -- 0.67448975 is Phi^-1(0.75) to 8 decimals, not bit-
+# identical to 1/1.4826 (they differ by ~1.5ppm, immaterial in practice).
+MAD_TO_SIGMA = 1.4826
+
 GEOMETRY_COLUMNS = ["organoid_id", "original_label_id", "segmented_voxels", "envelope_voxels",
                     "segmented_volume_um3", "volume_um3", "surface_area_um2", "sphericity",
                     "equivalent_diameter_um", "enclosed_void_fraction", "centroid_z_um", "centroid_y_um",
@@ -24,6 +33,9 @@ def outer_envelope(mask: np.ndarray) -> np.ndarray:
 
 
 def surface_mesh(mask: np.ndarray, spacing: tuple, origin_zyx=(0, 0, 0), step_size=1) -> tuple:
+    # Marching cubes: Lorensen & Cline (1987), ACM SIGGRAPH Computer Graphics
+    # 21(4):163-169, https://doi.org/10.1145/37401.37422. See
+    # docs/ALGORITHM_DECISIONS.md D3 for the level/spacing/padding rationale.
     # Padding closes the mesh at the crop boundary; clipped image objects remain QC-excluded.
     vertices, faces, _, _ = marching_cubes(np.pad(mask.astype(np.float32), 1), level=0.5,
                                           spacing=spacing, step_size=step_size, allow_degenerate=False)
@@ -129,7 +141,7 @@ def marker_measurements(labels: np.ndarray, object_id: int, bbox: tuple,
         if background_n >= cfg["min_background_voxels"]:
             background = channel[sl][shell].astype(np.float64)
             median = float(np.median(background))
-            noise = float(1.4826 * np.median(np.abs(background - median)))
+            noise = float(MAD_TO_SIGMA * np.median(np.abs(background - median)))
             # Keep negative corrected means. Per-voxel clipping would bias dim objects upward.
             corrected = float(foreground_values.mean() - median)
             result[f"{marker}_background_median"] = median

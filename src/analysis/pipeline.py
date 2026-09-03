@@ -13,7 +13,7 @@ import pandas as pd
 import yaml
 from . import __version__
 from .config import load_config
-from .io import META_FIELDS, PATH_FIELDS, read_manifest, load_sample, load_truth_labels, write_labels, sha256
+from .io import META_FIELDS, PATH_FIELDS, read_manifest, load_sample, load_truth_labels, write_labels, sha256, git_commit_hash
 from .segmentation import QC_COLUMNS, compare_instance_qc, instance_qc_summary, segment
 from .evaluation import match_instances
 from .features import GEOMETRY_COLUMNS, MARKER_COLUMNS, measure_instances
@@ -28,6 +28,19 @@ def _is_substantive(path: Path) -> bool:
     if path.is_dir():
         return True
     return path.name not in {".DS_Store", "Thumbs.db", ".gitkeep"}
+
+
+def complete_unit_objects(objects: pd.DataFrame, units: pd.DataFrame) -> pd.DataFrame:
+    """Restrict ``objects`` to rows whose (batch_id, unit_id) is a complete unit.
+
+    Matches ``summary.py``'s own exclusion of partially-failed acquisition
+    units from replicate/condition descriptive tables; used before any
+    downstream analysis (e.g. statistical testing) that should not silently
+    include organoids from an incomplete well.
+    """
+    complete_units = set(map(tuple, units.loc[units.unit_complete, ["batch_id", "unit_id"]].to_numpy()))
+    mask = np.array([(row.batch_id, row.unit_id) in complete_units for row in objects.itertuples()], dtype=bool)
+    return objects[mask]
 
 
 def _segment_with_qc(sample, cfg: dict) -> tuple:
@@ -91,7 +104,7 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
     (out / "config.resolved.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
     design.to_csv(out / "manifest.resolved.csv", index=False)
     origin = "synthetic_phantom" if synthetic else "user_images_unvalidated"
-    provenance = {"pipeline_version": __version__, "started_utc": datetime.now(timezone.utc).isoformat(),
+    provenance = {"pipeline_version": __version__, "git_commit": git_commit_hash(), "started_utc": datetime.now(timezone.utc).isoformat(),
                   "data_origin": origin, "python": sys.version, "platform": platform.platform(),
                   "manifest": str(manifest_path), "manifest_sha256": sha256(manifest_path),
                   "configuration": cfg, "status": "incomplete",
@@ -164,7 +177,7 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
     stats_omnibus = {}
     if cfg["stats"]["enabled"]:
         pairwise_contrasts, stats_omnibus = condition_pairwise_tests(
-            objects, tuple(cfg["stats"]["features"]), cfg["stats"]["min_replicates_per_condition"])
+            complete_unit_objects(objects, units), tuple(cfg["stats"]["features"]), cfg["stats"]["min_replicates_per_condition"])
         tables["pairwise_contrasts"] = pairwise_contrasts
     for name, table in tables.items():
         table.to_csv(out / f"{name}.csv", index=False, float_format="%.10g")

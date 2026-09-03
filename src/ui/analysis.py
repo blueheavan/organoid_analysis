@@ -361,6 +361,11 @@ def train_binary_classifiers(
     Returns a compact summary DataFrame of per-model metrics plus the fitted
     models, scaler, and test predictions.  The heavy ML backends (scikit-learn,
     xgboost) are imported lazily so the module stays importable without them.
+
+    Model hyperparameters below (n_estimators/max_depth/learning_rate) are
+    untuned engineering defaults, not cross-validated for this pipeline's
+    data; see docs/PARAMETERS.md ("Exploratory statistics/ML parameters").
+    Exploratory tutorial workflow output, not a validated classifier.
     """
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.linear_model import LogisticRegression
@@ -458,7 +463,11 @@ def feature_importance(models: dict, feature_names: list[str]) -> pd.DataFrame:
 def train_multiclass_classifier(
     df: pd.DataFrame, feature_cols: list[str], label_col: str
 ) -> dict:
-    """Train a multi-class Random Forest over all groups (e.g. wells)."""
+    """Train a multi-class Random Forest over all groups (e.g. wells).
+
+    `n_estimators`/`max_depth` are untuned engineering defaults; see
+    docs/PARAMETERS.md ("Exploratory statistics/ML parameters").
+    """
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
     from sklearn.model_selection import train_test_split
@@ -544,7 +553,14 @@ def silhouette_for(df: pd.DataFrame, feature_cols: list[str]) -> float:
 def categorize_prolate_oblate(
     df: pd.DataFrame, feature_cols: list[str]
 ) -> tuple[pd.DataFrame, str | None, str | None]:
-    """Gate Prolate/Oblate ratios into Rod / Disk / Sphere categories."""
+    """Gate Prolate/Oblate ratios into Rod / Disk / Sphere categories.
+
+    Thresholds are the 75th/25th percentile of the *currently loaded*
+    dataset's own prolate/oblate distribution (a relative, descriptive split,
+    not a biologically validated shape boundary) -- the same object can
+    receive a different label depending on what else is loaded. See
+    docs/PARAMETERS.md ("Exploratory statistics/ML parameters").
+    """
     prolate = next((c for c in feature_cols if "prolate" in c.lower()), None)
     oblate = next((c for c in feature_cols if "oblate" in c.lower()), None)
     result = df.copy()
@@ -600,7 +616,11 @@ def cluster_characterization(
 
 
 def cluster_feature_importance(df: pd.DataFrame, feature_cols: list[str]) -> pd.DataFrame:
-    """Random Forest classification importances predicting cluster membership."""
+    """Random Forest classification importances predicting cluster membership.
+
+    `n_estimators`/`max_depth` are untuned engineering defaults; see
+    docs/PARAMETERS.md ("Exploratory statistics/ML parameters").
+    """
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.model_selection import train_test_split
     from sklearn.preprocessing import StandardScaler

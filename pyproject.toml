@@ -61,11 +61,11 @@ streamlit = ">=1.40,<2"
 torch = "==2.7.1"
 torchvision = "==0.22.1"
 xgboost = ">=2.1,<3"
-dinov3 = { git = "https://github.com/facebookresearch/dinov3" }
+dinov3 = { git = "https://github.com/facebookresearch/dinov3", rev = "6876159a11b4df116f30f667f8c9888617df0751" }
 stpyvista = { version = ">=0.2.1, <0.3", extras = ["trame"] }
 pytest = ">=9.1.1, <10"
 pyarrow = ">=16,<24"
-pillow = "*"
+pillow = ">=11,<13"
 organoid3d-pipeline = { path = ".", editable = true }
 
 [tool.pixi.tasks]

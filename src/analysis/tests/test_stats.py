@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd
 import pytest
+import scipy.stats as st
 import tifffile
 import yaml
 
 from analysis.config import load_config
 from analysis.pipeline import analyze
-from analysis.stats import condition_pairwise_tests, fit_model
+from analysis.stats import _pairwise_contrasts, condition_pairwise_tests, fit_model
 
 
 def _objects(condition_values: dict, n_replicates: int = 4, feature: str = "volume_um3") -> pd.DataFrame:
@@ -49,6 +50,52 @@ def test_bh_fdr_padj_never_below_raw_p():
     objects = _objects({"A": (1000.0, 100.0), "B": (1200.0, 100.0), "C": (2000.0, 100.0)})
     pairwise, _ = condition_pairwise_tests(objects, features=("volume_um3",))
     assert (pairwise.padj >= pairwise.p_raw - 1e-12).all()
+
+
+def test_lmm_pairwise_uses_small_cluster_t_reference_not_asymptotic_z():
+    """Regression test for the P1 anti-conservative-p-value audit finding.
+
+    statsmodels' MixedLM always reports Wald p-values against an asymptotic z
+    reference, which is anti-conservative (overstates significance) with few
+    replicate clusters. ``_pairwise_contrasts`` must instead use a t(G-1)
+    reference (G = number of replicate clusters) for the LMM branch, matching
+    the small-cluster correction statsmodels' own cluster-robust OLS fallback
+    applies automatically via ``use_t=True``.
+    """
+    rng = np.random.default_rng(7)
+    rows = []
+    for condition in ("A", "B"):
+        base = 1000.0 if condition == "A" else 1015.0
+        for replicate in range(3):
+            cluster_offset = rng.normal(0, 25)  # genuine between-replicate variance
+            for _ in range(6):
+                rows.append({"condition": condition, "grp": f"{condition}::R{replicate}",
+                            "volume_um3": float(base + cluster_offset + rng.normal(0, 15))})
+    d = pd.DataFrame(rows)
+    d["condition"] = pd.Categorical(d.condition, categories=["A", "B"])
+    fit, model_used = fit_model(d, "volume_um3", "grp")
+    assert model_used.startswith("LMM")  # this test only exercises the LMM branch
+    n_clusters = d["grp"].nunique()
+    _, _, p_values, dof = _pairwise_contrasts(fit, ["A", "B"], n_clusters)
+    assert dof == [n_clusters - 1]
+    t_stat = float(np.ravel(fit.t_test(np.array([[0, 1]])).tvalue)[0])
+    expected_t_p = float(2 * st.t.sf(abs(t_stat), n_clusters - 1))
+    z_p = float(2 * st.norm.sf(abs(t_stat)))
+    assert p_values[0] == pytest.approx(expected_t_p)
+    assert p_values[0] > z_p  # t(G-1) reference must be more conservative than z
+
+
+def test_ols_fallback_uses_cluster_robust_t_reference():
+    """OLS-fallback p-values must come from use_t=True's t(G-1) reference."""
+    rows = []
+    for condition in ("A", "B"):
+        for replicate in range(3):
+            rows.append({"condition": condition, "grp": f"{condition}::R{replicate}", "value": 10.0})
+    d = pd.DataFrame(rows)
+    d["condition"] = pd.Categorical(d.condition, categories=["A", "B"])
+    fit, model_used = fit_model(d, "value", "grp")
+    assert model_used == "OLS(clustered SE)"
+    assert fit.use_t is True
 
 
 def test_ols_fallback_on_degenerate_random_effect():
@@ -119,6 +166,12 @@ def test_pipeline_writes_pairwise_contrasts_end_to_end(tmp_path):
     assert (out / "stats_results.json").stat().st_size > 2
     volume_row = pairwise[pairwise.feature == "volume_um3"].iloc[0]
     assert volume_row.contrast == "Vehicle vs Treated" or volume_row.contrast == "Treated vs Vehicle"
+    assert "df_denom" in pairwise.columns
+    # Regression check: the computed statistical-test results must be surfaced
+    # in the human-facing report, not only saved to disk (P2 audit finding).
+    report_html = (out / "report.html").read_text(encoding="utf-8")
+    assert "pairwise_contrasts.csv" in report_html
+    assert "Cross-condition statistical testing" in report_html
 
 
 def test_pipeline_skips_stats_cleanly_when_disabled(tmp_path):

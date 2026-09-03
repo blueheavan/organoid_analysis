@@ -1,7 +1,7 @@
 # Parameters Catalog — Organoid Pipeline
 
-Version: 1.0.0
-Date: 2026-09-02
+Version: 1.1.0
+Date: 2026-09-03
 
 This catalog records the provenance of every scientifically consequential parameter, threshold, and default in the pipeline. Properties follow the rigor protocol (section 6). Engineering-only parameters that cannot affect scientific results (e.g. output verbosity, file naming) are not catalogued.
 
@@ -46,6 +46,7 @@ Source of truth: `src/analysis/config.py` (module `DEFAULTS`), validated by `val
 | `qc_reference_method` | `none` | – | heuristic | Separate watershed as agreement check; `none` disables | Partially validated | N/A |
 | `qc_count_difference_threshold` | 0.40 | fraction | heuristic | Count disagreement triggers review | Partially validated | N/A |
 | `qc_min_z_extent_ratio` | 0.65 | fraction | heuristic | Z-extent disagreement threshold | Partially validated | N/A |
+| `_HIGH_ANISOTROPY_RATIO` (segmentation.py, not YAML-configurable) | 5 | ratio (max/min voxel spacing) | heuristic | Raises `high_voxel_anisotropy` QC flag; relates to docs/SCIENTIFIC_SPEC.md's "Isotropic voxels" limitation | Not validated | Not tested |
 
 ### Quality
 
@@ -79,7 +80,94 @@ Source of truth: `src/analysis/config.py` (module `DEFAULTS`), validated by `val
 | `max_meshes_in_preview` | 20 | count | engineering | Preview mesh cap | N/A | N/A |
 | `stats.enabled` | `true` | – | engineering | Enable stats section | Partially validated | N/A |
 | `stats.features` | `[volume_um3, sphericity]` | – | heuristic | Which features are summarized/compared | Partially validated | N/A |
-| `stats.min_replicates_per_condition` | 3 | replicate | statistical | Bootstrap CI requires ≥3 size-evaluable replicates | Partially validated | N/A |
+| `stats.min_replicates_per_condition` | 3 | replicate | statistical | Minimum biological replicates per condition for `stats.py`'s LMM/OLS-fallback hypothesis test (docs/ALGORITHM_DECISIONS.md D11); a condition below this is silently excluded from that feature's test. Distinct from the bootstrap-CI threshold below (was previously mislabeled as gating the CI here). | Partially validated | N/A |
+| `_MIN_REPLICATES_FOR_BOOTSTRAP_CI` (summary.py, not YAML-configurable) | 3 | replicate | statistical/heuristic | Minimum biological replicates with size data before `condition_summary.csv`'s bootstrap 95% CI is computed at all; coincidentally equal to, but a separate literal from, `stats.min_replicates_per_condition` above | Partially validated | N/A |
+
+---
+
+## Cellpose 3D segmentation parameters
+
+Source of truth: `src/segmentation/cellpose.py::SegmentationConfig` and `src/segmentation/auto_config.py`. Exposed as UI controls in `src/ui/vtk_viewer/integrated_app.py`. This route is independent of the classical `src/analysis/segmentation.py` route catalogued above and was not previously catalogued here.
+
+| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
+|---|---|---|---|---|---|---|---|
+| `model_type` | `cpdino-vitb` | – | heuristic (engineer-defined default) | Selects which Cellpose v4 foundation model runs; alternatives `cpsam_v2`, `cpdino`, `cpsam` trade accuracy for speed. Not independently benchmarked for this pipeline's organoid images. | Not validated | Not tested | Yes (UI dropdown) |
+| `nuclei_diameter` | 30.0 | px (full resolution) | heuristic (engineer-defined default); can be auto-estimated per-image by `auto_config.estimate_diameter_from_stack` | Directly sets the scale Cellpose expects objects at; a wrong diameter is a common cause of over/under-segmentation. | Not validated on real data | Not tested | Yes (UI slider 5-200) |
+| `cell_diameter` | 50.0 | px (full resolution) | heuristic (engineer-defined default); can be auto-estimated (defaults to the nucleus estimate) | Same role as `nuclei_diameter` for the cell/cytoplasm pass. | Not validated on real data | Not tested | Yes (UI slider 5-300) |
+| `anisotropy` | 2.9 | dimensionless (Z step / XY pixel size) | heuristic fallback; preferentially read from OME/ImageJ TIFF metadata via `auto_config.auto_anisotropy` when available, never guessed from pixel content | Rescales the Z axis so Cellpose's 3D network sees near-isotropic voxels; a wrong value distorts 3D shape. | N/A — should be sourced from acquisition metadata for real data | Not tested | Yes |
+| `xy_spacing_um` | 0.414 | µm/pixel | heuristic (default matching one specific microscope/objective configuration used during development) | Only informational for physical-scale display; segmentation itself is pixel-scale. | Not validated | N/A | Yes |
+| `nuclei_flow_threshold` | 0.4 | dimensionless (Cellpose flow-error threshold) | conventional (Cellpose's own suggested operating range) | Higher values reject more flow-inconsistent masks (fewer, more confident objects). | Not validated on real data | Not tested | Yes (UI slider) |
+| `cell_flow_threshold` | 0.6 | dimensionless | conventional | Same role for the cell pass. | Not validated on real data | Not tested | Yes (UI slider) |
+| `nuclei_cellprob_threshold` | 0.0 | dimensionless (Cellpose logit threshold) | conventional (Cellpose default) | Foreground/background decision boundary in logit space. | Not validated | Not tested | Yes (UI slider -6..6) |
+| `cell_cellprob_threshold` | 0.0 | dimensionless | conventional (Cellpose default) | Same role for the cell pass. | Not validated | Not tested | Yes |
+| `flow3d_smooth` | 1.0 | dimensionless (Gaussian smoothing passed to Cellpose `flow3D_smooth`) | heuristic (engineer-defined default) | Smooths the estimated 3D flow field before instance construction; affects splitting of touching objects. | Not validated | Not tested | Yes (UI slider 0-5) |
+| `xy_downsample` | 1.0 | fraction (0,1] | engineering (performance/memory trade-off, not scientific) | `1.0` = full resolution; lower values speed up inference at the cost of XY precision, then upsample masks with nearest-neighbor. | N/A (engineering) | N/A | Yes |
+| `batch_size` | 8 | images/batch | engineering (GPU/MPS memory trade-off) | Does not change segmentation results, only throughput. | N/A (engineering) | N/A | Yes |
+| `_ESTIMATE_SLICES` (auto_config.py) | 6 | Z-slices | heuristic | Number of Z-slices sampled for the fast diameter pre-estimate; more slices cost more time for marginal stability gain. | Not validated | Not tested | No (internal constant) |
+| `_ESTIMATE_DOWNSAMPLE` (auto_config.py) | 0.5 | fraction | heuristic | Downsample factor for the fast 2D pre-segmentation pass used only to estimate diameter, not to segment. | Not validated | Not tested | No |
+| `_DIAMETER_QUANTILE` (auto_config.py) | 0.5 (median) | quantile | heuristic | Which quantile of detected pre-segmentation object diameters is reported as "the" diameter estimate; median chosen for robustness to background-noise blobs. | Not validated | Not tested | No |
+| plausible diameter filter (auto_config.py:142) | [5.0, 250.0] | px (downsample-corrected) | heuristic | Diameter pre-estimates outside this range are discarded as noise before taking the quantile. | Not validated | Not tested | No |
+| quick pre-segmentation call (auto_config.py:116-119) | `flow_threshold=0.0, cellprob_threshold=0.0, min_size=5, batch_size=8` | mixed | heuristic (Cellpose defaults chosen for the diameter pre-estimate only, not the final segmentation) | Only affects the diameter *estimate* fed as a suggestion; does not affect the final segmentation parameters, which the user can override. | N/A (estimate only) | N/A | No |
+
+**Model weight provenance:** `create_model` (`src/segmentation/cellpose.py:136`) loads Cellpose's pretrained weights for `model_type` by name via the `cellpose` package; the specific weight file/version is whatever the installed `cellpose==4.2.1.1` package resolves (pinned in `pixi.lock`), not independently hashed or pinned by this repository. See `pyproject.toml` for the pinned `cellpose` package version.
+
+---
+
+## Cell–nucleus pairing parameters (`analysis cells` route)
+
+Source of truth: `src/analysis/cellular.py`, exposed via the `cells` CLI subcommand in `src/analysis/cli.py`. This route is independent of `analyze-3d` (which uses maximum-overlap assignment, D1) and was not previously catalogued here. See `docs/ALGORITHM_DECISIONS.md` D10 for the bipartite-matching algorithm decision.
+
+| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
+|---|---|---|---|---|---|---|---|
+| `min_cell_volume_um3` | 200.0 | µm³ | heuristic | Cells smaller than this are dropped before pairing (`too_small_cell`). | Not validated on real data | Not tested | Yes (`--min-cell-volume-um3`) |
+| `min_nucleus_volume_um3` | 25.0 | µm³ | heuristic | Candidate nuclei smaller than this fail pairing (`too_small_nucleus`). | Not validated on real data | Not tested | Yes (`--min-nucleus-volume-um3`) |
+| `max_nc_ratio` | 1.0 | fraction (nucleus voxels / cell voxels) | heuristic | Candidate pairs with nucleus volume exceeding the cell volume are rejected (`nc_ratio_too_high`) as biologically implausible. | Not validated | Not tested | Yes (`--max-nc-ratio`) |
+| `min_nucleus_containment` | 0.5 | fraction (overlap voxels / nucleus voxels) | heuristic | A candidate nucleus must have at least this fraction of its own volume inside the cell to be paired (`nucleus_not_contained`). | Not validated | Not tested | Yes (`--min-nucleus-containment`) |
+| `require_nucleus` | `True` | boolean | engineering/QC policy choice | When true, an unpaired cell is dropped entirely rather than kept anucleate; `--allow-nucleusless` flips this. | N/A (policy choice, not a measurement threshold) | N/A | Yes (`--allow-nucleusless`) |
+| `neighbor_radius_um` | 25.0 | µm | heuristic | Physical radius for the cell-neighborhood density/nearest-neighbor query (`cell_neighborhood`); a cell whose search sphere would extend past the image border is flagged `neighborhood_complete=False` rather than silently biased. | Not validated | Not tested | Yes (`--neighbor-radius-um`) |
+
+---
+
+## Segmentation-validation matching parameter
+
+Source of truth: `src/analysis/evaluation.py::match_instances`. Stated as a narrative fact in `docs/METHODS.md` and `docs/SCIENTIFIC_SPEC.md` ("Hungarian assignment at IoU ≥ 0.5") but not previously entered in this catalog. See `docs/ALGORITHM_DECISIONS.md` D9.
+
+| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
+|---|---|---|---|---|---|---|---|
+| `iou_threshold` | 0.5 | fraction (IoU) | conventional (common minimum-overlap convention in instance-segmentation benchmarks; not independently calibrated for this pipeline) | A predicted instance below this IoU with its best-matching truth object counts as a false positive/negative rather than a weak match; directly sets precision/recall/Dice/panoptic-quality values. | Not validated (conventional value, not calibrated) | Not tested | Yes (function argument; not currently exposed as a CLI flag) |
+
+---
+
+## Data-contract spacing/position tolerances
+
+Source of truth: `src/analysis/io.py` (`ome_spacing`, `load_sample`) and `src/analysis/cli.py` (`_run_cells`, `_run_multilevel`). The same literal tolerance is repeated at `io.py:142,182,194,245` and `cli.py:91,99,156,163`.
+
+| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
+|---|---|---|---|---|---|---|---|
+| spacing/Z-position consistency tolerance | `rtol=0.01, atol=1e-5` | relative fraction / µm | heuristic (engineering judgment for "close enough to be the same acquisition metadata", not independently calibrated) | Governs whether the pipeline accepts or rejects (a) OME plane Z-positions as a uniform grid, (b) explicit manifest/CLI spacing against OME metadata, and (c) spacing agreement between paired label volumes in the `cells`/`analyze-3d` routes. Too loose silently accepts mismatched acquisitions; too tight rejects valid metadata rounding. | Not validated | Not tested | No (hardcoded) |
+
+---
+
+## Statistical testing parameters (`stats.py`)
+
+Source of truth: `src/analysis/stats.py`. See `docs/ALGORITHM_DECISIONS.md` D11 for the LMM/BH-FDR method decision.
+
+| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
+|---|---|---|---|---|---|---|---|
+| `LOG10_FEATURES` | `{"volume_um3"}` | – | heuristic (engineering judgment: volume is right-skewed/multiplicative, sphericity is not) | Determines which features are log10-transformed before the LMM/OLS fit; changes the scale on which the omnibus test and pairwise contrasts are computed for that feature. | Not validated | Not tested | No (hardcoded set) |
+| degenerate random-effect threshold | `1e-6` (× `fit.scale`) | dimensionless (variance ratio) | heuristic (numerical-stability engineering judgment) | Below this ratio the LMM's random-effect variance is treated as collapsed to zero and the fit falls back to clustered-SE OLS instead of trusting a numerically singular mixed model. | Not validated | Not tested | No (hardcoded) |
+
+---
+
+## Exploratory statistics/ML parameters (`src/ui/analysis.py`, Tutorials 2-5)
+
+Source of truth: `src/ui/analysis.py`. These functions are explicitly scoped as reusable exploratory tutorial workflows (module docstring: "centralises the analysis workflows that live in Tutorials 2-5"), not part of the core `analyze`/`analyze-3d` measurement pipeline, and their outputs (classifier accuracy, feature importance, shape category) are exploratory/descriptive, not validated biological classifications.
+
+| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
+|---|---|---|---|---|---|---|---|
+| Rod/Disk/Sphere gating percentiles | 75th / 25th percentile of the loaded dataset's prolate/oblate ratio | percentile of sample distribution | heuristic (descriptive-statistics split, not a biologically validated shape boundary) | Assigns a categorical shape label per object from a distribution-relative cutoff; the same object can receive a different label depending on what other objects are in the loaded dataset. | Not validated as a biological shape classification | Not tested | No |
+| Binary-classifier hyperparameters (Tutorial 4) | `RandomForestClassifier(n_estimators=100, max_depth=10)`; `XGBClassifier(n_estimators=100, max_depth=5, learning_rate=0.1)` | – | engineering default (not tuned or cross-validated for this pipeline's data) | Determines the reported "best model" accuracy and feature-importance ranking shown to the user; untuned defaults may understate achievable accuracy or misrank features. | Not validated | Not tested | No |
+| Cluster-classifier hyperparameters | `RandomForestClassifier(n_estimators=200, max_depth=15)` | – | engineering default (not tuned) | Determines cluster-membership prediction accuracy and the feature-importance ranking used to characterize clusters. | Not validated | Not tested | No |
 
 ---
 
@@ -94,3 +182,9 @@ Source of truth: `src/analysis/config.py` (module `DEFAULTS`), validated by `val
 - Multilevel config: `src/analysis/multilevel3d/config.py`
 - Classical config defaults + validation: `src/analysis/config.py`
 - CLI exposure: `src/analysis/cli.py`
+- Cellpose 3D segmentation: `src/segmentation/cellpose.py`, `src/segmentation/auto_config.py`, UI exposure in `src/ui/vtk_viewer/integrated_app.py`
+- Cell–nucleus pairing: `src/analysis/cellular.py`, CLI exposure in `src/analysis/cli.py::_run_cells`
+- Segmentation-validation matching: `src/analysis/evaluation.py`
+- Data-contract tolerances: `src/analysis/io.py`, `src/analysis/cli.py`
+- Statistical testing: `src/analysis/stats.py`
+- Exploratory tutorial statistics/ML: `src/ui/analysis.py`

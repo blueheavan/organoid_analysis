@@ -5,10 +5,19 @@ from dataclasses import dataclass
 from pathlib import Path
 import hashlib
 import re
+import subprocess
 import xml.etree.ElementTree as ET
 import numpy as np
 import pandas as pd
 import tifffile
+
+# Tolerance for treating two physical-spacing/position values (µm) as the same
+# acquisition metadata rather than a conflict to reject. Heuristic engineering
+# judgment ("close enough to be metadata rounding, not a real mismatch"), not
+# independently calibrated; see docs/PARAMETERS.md. Reused by cli.py for the
+# same spacing-agreement checks in the `cells`/`analyze-3d` CLI routes.
+SPACING_RTOL = 0.01
+SPACING_ATOL_UM = 1e-5
 
 REQUIRED = ["sample_id", "condition", "biological_replicate", "image_path"]
 PATH_FIELDS = ["image_path", "structure_path", "calcein_path", "pi_path", "probability_path", "labels_path", "truth_labels_path"]
@@ -139,7 +148,7 @@ def ome_spacing(xml: str | None, series_index: int = 0, time_index: int | None =
         indices = np.array(sorted(positions))
         zvalues = np.array([positions[k] for k in indices])
         steps = np.abs(np.diff(zvalues) / np.diff(indices))
-        if not np.allclose(steps, values[0], rtol=0.01, atol=1e-5):
+        if not np.allclose(steps, values[0], rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
             raise ValueError("OME plane positions disagree with a uniformly spaced Z grid; resample before analysis")
     return tuple(values)
 
@@ -179,7 +188,7 @@ def load_sample(row: dict, cfg: dict) -> Sample:
     spacing = tuple(float(x) for x in explicit) if all(explicit) else metadata_spacing
     if spacing is None:
         raise ValueError("Physical spacing is missing: provide OME metadata or all spacing_*_um columns")
-    if metadata_spacing and all(explicit) and not np.allclose(spacing, metadata_spacing, rtol=0.01, atol=1e-5):
+    if metadata_spacing and all(explicit) and not np.allclose(spacing, metadata_spacing, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
         raise ValueError(f"Manifest spacing {spacing} conflicts with OME spacing {metadata_spacing}; correct the source metadata or manifest")
     volumes = {}
     channel_sources = {}
@@ -191,7 +200,7 @@ def load_sample(row: dict, cfg: dict) -> Sample:
                 loaded[key] = read_tiff(*key)
             volume, other_spacing, _ = loaded[key]
             index = int(row.get(f"{role}_channel") or 0)
-            if other_spacing and not np.allclose(spacing, other_spacing, rtol=0.01, atol=1e-5):
+            if other_spacing and not np.allclose(spacing, other_spacing, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
                 raise ValueError(f"{role} TIFF spacing differs from the primary image")
         else:
             index = cfg["channels"].get(role)
@@ -242,7 +251,7 @@ def load_truth_labels(row: dict, expected_shape: tuple[int, int, int], spacing: 
         raise ValueError("truth_labels_path must be registered on the primary image ZYX grid")
     if not np.issubdtype(truth.dtype, np.integer) or (truth < 0).any():
         raise ValueError("truth_labels_path must contain nonnegative integer instance labels")
-    if annotation_spacing and not np.allclose(spacing, annotation_spacing, rtol=0.01, atol=1e-5):
+    if annotation_spacing and not np.allclose(spacing, annotation_spacing, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
         raise ValueError("truth_labels_path voxel spacing differs from the primary image")
     return truth
 
@@ -260,3 +269,23 @@ def sha256(path: str | Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def git_commit_hash(repo_root: Path | None = None) -> str | None:
+    """Best-effort current git commit hash, with a "-dirty" suffix when the
+    working tree has uncommitted changes. Returns None (never raises) when
+    not run from a git repository or git is unavailable -- provenance capture
+    must never fail a run.
+    """
+    root = repo_root or Path(__file__).resolve().parents[2]
+    try:
+        commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True,
+                                text=True, timeout=5, check=False)
+        if commit.returncode != 0 or not commit.stdout.strip():
+            return None
+        dirty = subprocess.run(["git", "status", "--porcelain"], cwd=root, capture_output=True,
+                               text=True, timeout=5, check=False)
+        suffix = "-dirty" if dirty.returncode == 0 and dirty.stdout.strip() else ""
+        return commit.stdout.strip() + suffix
+    except (OSError, subprocess.SubprocessError):
+        return None

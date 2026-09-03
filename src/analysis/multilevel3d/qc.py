@@ -6,6 +6,18 @@ import pandas as pd
 
 from .config import Multilevel3DConfig
 
+# Phi^-1(0.75), the 0.75-quantile of the standard normal distribution -- the
+# z-form of the same MAD-to-sigma consistency-constant concept documented in
+# Rousseeuw & Croux (1993), J. Am. Stat. Assoc. 88(424):1273-1283,
+# https://doi.org/10.1080/01621459.1993.10476408. See docs/ALGORITHM_DECISIONS.md
+# D5. `analysis/features.py` and `analysis/viability.py` use the direct form
+# (... x 1.4826) of the same concept; 0.67448975 (8-decimal Phi^-1(0.75)) is
+# NOT bit-identical to 1/1.4826 (5-sig-fig rounding) -- they differ by
+# ~1.5ppm, immaterial in practice, but kept as this module's own literal
+# rather than rewritten to `1 / MAD_TO_SIGMA` to avoid a floating-point
+# change to already-validated QC flag output.
+NORMAL_MAD_CONSISTENCY_Z = 0.67448975
+
 
 def _volume_outliers(volumes: pd.Series, threshold: float) -> pd.Series:
     values = volumes.to_numpy(float)
@@ -16,7 +28,7 @@ def _volume_outliers(volumes: pd.Series, threshold: float) -> pd.Series:
         # containing a clear extreme value.  With no usable MAD scale, retain
         # the robust median centre and flag finite values that differ from it.
         return pd.Series(np.isfinite(values) & ~np.isclose(values, median), index=volumes.index)
-    robust_z = 0.67448975 * (values - median) / mad
+    robust_z = NORMAL_MAD_CONSISTENCY_Z * (values - median) / mad
     return pd.Series(np.abs(robust_z) > threshold, index=volumes.index)
 
 

@@ -7,6 +7,16 @@ from scipy.optimize import linear_sum_assignment
 
 
 def match_instances(truth: np.ndarray, predicted: np.ndarray, iou_threshold: float = .5) -> tuple[pd.DataFrame, dict]:
+    """One-to-one instance matching by Hungarian (Kuhn-Munkres) assignment.
+
+    Kuhn, H. W. (1955). The Hungarian method for the assignment problem.
+    Naval Research Logistics Quarterly, 2(1-2), 83-97.
+    https://doi.org/10.1002/nav.3800020109. See docs/ALGORITHM_DECISIONS.md D9.
+
+    ``iou_threshold`` (default 0.5) is a conventional instance-segmentation
+    matching threshold, not independently calibrated for this pipeline; see
+    docs/PARAMETERS.md ("Segmentation-validation matching parameter").
+    """
     if truth.shape != predicted.shape or truth.ndim != 3:
         raise ValueError("Ground truth and prediction must be matching 3D instance masks")
     for image in [truth, predicted]:

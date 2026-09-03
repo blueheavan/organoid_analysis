@@ -10,7 +10,8 @@ def control_rows():
     rows=[]
     for name,c,p in [('live',1050.,50.),('dead',50.,1050.)]:
         for rep in ['R1','R2']:
-            rows.append({'sample_id':f'{name}_{rep}','batch_id':'B1','control':name,'biological_replicate':rep,
+            rows.append({'sample_id':f'{name}_{rep}','batch_id':'B1','control':name,
+                         'condition':f'{name.capitalize()}_control','biological_replicate':rep,
                          'unit_id':f'{name}_{rep}','morphology_eligible':True,'viability_measurement_eligible':True,
                          'viability_measurement_flags':'','calcein_mean_bg_corrected':c,'pi_mean_bg_corrected':p,
                          'calcein_background_noise_mad':5.,'pi_background_noise_mad':5.})
@@ -52,6 +53,24 @@ def test_multiple_control_images_from_one_biological_replicate_are_not_independe
     result=calibrate(data,['B1'],cfg).iloc[0]
     assert result.status=='unavailable'
     assert result.live_control_replicates==1
+
+
+def test_controls_spanning_multiple_conditions_are_rejected():
+    """calibrate() must not pool two conditions' same-labeled replicates.
+
+    biological_replicate labels (e.g. "R1") are only unique within a
+    condition (see stats.py); a batch whose live (or dead) controls span more
+    than one condition must be rejected rather than silently pooled by
+    (control, biological_replicate) alone. Regression test for the P1 finding
+    from the scientific-software-development-validation audit.
+    """
+    data = control_rows()
+    data.loc[(data.control == 'live') & (data.biological_replicate == 'R1'), 'condition'] = 'LineB_live_control'
+    cfg = load_config()['viability']
+    cfg['mode'] = 'controls'
+    result = calibrate(data, ['B1'], cfg).iloc[0]
+    assert result.status == 'unavailable'
+    assert result.reason == 'controls_span_multiple_conditions'
 
 
 def test_badly_separated_control_channels_fail_calibration():

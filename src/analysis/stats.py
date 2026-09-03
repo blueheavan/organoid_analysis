@@ -19,34 +19,80 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import scipy.stats as scipy_stats
 import statsmodels.formula.api as smf
 from statsmodels.stats.multitest import multipletests
 
+# Features log10-transformed before fitting: volume is right-skewed on a
+# multiplicative scale, which the LMM/OLS normal-residual assumption does not
+# fit well untransformed. sphericity is bounded near [0,1] and is left as-is.
+# Heuristic (engineering judgment); see docs/PARAMETERS.md and
+# docs/ALGORITHM_DECISIONS.md D11.
 LOG10_FEATURES = {"volume_um3"}
+
+# Below this fraction of the residual scale, the LMM's random-intercept
+# variance is treated as numerically collapsed to zero rather than trusted;
+# heuristic numerical-stability threshold, not independently validated. See
+# docs/PARAMETERS.md.
+_DEGENERATE_RANDOM_EFFECT_VARIANCE_RATIO = 1e-6
 
 
 def fit_model(d: pd.DataFrame, feature: str, group_col: str):
     """LMM with a replicate random intercept; fall back to OLS with
     replicate-clustered SEs when the random-effects fit is singular (variance
-    collapses to ~0) or fails to converge."""
+    collapses to ~0) or fails to converge.
+
+    See docs/ALGORITHM_DECISIONS.md D11 for the method rationale and citation
+    (Benjamini & Hochberg, 1995, J. R. Stat. Soc. B 57(1):289-300, applied to
+    the pairwise contrasts in ``condition_pairwise_tests`` below).
+
+    The OLS-fallback branch uses ``use_t=True``, which statsmodels resolves to
+    a cluster-robust t(G-1) reference (G = number of replicate clusters) --
+    the standard small-cluster correction (Cameron & Miller, 2015, J. Human
+    Resources 50(2):317-372) instead of the anti-conservative asymptotic-normal
+    default. The LMM branch has no equivalent built-in correction (statsmodels'
+    ``MixedLM`` always reports z/chi2-referenced p-values); ``_pairwise_contrasts``
+    below applies the same t(G-1) reference manually to that branch's contrasts.
+    The LMM branch's *omnibus* Wald test (``condition_pairwise_tests``'s
+    ``omnibus_p``) is NOT corrected this way and remains asymptotic -- treat it
+    as a rough screening result, not a confirmatory one; the small-sample-
+    corrected pairwise contrasts are the primary output.
+    """
     formula = f"{feature} ~ condition"
     for method in ("lbfgs", "cg"):
         try:
             fit = smf.mixedlm(formula, d, groups=d[group_col]).fit(reml=True, method=method)
             re_var = float(np.diag(fit.cov_re).max()) if fit.cov_re.size else 0.0
-            degenerate = re_var < 1e-6 * float(fit.scale)
+            degenerate = re_var < _DEGENERATE_RANDOM_EFFECT_VARIANCE_RATIO * float(fit.scale)
             if fit.converged and np.isfinite(fit.llf) and not degenerate:
                 return fit, f"LMM({method})"
         except (np.linalg.LinAlgError, ValueError):
             continue
-    fit = smf.ols(formula, d).fit(cov_type="cluster", cov_kwds={"groups": d[group_col]})
+    fit = smf.ols(formula, d).fit(cov_type="cluster", cov_kwds={"groups": d[group_col]}, use_t=True)
     return fit, "OLS(clustered SE)"
 
 
-def _pairwise_contrasts(fit, conditions: list[str]) -> tuple[list[str], list[float], list[float]]:
+def _pairwise_contrasts(fit, conditions: list[str], n_clusters: int) -> tuple[list[str], list[float], list[float], list[int]]:
+    """Pairwise condition contrasts with a small-cluster-corrected p-value.
+
+    ``fit.t_test(...)`` gives a correctly t(G-1)-referenced p-value already
+    for the OLS-fallback branch (``use_t=True`` in ``fit_model``), but always
+    uses an asymptotic z reference for the LMM branch (statsmodels has no
+    Satterthwaite/Kenward-Roger correction for ``MixedLM``). Since the
+    ``condition`` fixed effect varies only *between* replicate clusters, a
+    t(G-1) reference (G = number of replicate clusters; the same convention
+    statsmodels' own cluster-robust ``use_t=True`` resolves to, verified
+    empirically) is a standard, defensible small-sample correction for the
+    LMM branch too -- not full Satterthwaite/Kenward-Roger, but no worse than
+    what the OLS-fallback branch already does. See docs/ALGORITHM_DECISIONS.md
+    D11 and docs/PARAMETERS.md for the residual limitation this does not
+    address (the omnibus test, and non-Satterthwaite df for LMM).
+    """
     fe_names = list(fit.fe_params.index) if hasattr(fit, "fe_params") else list(fit.params.index)
+    is_lmm = hasattr(fit, "cov_re")
+    df_denom = max(n_clusters - 1, 1)
     reference = conditions[0]
-    pairs, estimates, p_values = [], [], []
+    pairs, estimates, p_values, dof = [], [], [], []
     for i in range(len(conditions)):
         for j in range(i + 1, len(conditions)):
             ci, cj = conditions[i], conditions[j]
@@ -56,10 +102,16 @@ def _pairwise_contrasts(fit, conditions: list[str]) -> tuple[list[str], list[flo
             if ci != reference:
                 coefficients[fe_names.index(f"condition[T.{ci}]")] = -1
             test = fit.t_test(coefficients.reshape(1, -1))
+            if is_lmm:
+                t_stat = float(np.ravel(test.tvalue)[0])
+                p_value = float(2 * scipy_stats.t.sf(abs(t_stat), df_denom))
+            else:
+                p_value = float(np.atleast_1d(test.pvalue)[0])
             pairs.append(f"{cj} vs {ci}")
             estimates.append(float(np.atleast_1d(test.effect)[0]))
-            p_values.append(float(np.atleast_1d(test.pvalue)[0]))
-    return pairs, estimates, p_values
+            p_values.append(p_value)
+            dof.append(df_denom)
+    return pairs, estimates, p_values, dof
 
 
 def condition_pairwise_tests(
@@ -95,17 +147,21 @@ def condition_pairwise_tests(
         d["condition"] = pd.Categorical(d.condition, categories=conditions)
 
         fit, model_used = fit_model(d, feature, "_replicate_key")
+        n_clusters = int(d["_replicate_key"].nunique())
         wald = fit.wald_test_terms(skip_single=False)
         condition_row = [i for i, name in enumerate(wald.table.index) if "condition" in str(name)][0]
         omnibus_p = float(wald.table.iloc[condition_row]["pvalue"])
 
-        pairs, estimates, p_raw = _pairwise_contrasts(fit, conditions)
+        pairs, estimates, p_raw, dof = _pairwise_contrasts(fit, conditions, n_clusters)
         rejected, p_adj, _, _ = multipletests(p_raw, method="fdr_bh")
         pairwise_frames.append(pd.DataFrame({
             "feature": feature, "contrast": pairs, "estimate": estimates,
-            "p_raw": p_raw, "padj": p_adj, "significant_fdr05": rejected,
+            "p_raw": p_raw, "padj": p_adj, "significant_fdr05": rejected, "df_denom": dof,
         }))
-        omnibus[feature] = {"omnibus_p": omnibus_p, "model": model_used, "n_conditions": len(conditions)}
+        # omnibus_p is NOT small-sample corrected for the LMM branch (see
+        # fit_model's docstring); pairwise p_raw/padj above are, for both branches.
+        omnibus[feature] = {"omnibus_p": omnibus_p, "model": model_used, "n_conditions": len(conditions),
+                            "omnibus_p_small_sample_corrected": not model_used.startswith("LMM")}
 
     pairwise = (pd.concat(pairwise_frames, ignore_index=True) if pairwise_frames
                 else pd.DataFrame(columns=["feature", "contrast", "estimate", "p_raw", "padj", "significant_fdr05"]))

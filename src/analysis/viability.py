@@ -4,6 +4,15 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+# Consistency constant rescaling MAD into a sigma-equivalent robust scale
+# estimator under a Gaussian assumption (Rousseeuw & Croux, 1993, J. Am. Stat.
+# Assoc. 88(424):1273-1283, https://doi.org/10.1080/01621459.1993.10476408).
+# See docs/ALGORITHM_DECISIONS.md D5. `multilevel3d/qc.py` uses the reciprocal
+# form (0.67448975 x ...) of the same statistical concept, at a different
+# rounding precision -- 0.67448975 is Phi^-1(0.75) to 8 decimals, not bit-
+# identical to 1/1.4826 (they differ by ~1.5ppm, immaterial in practice).
+MAD_TO_SIGMA = 1.4826
+
 STATES = ["viable_like", "mixed_signal", "compromised_like", "indeterminate"]
 STATE_COLORS = {"viable_like": "#159D82", "mixed_signal": "#E8AE3B",
                 "compromised_like": "#C44E52", "indeterminate": "#9098A3"}
@@ -14,7 +23,7 @@ CALIBRATION_COLUMNS = ["batch_id", "status", "reason", "live_control_replicates"
 
 def _mad(values) -> float:
     values = np.asarray(values, dtype=float)
-    return float(1.4826 * np.median(np.abs(values - np.median(values))))
+    return float(MAD_TO_SIGMA * np.median(np.abs(values - np.median(values))))
 
 
 def calibrate(objects: pd.DataFrame, batch_ids: list[str], cfg: dict) -> pd.DataFrame:
@@ -31,6 +40,18 @@ def calibrate(objects: pd.DataFrame, batch_ids: list[str], cfg: dict) -> pd.Data
                         objects.morphology_eligible.astype(bool) & objects.viability_measurement_eligible.astype(bool)]
         if valid.empty:
             row["reason"] = "no_QC_eligible_controls"
+            rows.append(row)
+            continue
+        # A biological_replicate label is only unique *within* a condition (see
+        # stats.py's docstring): if this batch's live or dead controls span more
+        # than one condition, grouping by (control, biological_replicate) alone
+        # below could silently pool unrelated replicates that happen to share a
+        # label (e.g. two condition arms each with their own "R1" live control).
+        # Reject rather than guess which grouping was intended.
+        ambiguous_controls = [name for name in ("live", "dead")
+                              if valid.loc[valid.control == name, "condition"].nunique() > 1]
+        if ambiguous_controls:
+            row["reason"] = "controls_span_multiple_conditions"
             rows.append(row)
             continue
         fields = ["calcein_mean_bg_corrected", "pi_mean_bg_corrected",

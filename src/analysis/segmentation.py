@@ -10,6 +10,12 @@ from skimage.segmentation import watershed
 
 from .labels import compact_instance_labels
 
+# Ratio of max/min voxel spacing above which the `high_voxel_anisotropy` QC
+# flag is raised (docs/SCIENTIFIC_SPEC.md's own "Isotropic voxels" limitation:
+# highly anisotropic data may bias measurements). Heuristic (engineer-defined),
+# not independently calibrated; see docs/PARAMETERS.md.
+_HIGH_ANISOTROPY_RATIO = 5
+
 
 @dataclass
 class SegmentationResult:
@@ -59,6 +65,9 @@ def _drop_small(labels: np.ndarray, min_voxels: int) -> tuple[np.ndarray, int]:
 
 
 def watershed_instances(mask: np.ndarray, spacing: tuple, cfg: dict) -> np.ndarray:
+    # Distance-transform watershed: Vincent & Soille (1991), IEEE PAMI
+    # 13(6):583-598, https://doi.org/10.1109/34.87344. See
+    # docs/ALGORITHM_DECISIONS.md D8.
     components, count = ndi.label(mask)
     if not count or not cfg["split_touching"]:
         return components.astype(np.uint32)
@@ -217,6 +226,9 @@ def segment(structure: np.ndarray, spacing: tuple, cfg: dict,
                 mask = np.zeros(image.shape, bool)
                 flags.append("uniform_structure_image")
             else:
+                # Otsu, N. (1979). IEEE Trans. Systems, Man, and Cybernetics
+                # 9(1):62-66, https://doi.org/10.1109/TSMC.1979.4310076. See
+                # docs/ALGORITHM_DECISIONS.md D8.
                 threshold = float(threshold_otsu(image)) if cfg["threshold"] == "otsu" else float(cfg["threshold"])
                 mask = image > threshold
         if cfg["closing_radius_um"] > 0 and mask.any():
@@ -239,6 +251,6 @@ def segment(structure: np.ndarray, spacing: tuple, cfg: dict,
         flags.append("excess_foreground_review_segmentation")
     if not labels.any():
         flags.append("no_organoids_detected")
-    if max(spacing) / min(spacing) > 5:
+    if max(spacing) / min(spacing) > _HIGH_ANISOTROPY_RATIO:
         flags.append("high_voxel_anisotropy")
     return SegmentationResult(labels, threshold, fraction, removed, flags, mapping)

@@ -120,6 +120,15 @@ def validate_demo(out: Path) -> dict:
     validation.to_csv(out / "synthetic_validation_per_object.csv",index=False)
     detections = pd.DataFrame(detection_rows)
     detections.to_csv(out / "synthetic_detection_per_image.csv",index=False)
+    # Disaggregate state agreement by whether the sample's own controls fed
+    # its batch's calibration endpoints (live/dead) or were genuinely held
+    # out (treatment conditions) -- the pooled figure alone mixes the two and
+    # can look better than the held-out (treatment) agreement really is.
+    sample_control = measured[["sample_id", "control"]].drop_duplicates().set_index("sample_id")["control"]
+    matched = validation[validation.matched.astype(bool)]
+    is_control_sample = matched.sample_id.map(sample_control).isin(["live", "dead"])
+    treatment_agreement = matched.loc[~is_control_sample, "state_agrees"]
+    control_agreement = matched.loc[is_control_sample, "state_agrees"]
     summary = {"data_origin":"synthetic_phantom", "limitation":"Software verification on simple phantoms; not real-image accuracy or independent classifier validation. Control scaling and simulation intentionally share simple marker assumptions.",
                "expected_objects":len(truth),"detected_objects":len(measured),"matched_objects":int(validation.matched.sum()),
                "instance_matching":"Hungarian assignment at IoU >= 0.5",
@@ -128,7 +137,9 @@ def validate_demo(out: Path) -> dict:
                "median_dice":float(validation.dice.median()),"minimum_dice":float(validation.dice.min()),
                "median_absolute_relative_volume_error":float(validation.relative_volume_error.median()),
                "maximum_absolute_relative_volume_error":float(validation.relative_volume_error.max()),
-               "state_agreement_fraction_matched_objects":float(validation.state_agrees.mean())}
+               "state_agreement_fraction_matched_objects":float(validation.state_agrees.mean()),
+               "state_agreement_fraction_treatment_conditions":float(treatment_agreement.mean()) if len(treatment_agreement) else float("nan"),
+               "state_agreement_fraction_live_dead_control_conditions":float(control_agreement.mean()) if len(control_agreement) else float("nan")}
     (out / "synthetic_validation.json").write_text(json.dumps(summary,indent=2),encoding="utf-8")
     return summary
 

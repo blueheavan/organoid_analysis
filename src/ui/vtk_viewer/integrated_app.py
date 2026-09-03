@@ -545,13 +545,18 @@ def render_sidebar() -> SegmentationConfig:
             return float(value)
         return fallback
 
+    # Single source of truth for every fallback below, so a future edit to
+    # SegmentationConfig's dataclass defaults cannot silently desynchronize
+    # from what this sidebar displays/uses (docs/PARAMETERS.md, "Cellpose 3D
+    # segmentation parameters").
+    backend_defaults = SegmentationConfig()
+
     with st.sidebar:
         st.header("Segmentation settings")
-        default_model = SegmentationConfig().model_type
         model_type = st.selectbox(
             "Model",
             list(model_labels),
-            index=list(model_labels).index(default_model),
+            index=list(model_labels).index(backend_defaults.model_type),
             format_func=lambda m: model_labels[m],
         )
         if suggestions:
@@ -567,31 +572,31 @@ def render_sidebar() -> SegmentationConfig:
         return SegmentationConfig(
             model_type=model_type,
             nuclei_diameter=st.number_input(
-                "Nuclei diameter (px)", 5.0, 200.0, _default_for("nuclei_diameter", 30.0),
+                "Nuclei diameter (px)", 5.0, 200.0, _default_for("nuclei_diameter", backend_defaults.nuclei_diameter),
                 help="Set manually, or press 'Auto-detect' after uploading to "
                 "estimate it from the image.",
             ),
             cell_diameter=st.number_input(
-                "Cell diameter (px)", 5.0, 300.0, _default_for("cell_diameter", 50.0)
+                "Cell diameter (px)", 5.0, 300.0, _default_for("cell_diameter", backend_defaults.cell_diameter)
             ),
             anisotropy=st.number_input(
-                "Z / XY anisotropy", 0.1, 20.0, _default_for("anisotropy", 2.9),
+                "Z / XY anisotropy", 0.1, 20.0, _default_for("anisotropy", backend_defaults.anisotropy),
                 help="Auto-filled from TIFF metadata when available; otherwise "
                 "set from your microscope Z step / XY pixel size.",
             ),
             xy_spacing_um=st.number_input(
-                "XY pixel size (µm)", 0.001, 100.0, 0.414,
+                "XY pixel size (µm)", 0.001, 100.0, backend_defaults.xy_spacing_um,
                 help="Physical XY voxel spacing. Set to your microscope's pixel "
                 "size so volumes/areas are in real units.",
             ),
-            nuclei_flow_threshold=st.slider("Nuclei flow threshold", 0.0, 1.0, 0.4),
-            cell_flow_threshold=st.slider("Cell flow threshold", 0.0, 1.0, 0.6),
+            nuclei_flow_threshold=st.slider("Nuclei flow threshold", 0.0, 1.0, backend_defaults.nuclei_flow_threshold),
+            cell_flow_threshold=st.slider("Cell flow threshold", 0.0, 1.0, backend_defaults.cell_flow_threshold),
             nuclei_cellprob_threshold=st.slider(
-                "Nuclei cellprob threshold", -6.0, 6.0, 0.0
+                "Nuclei cellprob threshold", -6.0, 6.0, backend_defaults.nuclei_cellprob_threshold
             ),
-            cell_cellprob_threshold=st.slider("Cell cellprob threshold", -6.0, 6.0, 0.0),
-            flow3d_smooth=st.slider("3D flow smoothing", 0.0, 5.0, 1.0),
-            batch_size=st.select_slider("Batch size", options=[1, 2, 4, 8, 16], value=8),
+            cell_cellprob_threshold=st.slider("Cell cellprob threshold", -6.0, 6.0, backend_defaults.cell_cellprob_threshold),
+            flow3d_smooth=st.slider("3D flow smoothing", 0.0, 5.0, backend_defaults.flow3d_smooth),
+            batch_size=st.select_slider("Batch size", options=[1, 2, 4, 8, 16], value=backend_defaults.batch_size),
             xy_downsample={
                 "Full resolution": 1.0,
                 "1/2 resolution": 0.5,

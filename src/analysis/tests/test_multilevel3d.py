@@ -146,6 +146,19 @@ def test_zero_mad_still_flags_a_clear_volume_outlier():
     assert outliers.tolist() == [False, False, False, True]
 
 
+def test_volume_outliers_nonzero_mad_matches_hand_computed_robust_z():
+    """Regression test for a P3 audit finding: the primary (nonzero-MAD)
+    numeric path previously had no independent-oracle test, only the
+    mad==0 special case above."""
+    values = pd.Series([10.0, 12.0, 11.0, 13.0, 100.0])
+    median, mad = 12.0, 1.0  # median(|10-12|,|12-12|,|11-12|,|13-12|,|100-12|) = median(2,0,1,1,88) = 1
+    expected_robust_z = 0.67448975 * (values - median) / mad
+    outliers = _volume_outliers(values, threshold=3.5)
+    assert outliers.tolist() == (expected_robust_z.abs() > 3.5).tolist()
+    assert outliers.tolist() == [False, False, False, False, True]
+    assert expected_robust_z.iloc[-1] == pytest.approx(0.67448975 * 88.0)
+
+
 def test_spatial_depth_map_is_cached_per_organoid():
     labels = np.zeros((7, 7, 7), dtype=np.uint32)
     labels[1:6, 1:6, 1:6] = 1
@@ -202,3 +215,12 @@ def test_parquet_export_summary_and_cli_round_trip(tmp_path):
                  "--nucleus-labels", str(nucleus_path), "--sample-id", "synthetic", "--out", str(cli_out)]) == 0
     assert (cli_out / "features" / "organoid_features.parquet").exists()
     assert (cli_out / "masks" / "cell_labels.ome.tif").exists()
+
+    # Regression check for the P2 audit finding: the analyze-3d CLI route
+    # previously exported zero code/environment provenance, unlike the
+    # classical analyze() pipeline.
+    cli_summary = json.loads((cli_out / "summary" / "analysis_summary.json").read_text())
+    provenance = cli_summary["provenance"]
+    assert provenance["source_code_sha256"]  # nonempty: multilevel3d/*.py hashes present
+    assert provenance["packages"]["numpy"]
+    assert "python" in provenance and "platform" in provenance

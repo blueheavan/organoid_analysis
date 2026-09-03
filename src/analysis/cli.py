@@ -81,14 +81,14 @@ def main(argv=None) -> int:
 
 def _run_cells(arguments) -> dict:
     from .cellular import analyze_cells
-    from .io import read_tiff, write_labels
+    from .io import SPACING_ATOL_UM, SPACING_RTOL, read_tiff, write_labels
 
     cell_stack, cell_spacing, _ = read_tiff(arguments.cell_labels, arguments.axes)
     nucleus_stack, nucleus_spacing, _ = read_tiff(arguments.nucleus_labels, arguments.axes)
     if cell_stack.shape[0] != 1 or nucleus_stack.shape[0] != 1:
         raise ValueError("Cell and nucleus label TIFFs must each contain exactly one channel")
     metadata_spacings = [value for value in (cell_spacing, nucleus_spacing) if value is not None]
-    if len(metadata_spacings) == 2 and not np.allclose(metadata_spacings[0], metadata_spacings[1], rtol=0.01, atol=1e-5):
+    if len(metadata_spacings) == 2 and not np.allclose(metadata_spacings[0], metadata_spacings[1], rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
         raise ValueError("Cell and nucleus OME voxel spacings differ")
 
     explicit = (arguments.spacing_z_um, arguments.spacing_y_um, arguments.spacing_x_um)
@@ -96,7 +96,7 @@ def _run_cells(arguments) -> dict:
         raise ValueError("Provide all three spacing values or omit all three")
     if all(value is not None for value in explicit):
         spacing = explicit
-        if metadata_spacings and not np.allclose(spacing, metadata_spacings[0], rtol=0.01, atol=1e-5):
+        if metadata_spacings and not np.allclose(spacing, metadata_spacings[0], rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
             raise ValueError("Explicit spacing conflicts with OME metadata")
     elif metadata_spacings:
         spacing = metadata_spacings[0]
@@ -135,9 +135,12 @@ def _run_cells(arguments) -> dict:
 
 def _run_multilevel(arguments) -> dict:
     """CLI adapter: load registered labels/metadata then invoke pure analysis."""
+    import importlib.metadata
+    import platform
+
     from .multilevel3d import Multilevel3DConfig, analyze_multilevel_3d
     from .multilevel3d.export import export_results
-    from .io import read_tiff
+    from .io import SPACING_ATOL_UM, SPACING_RTOL, git_commit_hash, read_tiff, sha256
 
     def read_single(path: str, role: str) -> tuple[np.ndarray, tuple | None]:
         stack, spacing, _ = read_tiff(path, arguments.axes)
@@ -153,14 +156,14 @@ def _run_multilevel(arguments) -> dict:
     if arguments.nucleus_intensity:
         intensity, intensity_spacing = read_single(arguments.nucleus_intensity, "Nucleus intensity")
     metadata_spacings = [item for item in (organoid_spacing, cell_spacing, nucleus_spacing, intensity_spacing) if item is not None]
-    if len(metadata_spacings) > 1 and any(not np.allclose(metadata_spacings[0], item, rtol=0.01, atol=1e-5) for item in metadata_spacings[1:]):
+    if len(metadata_spacings) > 1 and any(not np.allclose(metadata_spacings[0], item, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM) for item in metadata_spacings[1:]):
         raise ValueError("Input TIFF voxel spacings differ; register/resample before multilevel analysis")
     explicit = (arguments.spacing_z_um, arguments.spacing_y_um, arguments.spacing_x_um)
     if any(value is not None for value in explicit) and not all(value is not None for value in explicit):
         raise ValueError("Provide all three spacing values or omit all three")
     if all(value is not None for value in explicit):
         spacing = explicit
-        if metadata_spacings and not np.allclose(spacing, metadata_spacings[0], rtol=0.01, atol=1e-5):
+        if metadata_spacings and not np.allclose(spacing, metadata_spacings[0], rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
             raise ValueError("Explicit spacing conflicts with OME metadata")
     elif metadata_spacings:
         spacing = metadata_spacings[0]
@@ -177,6 +180,19 @@ def _run_multilevel(arguments) -> dict:
                 ("sample_id", "well_id", "field_id", "batch_id", "condition", "treatment", "dose", "timepoint")}
     result = analyze_multilevel_3d(organoids, cells, nuclei, spacing, config=config, metadata=metadata,
                                    nucleus_intensity=intensity)
+    # Provenance capture belongs at this orchestration layer, not inside
+    # analyze_multilevel_3d (deliberately headless/pure per multilevel3d's
+    # module docstring). Mirrors the classical analyze() pipeline's provenance.
+    multilevel3d_dir = Path(__file__).parent / "multilevel3d"
+    result.summary["provenance"] = {
+        "pipeline_version": __version__,
+        "git_commit": git_commit_hash(),
+        "python": sys.version,
+        "platform": platform.platform(),
+        "source_code_sha256": {p.name: sha256(p) for p in sorted(multilevel3d_dir.glob("*.py"))},
+        "packages": {package: importlib.metadata.version(package) for package in
+                    ["numpy", "scipy", "scikit-image", "tifffile", "pandas"]},
+    }
     output_paths = export_results(arguments.out, organoids=result.organoid_features, cells=result.cell_features,
                                   nuclei=result.nucleus_features, edges=result.cell_topology_edges,
                                   qc_flags=result.qc_flags, summary=result.summary,

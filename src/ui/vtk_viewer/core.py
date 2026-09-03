@@ -714,6 +714,13 @@ _VIEWER_JS = r"""
     for(const p of color) ctf.addRGBPoint(lo+p[0]*span, p[1], p[2], p[3]);
     return ctf;
   }
+  // Fixed fallback opacity ramp, used only when the caller has not supplied
+  // percentile-anchored `opacity_pts` (see Python-side
+  // `_opacity_control_points` in this module, which is the normal path and
+  // is documented there). This heuristic, display-only default is not tied
+  // to any channel's actual value distribution; it does not affect any
+  // quantitative measurement, only what intensity range renders as visible
+  // "signal" in the 3D preview.
   function makeOp(peak){
     const pf = vtkPiecewiseFunction.newInstance();
     pf.addPoint(0.0, 0.0);

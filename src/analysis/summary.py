@@ -8,6 +8,11 @@ from .viability import STATES
 MORPHOLOGY = ["volume_um3", "surface_area_um2", "sphericity", "equivalent_diameter_um"]
 META = ["condition", "biological_replicate", "unit_id", "batch_id", "control"]
 
+# Minimum biological replicates with size data required before a bootstrap CI
+# is computed. Coincides with (but is a separate, non-configurable literal
+# from) stats.min_replicates_per_condition -- see docs/PARAMETERS.md.
+_MIN_REPLICATES_FOR_BOOTSTRAP_CI = 3
+
 
 def _describe(objects: pd.DataFrame) -> dict:
     eligible = objects[objects.morphology_eligible.astype(bool)]
@@ -66,7 +71,7 @@ def make_summaries(objects: pd.DataFrame, samples: pd.DataFrame, cfg: dict) -> t
             values = available[f"median_of_unit_medians_{metric}"].dropna().to_numpy(float)
             row[f"mean_replicate_median_{metric}"] = float(values.mean()) if len(values) else np.nan
             low, high = np.nan, np.nan
-            if len(values) >= 3:
+            if len(values) >= _MIN_REPLICATES_FOR_BOOTSTRAP_CI:
                 bootstrap = rng.choice(values, (cfg["bootstrap_iterations"], len(values)), replace=True).mean(axis=1)
                 low, high = np.quantile(bootstrap, [.025, .975])
             row[f"ci95_low_{metric}"] = low

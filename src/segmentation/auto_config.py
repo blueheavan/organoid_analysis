@@ -36,6 +36,24 @@ _ESTIMATE_DOWNSAMPLE = 0.5
 # median, which is more robust to background noise objects.
 _DIAMETER_QUANTILE = 0.5
 
+# Cellpose call parameters for the fast diameter *pre-estimate* only (never
+# for the final segmentation, whose parameters the user controls directly via
+# SegmentationConfig). flow_threshold=0.0/cellprob_threshold=0.0 are
+# permissive Cellpose-conventional defaults chosen to avoid under-detecting
+# candidate objects at this coarse pre-pass; min_size=5 (px) discards
+# single-pixel noise detections; batch_size=8 is an engineering
+# throughput/memory choice with no scientific effect. See docs/PARAMETERS.md.
+_PRESEGMENTATION_FLOW_THRESHOLD = 0.0
+_PRESEGMENTATION_CELLPROB_THRESHOLD = 0.0
+_PRESEGMENTATION_MIN_SIZE_PX = 5
+_PRESEGMENTATION_BATCH_SIZE = 8
+
+# Plausible full-resolution diameter range (px) for a nucleus; pre-estimate
+# diameters outside this range are treated as noise blobs and discarded
+# before taking the quantile. Heuristic, not independently calibrated for a
+# specific instrument. See docs/PARAMETERS.md.
+_PLAUSIBLE_DIAMETER_PX_RANGE = (5.0, 250.0)
+
 
 def auto_anisotropy(path: str | Path) -> float | None:
     """Return the Z/XY anisotropy from TIFF metadata, or ``None`` if unknown.
@@ -115,8 +133,10 @@ def estimate_diameter_from_stack(
         try:
             masks = model.eval(
                 work, diameter=None,
-                flow_threshold=0.0, cellprob_threshold=0.0,
-                min_size=5, do_3D=False, batch_size=8,
+                flow_threshold=_PRESEGMENTATION_FLOW_THRESHOLD,
+                cellprob_threshold=_PRESEGMENTATION_CELLPROB_THRESHOLD,
+                min_size=_PRESEGMENTATION_MIN_SIZE_PX, do_3D=False,
+                batch_size=_PRESEGMENTATION_BATCH_SIZE,
             )[0]
         except Exception:  # noqa: BLE001
             continue
@@ -139,7 +159,8 @@ def estimate_diameter_from_stack(
         return None
     arr = np.asarray(all_diams)
     # Filter to the plausible range for a nucleus so noise blobs don't skew it.
-    arr = arr[(arr >= 5.0) & (arr <= 250.0)]
+    low, high = _PLAUSIBLE_DIAMETER_PX_RANGE
+    arr = arr[(arr >= low) & (arr <= high)]
     if arr.size == 0:
         return None
     return float(np.quantile(arr, _DIAMETER_QUANTILE))

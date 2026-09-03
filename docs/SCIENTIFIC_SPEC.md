@@ -2,7 +2,7 @@
 
 Version: 1.0.0
 Date: 2026-09-02
-Classification: S2 (Analytical)
+Classification: S3 (Inferential) for the pipeline as a whole, because `src/analysis/stats.py`'s condition-comparison hypothesis testing (linear mixed-effects model + Benjamini-Hochberg FDR-corrected pairwise contrasts; `cfg["stats"]["enabled"]` defaults to `true`) is exactly the "hypothesis testing, differential analysis" example category the S3 rubric names. Core measurement/QC (morphology, hierarchy, topology, viability-state gating) is S2 (Analytical) on its own; see docs/ALGORITHM_DECISIONS.md D11 for the S3 component's method, validation status, and known small-sample-inference limitation. The bundled exploratory UI tutorial workflows (`src/ui/analysis.py`: trained classifiers, clustering) are also S3-shaped but are explicitly out of scope of this specification's measurement claims (see docs/PARAMETERS.md, "Exploratory statistics/ML parameters").
 
 ## 1. Scientific Objective and Question
 
@@ -10,7 +10,7 @@ Classification: S2 (Analytical)
 
 **Scientific question:** How do organoid size, shape, internal organization, and cellular composition vary across experimental conditions?
 
-**Scope:** This software provides morphological measurements and descriptive statistics. It does not perform hypothesis testing, causal inference, or predictive modeling. Biological interpretation remains with the researcher.
+**Scope:** This software provides morphological measurements and descriptive statistics, plus, by default, exploratory cross-condition hypothesis testing (linear mixed-effects model omnibus test and BH-FDR-corrected pairwise contrasts on the two summary features in `stats.features`; see docs/ALGORITHM_DECISIONS.md D11). It does not perform causal inference or predictive modeling as part of the core measurement pipeline. The statistical tests it does perform are exploratory (small documented replicate minimums, an approximate rather than full Satterthwaite/Kenward-Roger small-sample correction, no predeclared experimental design) and must not be treated as confirmatory without independent statistical review appropriate to the actual study design. Biological interpretation remains with the researcher.
 
 ## 2. Intended Users and Permitted Research Use
 
@@ -198,13 +198,14 @@ Classification: S2 (Analytical)
 - Biological validity without independent validation
 - Generalizability to all organoid types or imaging conditions
 - Replacement for expert manual analysis
-- Statistical significance of observed differences
+- That its default-on exploratory significance tests (docs/ALGORITHM_DECISIONS.md D11) are confirmatory, independently reviewed, or a substitute for statistical analysis matched to a predeclared experimental design
 
 ## 11. Revision History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2026-09-02 | Initial scientific specification |
+| 1.1.0 | 2026-09-03 | Reclassified S2→S3: `stats.py`'s default-on hypothesis testing (D11) was shipped without updating this document's classification/scope/"does NOT claim" sections; corrected per an independent scientific-software audit. |
 
 ## 12. References
 

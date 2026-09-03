@@ -140,6 +140,13 @@ def pair_and_filter_cells(
     then maximizes total overlap among those solutions. Unlike the source
     implementation, nucleus volume and N:C ratio use the complete nucleus,
     not only the overlapping part.
+
+    The underlying algorithm is the same assignment-problem theory as the
+    Hungarian matching in ``evaluation.py``: Kuhn, H. W. (1955). Naval
+    Research Logistics Quarterly, 2(1-2), 83-97.
+    https://doi.org/10.1002/nav.3800020109. See docs/ALGORITHM_DECISIONS.md
+    D10 for this specific application (bipartite cell-nucleus pairing) and
+    docs/PARAMETERS.md for the QC-gate threshold provenance.
     """
     spacing = _validate_inputs(cell_masks, nuclei_masks, spacing)
     _validate_qc(min_cell_volume_um3, min_nucleus_volume_um3, max_nc_ratio, min_nucleus_containment)

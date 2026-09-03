@@ -1,8 +1,8 @@
 # Algorithm Decisions — Organoid Pipeline
 
-Version: 1.0.0
-Date: 2026-09-02
-Applies to: multilevel 3D analysis (`analysis.analyze-3d`) and classical organoid morphology/viability analysis.
+Version: 1.1.0
+Date: 2026-09-03
+Applies to: multilevel 3D analysis (`analysis.analyze-3d`), classical organoid morphology/viability analysis, segmentation-validation instance matching, cell–nucleus pairing (`analysis cells`), and cross-condition statistical testing.
 
 ## Decision provenance
 
@@ -61,6 +61,8 @@ This document records the scientific rationale for consequential algorithmic cho
 
 **Rationale:** Marching cubes at native spacing with no smoothing preserves the underlying voxel geometry and is the standard surface estimator for binary masks. Zero padding closes the crop surface so an object fully inside the image reports a closed surface. SPHERICITY uses the classic isoperimetric ratio; perfect sphere ⇒ 1.0.
 
+**Original literature:** Lorensen, W. E., & Cline, H. E. (1987). Marching cubes: A high resolution 3D surface construction algorithm. *ACM SIGGRAPH Computer Graphics*, 21(4), 163–169. https://doi.org/10.1145/37401.37422
+
 **Rejected:**
 - MIP / single-slice / density projections — explicitly excluded by project principle (never treat 2D projection as 3D measurement).
 - Smoothed or downsampled mesh for measurements — used only for preview, never for reported area. Documented discretization bias is retained rather than hidden.
@@ -97,6 +99,8 @@ This document records the scientific rationale for consequential algorithmic cho
 
 **Rationale:** MAD is robust to outliers, unlike mean/std which are inflated by the very outliers being detected. This prevents a single extreme object from masking the next-level outliers.
 
+**Original literature:** The 1.4826 (equivalently, its reciprocal 0.67448975) consistency constant that rescales MAD into a σ-equivalent robust estimator under a Gaussian assumption is documented in Rousseeuw, P. J., & Croux, C. (1993). Alternatives to the Median Absolute Deviation. *Journal of the American Statistical Association*, 88(424), 1273–1283. https://doi.org/10.1080/01621459.1993.10476408. The constant itself is the reciprocal of the 0.75-quantile of the standard normal distribution, Φ⁻¹(0.75). `src/analysis/multilevel3d/qc.py` uses the reciprocal form (0.67448975 × …); `src/analysis/features.py` and `src/analysis/viability.py` use the direct form (… × 1.4826); both are the same constant, named and cross-referenced at each definition site so the two spellings do not appear to be different numbers.
+
 **Validation:** `PASS — controlled phantoms; real-data outlier calibration NOT ASSESSED.`
 
 **Strength labeling:** established robust-statistics technique (median + MAD).
@@ -127,9 +131,99 @@ This document records the scientific rationale for consequential algorithmic cho
 
 **Rationale, rejected alternatives, and caveats are fully documented in docs/METHODS.md.** This is an intensity-based signal-pattern characterization, not a cell-count or a validated cell-viability fraction.
 
-**Validation:** `PARTIAL — controlled phantom agreement on simplified marker patterns; biological calibration against matched controls and independent viability measurements NOT ASSESSED.`
+**Condition-scoping fix (2026-09-03 audit fix):** An independent audit found `calibrate()` grouped controls by `(control, biological_replicate)` without `condition`, unlike `stats.py`'s composite-key convention — since `biological_replicate` labels (e.g. "R1") are only unique *within* a condition, a batch whose live or dead controls spanned more than one `condition` value could have been silently pooled as if they were one replicate, corrupting the batch's calibration endpoints without any error or QC flag. Fixed: `calibrate()` now rejects (status `unavailable`, reason `controls_span_multiple_conditions`) a batch whose live or dead controls span more than one condition, rather than guessing which grouping was intended. Regression test: `test_controls_spanning_multiple_conditions_are_rejected` in `test_viability_summary.py`.
+
+**Validation:** `PARTIAL — controlled phantom agreement on simplified marker patterns; the condition-scoping fix above is unit-tested; biological calibration against matched controls and independent viability measurements NOT ASSESSED.`
 
 **Strength labeling:** empirically calibrated / heuristic.
+
+---
+
+## D8. Otsu global thresholding + physical-distance watershed splitting (classical segmentation)
+
+**Task:** Produce a 3D instance-label mask from a single structural fluorescence/brightfield channel (`segmentation.method: watershed`).
+
+**Selected:** Global Otsu thresholding on the (optionally background-subtracted, Gaussian-smoothed) structural volume, followed by a spacing-aware Euclidean distance transform, h-maxima seed detection at a physical prominence, physical minimum-seed-separation suppression, and masked watershed of the negative distance map.
+
+**Rationale:** Otsu thresholding is a standard, parameter-free global binarization method. Distance-transform watershed is a standard technique for splitting touching, roughly convex objects (such as organoids) without a trained model.
+
+**Original literature:**
+- Otsu, N. (1979). A threshold selection method from gray-level histograms. *IEEE Transactions on Systems, Man, and Cybernetics*, 9(1), 62–66. https://doi.org/10.1109/TSMC.1979.4310076
+- Vincent, L., & Soille, P. (1991). Watersheds in digital spaces: an efficient algorithm based on immersion simulations. *IEEE Transactions on Pattern Analysis and Machine Intelligence*, 13(6), 583–598. https://doi.org/10.1109/34.87344
+
+**Rejected:** A trained/learned segmentation model for the classical route — deliberately out of scope; this route is the parameter-free/classical alternative to Cellpose (see `src/segmentation/`).
+
+**Validation:** `PARTIAL — unit/synthetic-phantom tests cover the split/threshold logic (test_segmentation.py); real-image detection accuracy is assessed only via the optional independent-annotation route in docs/METHODS.md, not a general claim.`
+
+**Strength labeling:** established methods (Otsu; distance-transform watershed), combined by heuristic parameter choices (seed height, minimum seed separation — see docs/PARAMETERS.md).
+
+**Code location:** `src/analysis/segmentation.py::segment`, `::watershed_instances`.
+
+---
+
+## D9. Hungarian (Kuhn–Munkres) one-to-one instance matching for segmentation validation
+
+**Task:** Match predicted instance labels to an independent annotated truth mask for validation metrics (precision/recall/Dice/IoU/panoptic quality), and match synthetic phantom predictions to their known ground truth.
+
+**Selected:** `scipy.optimize.linear_sum_assignment` (Hungarian/Kuhn–Munkres algorithm) maximizing a reward that first maximizes the count of IoU ≥ threshold matches, then total IoU, at a fixed `iou_threshold` (default 0.5).
+
+**Rationale:** One-to-one optimal assignment prevents a many-to-one or greedy match from hiding split/merge errors that a foreground-only overlap metric (e.g. plain Dice) would miss.
+
+**Original literature:** Kuhn, H. W. (1955). The Hungarian method for the assignment problem. *Naval Research Logistics Quarterly*, 2(1–2), 83–97. https://doi.org/10.1002/nav.3800020109
+
+**Rejected:** Greedy nearest-IoU matching — can produce inconsistent, order-dependent assignments when several predictions compete for the same truth object.
+
+**Validation:** `PASS — controlled phantom validation (test_analysis.py, run_demo synthetic validation); real-data annotation matching depends on the availability of an independent truth mask (INSUFFICIENT EVIDENCE without one).`
+
+**Strength labeling:** established method (Hungarian assignment); `iou_threshold=0.5` is a conventional choice (see docs/PARAMETERS.md), not independently calibrated for this pipeline.
+
+**Code location:** `src/analysis/evaluation.py::match_instances`.
+
+---
+
+## D10. Minimum-weight full bipartite matching for cell–nucleus pairing
+
+**Task:** Pair each cell instance with at most one nucleus instance from two independently segmented, registered label masks (`analysis cells` CLI route, distinct from the `analyze-3d` maximum-overlap hierarchy in D1).
+
+**Selected:** `scipy.sparse.csgraph.min_weight_full_bipartite_matching` on a sparse graph weighted by (cardinality-maximizing bonus + voxel overlap), restricted to candidate pairs that already pass the nucleus-containment/size/N:C-ratio QC gates; every cell gets a guaranteed dummy column so the matching is always full.
+
+**Rationale:** Optimal bipartite matching first maximizes the number of valid one-to-one pairs, then total overlap, which avoids a greedy "closest nucleus wins" rule silently mis-pairing cells that compete for the same nucleus.
+
+**Original literature:** This is an application of the same assignment-problem theory as D9 — Kuhn, H. W. (1955). *Naval Research Logistics Quarterly*, 2(1–2), 83–97. https://doi.org/10.1002/nav.3800020109
+
+**Rejected:** Greedy dominant-overlap pairing (assign each cell its single largest-overlap nucleus without considering competing cells) — can double-assign one nucleus to two cells' "best candidate" lists without resolving the conflict optimally.
+
+**Validation:** `PARTIAL — unit-tested on synthetic label pairs (test_cellular.py per docs/PARAMETERS.md gap noted below); real-data pairing accuracy NOT ASSESSED.`
+
+**Strength labeling:** established method (bipartite assignment); the QC gate thresholds (`min_cell_volume_um3`, `min_nucleus_volume_um3`, `max_nc_ratio`, `min_nucleus_containment`) are heuristic (see docs/PARAMETERS.md).
+
+**Code location:** `src/analysis/cellular.py::pair_and_filter_cells`.
+
+---
+
+## D11. Linear mixed-effects model with BH-FDR pairwise contrasts for condition comparison
+
+**Task:** Test whether a continuous morphology feature (volume, sphericity) differs across experimental conditions while accounting for biological-replicate structure (`src/analysis/stats.py`, invoked from `pipeline.py` when `cfg["stats"]["enabled"]`).
+
+**Selected:** A linear mixed-effects model (condition as fixed effect, `condition::biological_replicate` as a random intercept) fit by REML, giving an omnibus Wald test and all-pairwise contrasts between conditions. Falls back to OLS with replicate-clustered standard errors when the random-effects fit is singular (variance below `1e-6 × scale`) or does not converge. Pairwise p-values are Benjamini–Hochberg FDR corrected. `volume_um3` is log10-transformed before fitting; `sphericity` is not.
+
+**Rationale:** A random intercept on the biological-replicate unit avoids treating pooled organoids/technical replicates as independent samples (pseudoreplication). BH-FDR correction controls the false discovery rate across the pairwise contrasts performed for each feature. Log-transforming volume addresses its right-skewed, multiplicative-scale distribution before a model that assumes approximately normal, homoscedastic residuals.
+
+**Original literature:** Benjamini, Y., & Hochberg, Y. (1995). Controlling the false discovery rate: a practical and powerful approach to multiple testing. *Journal of the Royal Statistical Society: Series B*, 57(1), 289–300. https://doi.org/10.1111/j.2517-6161.1995.tb02031.x
+
+**Rejected:** An unpaired t-test/ANOVA on pooled per-organoid values — would treat organoids as independent biological replicates (pseudoreplication), overstating significance.
+
+**Documentation note:** `docs/METHODS.md` previously stated "No automatic inferential tests are included," which was inaccurate once this module shipped; that statement has been corrected (see `docs/METHODS.md`, Treatment summaries) to describe this module and its assumptions.
+
+**Failure modes:** A feature/condition combination with fewer than `stats.min_replicates_per_condition` (default 3) biological replicates in a condition is silently excluded from that feature's test rather than raising; callers must treat an empty result as "not enough data to test." (2026-09-03 audit fix: `pipeline.py` now filters `objects` through `complete_unit_objects()` before calling `condition_pairwise_tests`, matching `summary.py`'s own exclusion of organoids from partially-failed acquisition units; regression test `test_complete_unit_objects_excludes_incomplete_units` in `test_pipeline.py`.)
+
+**Small-sample p-value correction (2026-09-03 audit fix):** An independent scientific-software audit found that both branches originally reported Wald p-values against an asymptotic z reference, which is anti-conservative (overstates significance) at the pipeline's own documented minimum of 3 replicates/condition (empirically confirmed against this repository's statsmodels 0.14.6). Fixed: the OLS-fallback branch now fits with `use_t=True`, which statsmodels resolves to a cluster-robust t(G−1) reference (G = number of replicate clusters) — the standard small-cluster correction (Cameron & Miller, 2015, *Journal of Human Resources*, 50(2), 317–372). The LMM branch has no equivalent built-in correction in statsmodels (no Satterthwaite/Kenward-Roger for `MixedLM`), so `_pairwise_contrasts` now manually applies the same t(G−1) reference to its pairwise contrasts. **Residual limitation:** this is a standard but approximate small-cluster correction, not full Satterthwaite/Kenward-Roger; and the LMM branch's *omnibus* Wald test (`omnibus_p` in `stats_results.json`, flagged via the `omnibus_p_small_sample_corrected` field) remains asymptotic/uncorrected — treat it as a rough screening result, not confirmatory. The pairwise, BH-FDR-corrected contrasts in `pairwise_contrasts.csv` are the primary, corrected output.
+
+**Validation:** `PARTIAL — the small-sample p-value correction above is independently derived and verified (regression tests in test_stats.py assert the corrected p-value against a hand-computed t(G-1) reference, and that it is strictly more conservative than the uncorrected z reference); no independent review against an external Satterthwaite/Kenward-Roger reference implementation (e.g. R's lmerTest) has been performed, and the omnibus test remains NOT ASSESSED for small-sample validity.`
+
+**Strength labeling:** established statistical methods (LMM; BH-FDR), combined by an engineering fallback rule (LMM→OLS singular-fit threshold) that is heuristic and not independently validated.
+
+**Code location:** `src/analysis/stats.py::condition_pairwise_tests`, `::fit_model`.
 
 ---
 
@@ -150,3 +244,7 @@ This document records the scientific rationale for consequential algorithmic cho
 | D5 | `src/analysis/multilevel3d/qc.py::_volume_outliers` |
 | D6 | `src/analysis/multilevel3d/spatial.py` |
 | D7 | `src/analysis/features.py::marker_measurements`, `src/analysis/viability.py`, `src/analysis/report.py` |
+| D8 | `src/analysis/segmentation.py::segment`, `::watershed_instances` |
+| D9 | `src/analysis/evaluation.py::match_instances` |
+| D10 | `src/analysis/cellular.py::pair_and_filter_cells` |
+| D11 | `src/analysis/stats.py::condition_pairwise_tests`, `::fit_model` |

@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 import tifffile
 import yaml
-from analysis.pipeline import analyze
+from analysis.pipeline import analyze, complete_unit_objects
 from analysis.config import load_config
 
 
@@ -105,6 +105,23 @@ def test_all_empty_field_has_consistent_tables_and_report(tmp_path):
     assert samples.iloc[0].n_detected==0
     assert pd.isna(samples.iloc[0].median_volume_um3)
     assert (out/'report.html').is_file()
+
+
+def test_complete_unit_objects_excludes_incomplete_units():
+    """Regression test for the P2 audit finding: statistical testing must not
+    silently include organoids from a partially-failed acquisition unit, the
+    same exclusion summary.py already applies to descriptive tables."""
+    objects = pd.DataFrame([
+        {"batch_id": "B1", "unit_id": "W1", "organoid_id": 1},
+        {"batch_id": "B1", "unit_id": "W1", "organoid_id": 2},
+        {"batch_id": "B1", "unit_id": "W2", "organoid_id": 3},
+    ])
+    units = pd.DataFrame([
+        {"batch_id": "B1", "unit_id": "W1", "unit_complete": True},
+        {"batch_id": "B1", "unit_id": "W2", "unit_complete": False},
+    ])
+    kept = complete_unit_objects(objects, units)
+    assert sorted(kept.organoid_id) == [1, 2]
 
 
 def test_partial_run_marks_failed_field_and_excludes_its_entire_well(tmp_path):

@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 import base64
 import html
+import json
 import textwrap
 import numpy as np
 import pandas as pd
@@ -276,15 +277,40 @@ def write_html(out: Path, objects: pd.DataFrame, samples: pd.DataFrame, conditio
             f'<div class="scroll">{validation_table_html}</div></section>'
         )
         links.extend(["segmentation_validation_metrics.csv", "segmentation_validation_matches.csv"])
+    stats_path = out / "stats_results.json"
+    pairwise_path = out / "pairwise_contrasts.csv"
+    stats_html = ""
+    if stats_path.is_file() and pairwise_path.is_file():
+        stats_omnibus = json.loads(stats_path.read_text(encoding="utf-8"))
+        pairwise_table = pd.read_csv(pairwise_path)
+        omnibus_rows = "".join(
+            f"<tr><td>{html.escape(str(feature))}</td><td>{html.escape(str(info['model']))}</td>"
+            f"<td>{info['omnibus_p']:.4g}</td>"
+            f"<td>{'yes' if info.get('omnibus_p_small_sample_corrected') else 'no (asymptotic)'}</td></tr>"
+            for feature, info in stats_omnibus.items()
+        )
+        pairwise_table_html = pairwise_table.to_html(index=False, escape=True, na_rep="—", float_format=lambda x: f"{x:,.4g}")
+        stats_html = (
+            "<section><h2>Cross-condition statistical testing</h2>"
+            '<p class="small">Exploratory significance tests, not a substitute for a predeclared experimental '
+            "design (see docs/ALGORITHM_DECISIONS.md D11 and docs/SCIENTIFIC_SPEC.md). Each feature's omnibus p "
+            "tests whether condition means differ at all; pairwise contrasts are Benjamini-Hochberg FDR-corrected "
+            'across conditions within a feature. "Small-sample corrected" pairwise p-values use a cluster-robust '
+            't(G-1) reference; an omnibus p marked "asymptotic" is not corrected and is a rough screen only.</p>'
+            f"<table><thead><tr><th>Feature</th><th>Model</th><th>Omnibus p</th><th>Small-sample corrected</th></tr></thead>"
+            f"<tbody>{omnibus_rows}</tbody></table>"
+            f'<div class="scroll">{pairwise_table_html}</div></section>'
+        )
+        links.extend(["pairwise_contrasts.csv", "stats_results.json"])
     downloads = " · ".join(f'<a href="{name}">{name}</a>' for name in links)
     css = "body{font:15px/1.55 system-ui,sans-serif;color:#233143;max-width:1200px;margin:36px auto;padding:0 22px;background:#f6f8fb}h1,h2{line-height:1.2}h1{font-size:32px}h2{font-size:23px;margin-top:30px}p{max-width:1100px}.notice{padding:16px 20px;background:#fff1d6;border-left:5px solid #cb8a2a;border-radius:5px}section{background:white;padding:22px;border-radius:9px;margin:20px 0;border:1px solid #e0e5ee}img{width:100%;height:auto}table{border-collapse:collapse;white-space:nowrap;font-size:12px}th,td{padding:9px 12px;text-align:right;border-bottom:1px solid #e2e7ee}th{background:#eaf0f7;color:#233143}th:first-child,td:first-child{text-align:left}.scroll{overflow-x:auto}summary{cursor:pointer;font-weight:600;padding:12px;border-bottom:1px solid #e0e5ee}a{color:#1b6d99}.small{font-size:13px;color:#5c6674}code{background:#edf0f4;padding:2px 5px;border-radius:3px}"
     document = f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title><style>{css}</style></head><body>
 <h1>{html.escape(title)}</h1><p class="notice">{html.escape(banner)}</p>
 <p>Measurements use calibrated Z/Y/X spacing. Volume and surface area describe the outer envelope, including fully enclosed lumens. Border-truncated objects and other geometry QC failures remain in the object table but are excluded from size summaries.</p>
-<section><h2>Treatment size comparisons</h2><img src="{_image_data(out/'size_comparison.png')}" alt="Volume ECDFs and biological replicate summaries"><p class="small">The pooled distribution describes measured objects and can overweight organoid-rich wells. The replicate plot first pools fields within wells, then uses the median of well medians within each biological replicate. Confidence intervals resample biological replicates only; no object-level significance tests are used. Bootstrap intervals with few replicates are unstable. Empty wells remain in count summaries but have no size median.</p><div class="scroll">{summary_html}</div></section>
+<section><h2>Treatment size comparisons</h2><img src="{_image_data(out/'size_comparison.png')}" alt="Volume ECDFs and biological replicate summaries"><p class="small">The pooled distribution describes measured objects and can overweight organoid-rich wells. The replicate plot first pools fields within wells, then uses the median of well medians within each biological replicate. Confidence intervals resample biological replicates only; this panel does not itself run an object-level significance test — see "Cross-condition statistical testing" below if condition comparisons were enabled for this run. Bootstrap intervals with few replicates are unstable. Empty wells remain in count summaries but have no size median.</p><div class="scroll">{summary_html}</div></section>
 <section><h2>Morphology and viability</h2><img src="{_image_data(out/'morphology_viability.png')}" alt="Size versus sphericity and organoid signal states"><p>Calcein and PI means are measured from raw data after local background subtraction. Each marker is scaled separately to matched live/dead controls within its acquisition batch. Gates ({cfg['viability']['high_gate']:g} high; {cfg['viability']['low_gate']:g} low) are configurable starting rules, not universal biological thresholds. Both-low signals, missing controls, saturation, or other measurement failures remain indeterminate. Mixed signal does not establish apoptosis or a cell survival fraction.</p><div class="scroll">{calibration_html}</div></section>
  <section><h2>Segmentation quality control</h2><p class="small">Expand a sample to inspect true XY/XZ/YZ slices, MIPs, and reconstructed surfaces. Colors of surfaces identify instances; they are not heatmaps. Preview meshes are coarser than the meshes used for measurements. Intensity contrast is adjusted for display only. Review border-truncated objects, implausible joins/splits, weak Z continuity, and method-disagreement flags before interpreting morphology or marker states.</p>{''.join(details)}{failure_html}</section>
- {qc_html}{validation_html}
+ {stats_html}{qc_html}{validation_html}
 <section><h2>Structured results</h2><p>{downloads}</p><p class="small">First 100 object rows below; the CSV contains every object, QC flags, marker readouts, and replicate identifiers. Keep this report beside its tables when using download links. All figures and sample QC images are embedded and work offline.</p><div class="scroll">{object_html}</div></section>
 <p class="small">Methods: <a href="https://scikit-image.org/docs/stable/api/skimage.measure.html#skimage.measure.marching_cubes">spacing-aware marching cubes</a>; <a href="https://scikit-image.org/docs/stable/auto_examples/segmentation/plot_watershed.html">3D watershed</a>; <a href="https://www.cgohlke.com/docs/tifffile/">TIFF metadata</a>. See README.md and docs/METHODS.md in the package for assumptions and limitations.</p></body></html>'''
     (out / "report.html").write_text(document,encoding="utf-8")

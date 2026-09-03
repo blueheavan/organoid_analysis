@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 import tifffile
 import analysis.io as analysis_io
-from analysis.io import canonical_czyx, ome_spacing, read_manifest, load_sample
+from analysis.io import canonical_czyx, git_commit_hash, ome_spacing, read_manifest, load_sample
 from analysis.config import load_config
 
 
@@ -93,3 +93,12 @@ def test_shared_multichannel_source_is_decoded_once_per_sample(tmp_path, monkeyp
     assert len(calls)==1
     assert (sample.calcein==11).all()
     assert (sample.pi==22).all()
+
+
+def test_git_commit_hash_returns_current_repo_head():
+    commit = git_commit_hash()
+    assert commit is None or (len(commit.split("-dirty")[0]) == 40)
+
+
+def test_git_commit_hash_returns_none_outside_a_repo(tmp_path):
+    assert git_commit_hash(repo_root=tmp_path) is None
