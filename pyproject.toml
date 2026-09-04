@@ -28,8 +28,8 @@ where = ["src"]
 include = ["analysis*", "analysis.*", "segmentation*", "segmentation.*", "ui*", "ui.*"]
 
 [tool.pytest.ini_options]
-testpaths = ["src/analysis/tests"]
-addopts = "-q"
+testpaths = ["tests", "src/analysis/tests", "src/ui/vtk_viewer/tests"]
+addopts = "-q --import-mode=importlib"
 
 [tool.pixi.workspace]
 authors = ["Mac_Arm project maintainers"]
@@ -72,7 +72,7 @@ organoid3d-pipeline = { path = ".", editable = true }
 check = "python scripts/validate_notebooks.py"
 kernel = "python -m ipykernel install --sys-prefix --name 3d-organoid-mac-arm --display-name 'Python (3D Organoid Mac Arm)'"
 smoke = "PYTHONPATH=src python -m scripts.smoke_segmentation"
-test = "PYTHONPATH=src python -m unittest discover -s tests -v"
+test = "python -m pytest -v"
 preview = "PYTHONPATH=src python -m scripts.run_app src/ui/preview_2d.py"
 app = "PYTHONPATH=src python -m scripts.run_app src/ui/app.py"
 # --- data management ---

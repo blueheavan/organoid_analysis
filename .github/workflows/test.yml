@@ -1,0 +1,22 @@
+name: test
+
+# The pixi environment only targets osx-arm64 (Apple Silicon), so this
+# workflow runs exclusively on the arm64 macOS runner GitHub provides.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+
+      - name: Run test suite
+        run: pixi run test
