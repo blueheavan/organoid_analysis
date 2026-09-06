@@ -16,6 +16,12 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=8,<10"]
+dev = [
+  "pytest>=8,<10",
+  "pytest-cov>=4.1",
+  "ruff>=0.1",
+  "mypy>=1.7",
+]
 
 [project.scripts]
 analysis = "analysis.cli:main"
@@ -30,6 +36,21 @@ include = ["analysis*", "analysis.*", "segmentation*", "segmentation.*", "ui*", 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/analysis/tests", "src/ui/vtk_viewer/tests"]
 addopts = "-q --import-mode=importlib"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = ["src"]
+explicit_package_bases = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
 
 [tool.pixi.workspace]
 authors = ["Mac_Arm project maintainers"]
@@ -64,6 +85,9 @@ xgboost = ">=2.1,<3"
 dinov3 = { git = "https://github.com/facebookresearch/dinov3", rev = "6876159a11b4df116f30f667f8c9888617df0751" }
 stpyvista = { version = ">=0.2.1, <0.3", extras = ["trame"] }
 pytest = ">=9.1.1, <10"
+pytest-cov = ">=4.1"
+ruff = ">=0.1"
+mypy = ">=1.7"
 pyarrow = ">=16,<24"
 pillow = ">=11,<13"
 organoid3d-pipeline = { path = ".", editable = true }
@@ -71,10 +95,13 @@ organoid3d-pipeline = { path = ".", editable = true }
 [tool.pixi.tasks]
 check = "python scripts/validate_notebooks.py"
 kernel = "python -m ipykernel install --sys-prefix --name 3d-organoid-mac-arm --display-name 'Python (3D Organoid Mac Arm)'"
-smoke = "PYTHONPATH=src python -m scripts.smoke_segmentation"
+smoke = "python scripts/smoke_segmentation.py"
 test = "python -m pytest -v"
-preview = "PYTHONPATH=src python -m scripts.run_app src/ui/preview_2d.py"
-app = "PYTHONPATH=src python -m scripts.run_app src/ui/app.py"
+lint = "ruff check src tests scripts"
+format = "ruff format src tests scripts"
+typecheck = "mypy src/analysis src/segmentation src/ui"
+preview = "python scripts/run_app.py src/ui/preview_2d.py"
+app = "python scripts/run_app.py src/ui/app.py"
 # --- data management ---
 data = "bash scripts/download_data.sh"
 # --- analysis pipeline ---

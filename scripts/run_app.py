@@ -1,7 +1,7 @@
 """Launch a Streamlit app on a free port, then shut it down once the browser tab closes.
 
 Usage:
-    python -m scripts.run_app src/ui/app.py [--start-port 8501] [--idle-timeout 10]
+    python scripts/run_app.py src/ui/app.py [--start-port 8501] [--idle-timeout 10]
 """
 from __future__ import annotations
 
