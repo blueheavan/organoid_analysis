@@ -227,6 +227,27 @@ This document records the scientific rationale for consequential algorithmic cho
 
 ---
 
+## D12. TIFF axis/spacing readers kept as two implementations, with behavior (not code) unified
+
+**Task:** Two TIFF-reading paths exist -- `microscopy_io/tiff_contract.py` (manifest-driven, multi-role: structure/calcein/pi/probability/labels, for the classical CLI) and `microscopy_io/zstack_reader.py` + `metadata.py` (single uploaded file, for Streamlit). Each independently implements axis canonicalization and OME/ImageJ spacing parsing, which is a real duplication risk: the two had drifted to disagree on two consequential behaviors before this decision.
+
+**Found divergences (2026-09-08 audit):**
+1. `tiff_contract.ome_spacing()` already rejected a nonuniform Z-plane grid (via `PositionZ` values); `metadata.parse_spacing_ome()` (the Streamlit path) did not check this at all, so a Streamlit-uploaded stack with unevenly spaced Z planes would silently get one (wrong) Z spacing value instead of an error.
+2. `tiff_contract.canonical_czyx()` silently squeezed away any unrecognized axis of size 1 (e.g. a stray legacy/filler dimension); `zstack_reader._reorder_to_czyx()` already rejected *any* unrecognized axis regardless of size ("Fully explicit, no guessing").
+
+**Selected:** Fixed both divergences toward the stricter behavior rather than merging the two readers into one implementation:
+- Ported the nonuniform-Z-grid check into `metadata.parse_spacing_ome()` (using `ome_types`' `Pixels.planes`, mirroring `ome_spacing()`'s own ElementTree-based check).
+- Removed `canonical_czyx()`'s size-1 exception so it always rejects an unrecognized axis, matching `_reorder_to_czyx()`.
+- Consolidated the two independent unit-conversion tables and the two independent `SPACING_RTOL`/`SPACING_ATOL_UM` constant definitions into one copy in `metadata.py` (`to_um`), which `tiff_contract.py` now imports rather than redefining -- the table became the union of both (adding the µ/μ codepoint variants and the "micrometer" spelling that only one side previously accepted).
+
+**Rejected (deferred, not abandoned):** A full merge into one canonical reader/one OME-parsing implementation. Investigated switching `tiff_contract.ome_spacing()`'s hand-rolled `xml.etree.ElementTree` parsing to `metadata.py`'s `ome_types`-based parsing, and found `ome_types` performs strict pydantic validation of unit strings that the OME schema's controlled vocabulary does not actually require real-world writers to follow exactly (e.g. `PhysicalSizeZUnit="um"` -- ASCII, not the canonical "µm" -- raises an uncaught `pydantic.ValidationError` under `ome_types`, but parses fine under raw ElementTree). Switching would trade the classical pipeline's current tolerance of such files for the Streamlit path's `ome_types` robustness elsewhere, which is not a clear improvement and was not evaluated against real acquisition files from either code path's actual user base. The manifest-vs-single-file/multi-role-vs-none input shapes also do not collapse into one API without changing either path's public contract. Two implementations are kept, with the specific behaviors above now enforced identically and verified by shared-intent regression tests, rather than forcing a structural merge that would need to pick a winner on an open question (unit-string strictness) with no evidence to decide it.
+
+**Validation:** Both changed behaviors have regression tests: `tests/microscopy_io/test_io.py::test_ambiguous_singleton_axis_is_rejected_not_silently_squeezed` and `tests/visualization/test_3d_preview.py::SpacingMetadataTests::test_nonuniform_z_positions_are_rejected`/`test_uniform_z_positions_are_accepted`. All 5 real sample images in `data/images/` were re-loaded through `load_zstack()` after the change with no regression (none use ambiguous axes or nonuniform Z metadata, so none were expected to be affected, and none were).
+
+**Code location:** `src/organoid_analysis/microscopy_io/tiff_contract.py::canonical_czyx`, `::ome_spacing`; `src/organoid_analysis/microscopy_io/metadata.py::parse_spacing_ome`, `::to_um`.
+
+---
+
 ## Rejected overall approaches
 
 - **Replace the existing segmentation model** — preserved by requirement. Segmentation is upstream; this pipeline consumes its output.
@@ -248,3 +269,4 @@ This document records the scientific rationale for consequential algorithmic cho
 | D9 | `src/organoid_analysis/validation/segmentation_metrics.py::match_instances` |
 | D10 | `src/organoid_analysis/quantification/cellular_measurements.py::pair_and_filter_cells` |
 | D11 | `src/organoid_analysis/statistics/inference.py::condition_pairwise_tests`, `::fit_model` |
+| D12 | `src/organoid_analysis/microscopy_io/tiff_contract.py::canonical_czyx`, `::ome_spacing`; `src/organoid_analysis/microscopy_io/metadata.py::parse_spacing_ome`, `::to_um` |

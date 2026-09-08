@@ -99,6 +99,42 @@ class SpacingMetadataTests(unittest.TestCase):
         self.assertIsNone(s.x)
         self.assertIsNone(s.z)
 
+    def test_nonuniform_z_positions_are_rejected(self) -> None:
+        """Regression: load_zstack()'s OME parsing previously accepted a
+        nonuniform Z grid silently (unlike the classical manifest pipeline's
+        tiff_contract.ome_spacing(), which already rejected this). A stack
+        whose actual plane spacing does not match PhysicalSizeZ must be
+        surfaced as an error here too, not silently averaged into one value.
+        """
+        xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">'
+            '<Image ID="Image:0"><Pixels ID="Pixels:0" DimensionOrder="XYZCT" '
+            'Type="uint16" SizeX="4" SizeY="3" SizeZ="3" SizeC="1" SizeT="1" '
+            'PhysicalSizeX="1" PhysicalSizeY="1" PhysicalSizeZ="2">'
+            '<Plane TheZ="0" TheC="0" TheT="0" PositionZ="0"/>'
+            '<Plane TheZ="1" TheC="0" TheT="0" PositionZ="2"/>'
+            '<Plane TheZ="2" TheC="0" TheT="0" PositionZ="7"/>'
+            '</Pixels></Image></OME>'
+        )
+        with self.assertRaisesRegex(ValueError, "uniformly"):
+            parse_spacing_ome(xml)
+
+    def test_uniform_z_positions_are_accepted(self) -> None:
+        xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">'
+            '<Image ID="Image:0"><Pixels ID="Pixels:0" DimensionOrder="XYZCT" '
+            'Type="uint16" SizeX="4" SizeY="3" SizeZ="3" SizeC="1" SizeT="1" '
+            'PhysicalSizeX="1" PhysicalSizeY="1" PhysicalSizeZ="2">'
+            '<Plane TheZ="0" TheC="0" TheT="0" PositionZ="0"/>'
+            '<Plane TheZ="1" TheC="0" TheT="0" PositionZ="2"/>'
+            '<Plane TheZ="2" TheC="0" TheT="0" PositionZ="4"/>'
+            '</Pixels></Image></OME>'
+        )
+        s = parse_spacing_ome(xml)
+        self.assertAlmostEqual(s.z, 2.0)
+
     def test_imagej_z_step(self) -> None:
         s = parse_spacing_imagej({"spacing": 2.5, "unit": "micron"})
         self.assertEqual(s.z, 2.5)

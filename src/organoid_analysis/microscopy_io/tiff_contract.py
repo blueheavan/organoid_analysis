@@ -1,4 +1,27 @@
-"""TIFF axis, spacing, and experimental-design checks. Internal order: Z,Y,X."""
+"""TIFF axis, spacing, and experimental-design checks. Internal order: Z,Y,X.
+
+This is the manifest-driven, multi-role (structure/calcein/pi/probability/
+labels) reader for the classical CLI pipeline. ``zstack_reader.py`` is the
+other TIFF reader in this package, for single-file uploads (Streamlit); the
+two exist because their inputs differ enough to need it (a CSV of many
+per-role files with an explicit `time_index`/`series_index` contract here,
+vs. one arbitrary uploaded file whose time axis is kept for the caller to
+pick from there) -- not because either duplicates the other's job.
+
+What *is* shared, deliberately, rather than reimplemented twice:
+* Physical-unit conversion and the OME/ImageJ spacing tolerance constants
+  (``metadata.to_um``, ``SPACING_RTOL``, ``SPACING_ATOL_UM``) -- imported
+  from ``metadata.py``, not redefined here.
+* The nonuniform-Z-grid rejection and the "no ambiguous axis is silently
+  dropped, regardless of size" rule are both enforced by *both* readers
+  (this module's ``ome_spacing()``/``canonical_czyx()`` and the other
+  module's ``metadata.parse_spacing_ome()``/``zstack_reader.
+  _reorder_to_czyx()``), kept in sync by the regression tests in
+  tests/microscopy_io/ and tests/visualization/test_3d_preview.py rather
+  than by one calling the other -- see ALGORITHM_DECISIONS.md for why a full
+  implementation merge (e.g. switching this module's raw-ElementTree OME
+  parsing to ``ome_types``) was evaluated and deferred.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -13,13 +36,7 @@ import numpy as np
 import pandas as pd
 import tifffile
 
-# Tolerance for treating two physical-spacing/position values (µm) as the same
-# acquisition metadata rather than a conflict to reject. Heuristic engineering
-# judgment ("close enough to be metadata rounding, not a real mismatch"), not
-# independently calibrated; see docs/PARAMETERS.md. Reused by cli.py for the
-# same spacing-agreement checks in the `cells`/`analyze-3d` CLI routes.
-SPACING_RTOL = 0.01
-SPACING_ATOL_UM = 1e-5
+from .metadata import SPACING_ATOL_UM, SPACING_RTOL, to_um
 
 REQUIRED = ["sample_id", "condition", "biological_replicate", "image_path"]
 PATH_FIELDS = ["image_path", "structure_path", "calcein_path", "pi_path", "probability_path", "labels_path", "truth_labels_path"]
@@ -97,10 +114,11 @@ def canonical_czyx(array: np.ndarray, axes: str, time_index: int | None = None) 
         raise ValueError("time_index was given for a TIFF without a time axis")
     for axis in range(len(axes) - 1, -1, -1):
         if axes[axis] not in "CZYX":
-            if array.shape[axis] != 1:
-                raise ValueError(f"Ambiguous TIFF axis '{axes[axis]}' in {axes}. Set an explicit axes override; do not guess depth or RGB channels.")
-            array = np.take(array, 0, axis=axis)
-            axes = axes[:axis] + axes[axis + 1:]
+            # An axis of size 1 is not proof it is harmless filler -- it is
+            # only proof we cannot tell what it means. Refusing to guess and
+            # silently drop it matches how the single-file (Streamlit) reader
+            # already treats every unrecognized axis, regardless of size.
+            raise ValueError(f"Ambiguous TIFF axis '{axes[axis]}' in {axes}. Set an explicit axes override; do not guess depth or RGB channels.")
     if not all(axis in axes for axis in "ZYX"):
         raise ValueError(f"A genuine 3D Z-stack is required; found axes={axes}")
     if array.shape[axes.index("Z")] < 3:
@@ -116,14 +134,6 @@ def canonical_czyx(array: np.ndarray, axes: str, time_index: int | None = None) 
     return array
 
 
-def _unit_scale(unit: str) -> float:
-    scales = {"µm": 1., "μm": 1., "um": 1., "micrometer": 1.,
-              "nm": .001, "mm": 1000., "m": 1e6}
-    if unit not in scales:
-        raise ValueError(f"Unsupported OME physical unit: {unit}")
-    return scales[unit]
-
-
 def ome_spacing(xml: str | None, series_index: int = 0, time_index: int | None = None) -> tuple | None:
     if not xml:
         return None
@@ -136,7 +146,7 @@ def ome_spacing(xml: str | None, series_index: int = 0, time_index: int | None =
         value = pixel.get(f"PhysicalSize{axis}")
         if value is None:
             return None
-        values.append(float(value) * _unit_scale(pixel.get(f"PhysicalSize{axis}Unit", "µm")))
+        values.append(to_um(float(value), pixel.get(f"PhysicalSize{axis}Unit", "µm")))
     values = np.asarray(values, float)
     if not np.isfinite(values).all() or (values <= 0).any():
         raise ValueError("Invalid OME physical spacing")
@@ -145,7 +155,7 @@ def ome_spacing(xml: str | None, series_index: int = 0, time_index: int | None =
     for plane in pixel.findall("{*}Plane"):
         if int(plane.get("TheT", "0")) == (time_index or 0) and int(plane.get("TheC", "0")) == 0:
             if plane.get("PositionZ") is not None:
-                positions[int(plane.get("TheZ", "0"))] = float(plane.get("PositionZ")) * _unit_scale(plane.get("PositionZUnit", "µm"))
+                positions[int(plane.get("TheZ", "0"))] = to_um(float(plane.get("PositionZ")), plane.get("PositionZUnit", "µm"))
     if len(positions) >= 3:
         indices = np.array(sorted(positions))
         zvalues = np.array([positions[k] for k in indices])

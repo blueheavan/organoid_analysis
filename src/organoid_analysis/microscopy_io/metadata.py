@@ -18,23 +18,44 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
+
 from .voxel_spacing import isotropic_xy_size_um
+
+# Tolerance for treating two physical-spacing/position values (µm) as the same
+# acquisition metadata rather than a conflict to reject. Heuristic engineering
+# judgment ("close enough to be metadata rounding, not a real mismatch"), not
+# independently calibrated; see docs/PARAMETERS.md. The single canonical
+# definition -- tiff_contract.py and organoid_commands.py both import these
+# from here rather than each declaring their own copy.
+SPACING_RTOL = 0.01
+SPACING_ATOL_UM = 1e-5
 
 # μm conversion factors: value_in_unit * FACTOR = value_in_um
 # OME's default unit when PhysicalSize*Unit is absent/empty is micrometre.
+# This is the single, canonical unit table for the whole package -- it must
+# stay a superset of every spelling either TIFF-reading path has ever needed
+# to accept, since dropping one would reject files that used to parse.
 _UNIT_TO_UM: dict[str, float] = {
     "": 1.0,  # bare numbers / missing unit default to micrometres per OME
     "m": 1.0e6,
     "cm": 1.0e4,
     "mm": 1.0e3,
-    "µm": 1.0,
+    "µm": 1.0,  # U+00B5 MICRO SIGN
+    "μm": 1.0,  # U+03BC GREEK SMALL LETTER MU -- visually identical, seen in the wild
     "um": 1.0,
+    "micrometer": 1.0,
     "nm": 1.0e-3,
     "Å": 1.0e-4,
 }
 
 
-def _to_um(value: float, unit: str | None) -> float:
+def to_um(value: float, unit: str | None) -> float:
+    """Convert ``value`` in the given OME/physical unit string to micrometres.
+
+    The single canonical unit-conversion function -- tiff_contract.py's
+    ``ome_spacing()`` uses this too rather than maintaining its own table.
+    """
     unit = (unit or "").strip() or "µm"
     factor = _UNIT_TO_UM.get(unit)
     if factor is None:
@@ -68,12 +89,15 @@ class Spacing:
         return self.z / xy
 
 
-def parse_spacing_ome(ome_metadata: str | None) -> Spacing:
+def parse_spacing_ome(ome_metadata: str | None, time_index: int | None = None) -> Spacing:
     """Parse voxel spacing from OME-XML via ``ome_types``.
 
     Returns a ``Spacing`` with per-axis values in micrometres. Any axis that
     cannot be resolved is ``None`` (unknown). Raises if the XML is malformed in
-    a way ``ome_types`` cannot parse.
+    a way ``ome_types`` cannot parse, or if per-plane Z positions (when
+    present) disagree with a uniformly spaced Z grid -- the rest of this
+    package assumes a uniform Z step, so a nonuniform grid must be surfaced as
+    an error here rather than silently averaged into one Z spacing value.
     """
     x = y = z = None
     if not ome_metadata:
@@ -96,7 +120,7 @@ def parse_spacing_ome(ome_metadata: str | None) -> Spacing:
         if value is None:
             continue
         try:
-            um = _to_um(float(value), unit.value if unit is not None else "µm")
+            um = to_um(float(value), unit.value if unit is not None else "µm")
         except ValueError:
             continue
         if slot == "x":
@@ -105,6 +129,31 @@ def parse_spacing_ome(ome_metadata: str | None) -> Spacing:
             y = um
         elif slot == "z":
             z = um
+
+    # When plane positions are available, reject a nonuniform Z grid rather
+    # than reporting a single (possibly wrong) Z spacing derived only from
+    # PhysicalSizeZ. Only planes for the selected timepoint/first channel are
+    # considered, matching how the rest of this package selects one T/C slice.
+    positions: dict[int, float] = {}
+    for plane in pixels.planes:
+        if plane.the_t == (time_index or 0) and plane.the_c == 0 and plane.position_z is not None:
+            unit = plane.position_z_unit
+            # ome_types defaults PositionZUnit to UnitsLength.REFERENCEFRAME
+            # (OME's own schema default) when the XML omits it entirely, not
+            # to a physical unit -- treat that the same as "no unit given" ->
+            # micrometres, matching tiff_contract.ome_spacing()'s equivalent
+            # `plane.get("PositionZUnit", "µm")` default for the same XML.
+            unit_str = None if unit is None or unit.value == "reference frame" else unit.value
+            positions[plane.the_z] = to_um(float(plane.position_z), unit_str)
+    if len(positions) >= 3 and z is not None:
+        indices = np.array(sorted(positions))
+        zvalues = np.array([positions[k] for k in indices])
+        steps = np.abs(np.diff(zvalues) / np.diff(indices))
+        if not np.allclose(steps, z, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
+            raise ValueError(
+                "OME plane positions disagree with a uniformly spaced Z grid; "
+                "resample before analysis"
+            )
     return Spacing(x, y, z)
 
 
