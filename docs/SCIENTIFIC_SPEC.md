@@ -184,7 +184,7 @@ Classification: S3 (Inferential) for the pipeline as a whole, because `src/organ
 3. **Sphericity bias:** Voxel discretization can produce values >1.0. Values >1.05 are flagged but not corrected.
 4. **Intensity measurements:** Raw intensities are not normalized across experiments. Cross-experiment comparison requires separate normalization.
 5. **Viability states:** Calcein/PI states describe signal patterns, not cell viability fraction. States are not validated against independent viability assays.
-6. **Statistical summaries:** Bootstrap CIs are exploratory with small samples. No inferential tests are provided.
+6. **Statistical summaries:** Bootstrap CIs (well/condition-level descriptive summaries) are exploratory with small samples. The default-on hypothesis tests (linear mixed-effects omnibus test, BH-FDR-corrected pairwise contrasts; see §1 and docs/ALGORITHM_DECISIONS.md D11) are likewise exploratory — small documented replicate minimums, an approximate rather than full Satterthwaite/Kenward-Roger small-sample correction, no predeclared design — and must not be treated as confirmatory.
 7. **Spatial features:** Contact area is voxel-face based. Centroid distance and kNN are not used for contact definition.
 
 ### Unresolved assumptions
@@ -206,6 +206,7 @@ Classification: S3 (Inferential) for the pipeline as a whole, because `src/organ
 |---------|------|---------|
 | 1.0.0 | 2026-09-02 | Initial scientific specification |
 | 1.1.0 | 2026-09-03 | Reclassified S2→S3: `stats.py`'s default-on hypothesis testing (D11) was shipped without updating this document's classification/scope/"does NOT claim" sections; corrected per an independent scientific-software audit. |
+| 1.1.1 | 2026-09-08 | §10 item 6 ("Statistical summaries") still read "No inferential tests are provided," left over from before the 1.1.0 S2→S3 reclassification and directly contradicting §1's Scope (which correctly describes the default-on LMM/BH-FDR hypothesis tests). Corrected to describe those tests' exploratory status consistently with §1. |
 
 ## 12. References
 

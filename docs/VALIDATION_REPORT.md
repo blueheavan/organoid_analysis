@@ -34,7 +34,7 @@ Per item: `PASS`, `PARTIAL`, `FAIL`, `NOT ASSESSED`, `INSUFFICIENT EVIDENCE`, `N
 | Formal QC flags (VR-7) | `PASS` | border, MAD-outlier, too-small, parent-failed, anucleate, multinucleated, direct-mismatch all produced; MAD==0 path handled |
 | Reproducibility/determinism (VR-9) | `PASS` | identical feature tables across two runs (organoid/cell/nucleus/topology/qc) |
 | Failure modes / out-of-domain (VR-10) | `PASS` | missing spacing, conflicting metadata, shape mismatch, non-finite intensity handled explicitly |
-| Full automated suite | `PASS` | `pixi run analysis-test`: 78 passed; `pixi run test`: 64 passed (post-change) |
+| Full automated suite | `PASS` | `pixi run test` (single authoritative suite as of `3c9793c`): 195 passed, 8 skipped (Playwright unavailable in this environment), 8 render-marked tests deselected by default (`pixi run test-render` runs them: 8 passed) |
 
 ### Independent-oracle note (VR-2/3/5)
 
@@ -84,7 +84,7 @@ Metadata supplied by the caller is preserved verbatim and never invented (`_add_
 | F-1 | P4 | `cli.py` had a no-op `key.replace("_","_")` — misleading, fixed | Resolved (P3/P4, no scientific impact) |
 | F-2 | P4 | In-progress uncommitted label-compaction refactor (`src/organoid_analysis/quantification/labels.py`) deduplicates logic across 4 files; behavior preserved (all tests green) | Open — refactor itself is beneficial; commit when ready |
 | F-3 | P2 | `analyze-3d`'s exported `analysis_summary.json` had zero code/environment provenance (no git commit, source hash, or package versions), unlike the classical `analyze` pipeline | Resolved 2026-09-03 — `_run_multilevel` now writes a `provenance` block (git commit + dirty flag, `multilevel3d/*.py` source hashes, package versions); regression test in `test_multilevel3d.py` |
-| F-4 | P2 | This report's own Gate 11 baseline cited git commit `280bd06`, which does not exist in this repository's actual history | Open — the historical evidence is retained below, but a new release validation must establish a reproducible baseline |
+| F-4 | P2 | This report's own Gate 11 baseline cited git commit `280bd06`, which does not exist in this repository's actual history | Resolved 2026-09-08 — Gate 11 now cites `3c9793c` (an actual commit in this repository's history, `git log` verified) with package versions read directly from the installed pixi environment, not carried forward from the unreproducible historical entry |
 
 No P0/P1 findings **for this report's scope** (the `analyze-3d` multilevel module). An independent scientific-software-development-validation audit on 2026-09-03 found two P1 findings in the separately-validated *classical* `analyze` pipeline (`viability.calibrate()`'s control condition-scoping, and anti-conservative small-sample p-values in `stats.py`) — both fixed and regression-tested; see `docs/ALGORITHM_DECISIONS.md` D7/D11 and `docs/SCIENTIFIC_SPEC.md` (reclassified S2→S3) for that pipeline's own findings and current status. No scientific algorithm/threshold was changed merely to satisfy a test; changes were fixes for confirmed defects, each with its own regression test asserting the corrected (not the old, defective) behavior.
 
@@ -102,7 +102,7 @@ This is a research-readiness assessment only. It does not establish conformity w
 
 | Component | Version |
 |---|---|
-| Git commit | Historical report value `280bd06` is **not present in this repository's actual history**. This table is retained as historical evidence only and is not a reproducible baseline for the current release; re-validation against a tagged current commit remains required. |
+| Git commit | `3c9793c` (verified present via `git log`; supersedes the historical `280bd06` value, which was never a real commit in this repository -- see F-4) |
 | Platform | macOS Apple Silicon (osx-arm64), pixi environment |
 | Python | 3.12 (pixi `python = "3.12.*"`) |
 | NumPy | 2.5.2 |
@@ -110,10 +110,10 @@ This is a research-readiness assessment only. It does not establish conformity w
 | scikit-image | 0.26.0 |
 | tifffile | 2026.3.3 |
 | pandas | 2.3.3 |
-| Matplotlib | 3.8+ |
+| Matplotlib | 3.11.1 |
 | PyYAML | 6.0.3 |
 
-Environment is pinned via `pixi.lock`. The multilevel measurement step is deterministic (no RNG); determinism re-verified in this pass (VR-9).
+Environment is pinned via `pixi.lock`. The multilevel measurement step is deterministic (no RNG); determinism re-verified in this pass (VR-9). Package versions above were read directly from the installed pixi environment (`pixi run python -c "import numpy, ..."`) at the commit cited, not carried forward from a prior report.
 
 ## Traceability matrix
 
