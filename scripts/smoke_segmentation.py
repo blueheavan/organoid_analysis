@@ -17,7 +17,7 @@ _bootstrap()
 
 DATA_IMAGES_DIR = Path(__file__).resolve().parent.parent / "data" / "images"
 
-from segmentation.cellpose import (  # noqa: E402
+from organoid_analysis.segmentation.cellpose_inference import (  # noqa: E402
     SegmentationConfig,
     create_model,
     get_accelerator,

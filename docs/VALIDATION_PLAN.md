@@ -125,5 +125,5 @@ Audit separation for this pass: Tier D (same agent and context as implementation
 ## Traceability
 
 - Plan mapping to code: see `docs/ALGORITHM_DECISIONS.md` traceability table.
-- Tests: `src/analysis/tests/test_multilevel3d.py`.
+- Tests: `tests/workflows/test_multilevel_measurement_workflow.py`.
 - Result outputs: `export_results` → Parquet/JSON hierarchy described in README.

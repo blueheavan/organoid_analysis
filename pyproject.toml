@@ -3,7 +3,7 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "organoid3d-pipeline"
+name = "organoid-analysis"
 version = "1.0.0"
 description = "Auditable 3D organoid morphology and control-scaled viability analysis"
 license = { text = "MIT" }
@@ -24,18 +24,21 @@ dev = [
 ]
 
 [project.scripts]
-analysis = "analysis.cli:main"
+organoid-analysis = "organoid_analysis.command_line.organoid_commands:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["analysis*", "analysis.*", "segmentation*", "segmentation.*", "ui*", "ui.*"]
+include = ["organoid_analysis*"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "src/analysis/tests", "src/ui/vtk_viewer/tests"]
-addopts = "-q --import-mode=importlib"
+testpaths = ["tests"]
+addopts = "-q -m 'not render'"
+markers = [
+  "render: native offscreen VTK rendering tests; run explicitly on a graphics-capable host",
+]
 
 [tool.ruff]
 line-length = 100
@@ -90,22 +93,23 @@ ruff = ">=0.1"
 mypy = ">=1.7"
 pyarrow = ">=16,<24"
 pillow = ">=11,<13"
-organoid3d-pipeline = { path = ".", editable = true }
+organoid-analysis = { path = ".", editable = true }
 
 [tool.pixi.tasks]
 check = "python scripts/validate_notebooks.py"
 kernel = "python -m ipykernel install --sys-prefix --name 3d-organoid-mac-arm --display-name 'Python (3D Organoid Mac Arm)'"
 smoke = "python scripts/smoke_segmentation.py"
 test = "python -m pytest -v"
+test-render = "python -m pytest -v -m render"
 lint = "ruff check src tests scripts"
 format = "ruff format src tests scripts"
-typecheck = "mypy src/analysis src/segmentation src/ui"
-preview = "python scripts/run_app.py src/ui/preview_2d.py"
-app = "python scripts/run_app.py src/ui/app.py"
+typecheck = "mypy src/organoid_analysis"
+preview = "python scripts/run_app.py src/organoid_analysis/web_interface/preview_2d.py"
+app = "python scripts/run_app.py src/organoid_analysis/web_interface/organoid_workspace.py"
 # --- data management ---
 data = "bash scripts/download_data.sh"
 # --- analysis pipeline ---
-analysis-test = "python -m pytest src/analysis/tests -v"
-analysis-demo = "python -m analysis demo --out data/synthetic_demo"
-analysis-analyze = "python -m analysis analyze"
-analysis-cells = "python -m analysis cells"
+analysis-test = "python -m pytest tests -v"
+analysis-demo = "python -m organoid_analysis demo --out data/synthetic_demo"
+analysis-analyze = "python -m organoid_analysis analyze"
+analysis-cells = "python -m organoid_analysis cells"

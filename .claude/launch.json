@@ -4,7 +4,7 @@
     {
       "name": "organoid-app",
       "runtimeExecutable": "pixi",
-      "runtimeArgs": ["run", "streamlit", "run", "src/ui/app.py", "--server.port", "8501", "--server.headless", "true", "--browser.gatherUsageStats", "false"],
+      "runtimeArgs": ["run", "streamlit", "run", "src/organoid_analysis/web_interface/organoid_workspace.py", "--server.port", "8501", "--server.headless", "true", "--browser.gatherUsageStats", "false"],
       "port": 8501
     }
   ]

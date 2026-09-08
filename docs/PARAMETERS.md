@@ -11,7 +11,7 @@ Legend for status: `Validated` / `Partially validated` / `Not validated`; sensit
 
 ## Multilevel 3D analysis parameters
 
-Source of truth: `src/analysis/multilevel3d/config.py` (dataclass) and CLI flags in `src/analysis/cli.py`.
+Source of truth: `src/organoid_analysis/quantification/multilevel_relationships/config.py` (dataclass) and CLI flags in `src/organoid_analysis/command_line/organoid_commands.py`.
 
 | Parameter | Value | Unit | Origin | Rationale | Scientific impact | Calibration artifact | Status | Sensitivity | User configurable |
 |---|---|---|---|---|---|---|---|---|---|
@@ -25,7 +25,7 @@ Source of truth: `src/analysis/multilevel3d/config.py` (dataclass) and CLI flags
 
 ## Classical analysis config defaults
 
-Source of truth: `src/analysis/config.py` (module `DEFAULTS`), validated by `validate_config`.
+Source of truth: `src/organoid_analysis/config.py` (module `DEFAULTS`), validated by `validate_config`.
 
 ### Segmentation
 
@@ -87,7 +87,7 @@ Source of truth: `src/analysis/config.py` (module `DEFAULTS`), validated by `val
 
 ## Cellpose 3D segmentation parameters
 
-Source of truth: `src/segmentation/cellpose.py::SegmentationConfig` and `src/segmentation/auto_config.py`. Exposed as UI controls in `src/ui/vtk_viewer/integrated_app.py`. This route is independent of the classical `src/analysis/segmentation.py` route catalogued above and was not previously catalogued here.
+Source of truth: `src/organoid_analysis/segmentation/cellpose_inference.py::SegmentationConfig` and `src/organoid_analysis/segmentation/parameter_estimation.py`. Exposed as UI controls in `src/organoid_analysis/web_interface/segmentation_workspace.py`. This route is independent of the classical `src/organoid_analysis/segmentation/watershed_instances.py` route catalogued above and was not previously catalogued here.
 
 | Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
 |---|---|---|---|---|---|---|---|
@@ -109,13 +109,13 @@ Source of truth: `src/segmentation/cellpose.py::SegmentationConfig` and `src/seg
 | plausible diameter filter (auto_config.py:142) | [5.0, 250.0] | px (downsample-corrected) | heuristic | Diameter pre-estimates outside this range are discarded as noise before taking the quantile. | Not validated | Not tested | No |
 | quick pre-segmentation call (auto_config.py:116-119) | `flow_threshold=0.0, cellprob_threshold=0.0, min_size=5, batch_size=8` | mixed | heuristic (Cellpose defaults chosen for the diameter pre-estimate only, not the final segmentation) | Only affects the diameter *estimate* fed as a suggestion; does not affect the final segmentation parameters, which the user can override. | N/A (estimate only) | N/A | No |
 
-**Model weight provenance:** `create_model` (`src/segmentation/cellpose.py:136`) loads Cellpose's pretrained weights for `model_type` by name via the `cellpose` package; the specific weight file/version is whatever the installed `cellpose==4.2.1.1` package resolves (pinned in `pixi.lock`), not independently hashed or pinned by this repository. See `pyproject.toml` for the pinned `cellpose` package version.
+**Model weight provenance:** `create_model` (`src/organoid_analysis/segmentation/cellpose_inference.py:136`) loads Cellpose's pretrained weights for `model_type` by name via the `cellpose` package; the specific weight file/version is whatever the installed `cellpose==4.2.1.1` package resolves (pinned in `pixi.lock`), not independently hashed or pinned by this repository. See `pyproject.toml` for the pinned `cellpose` package version.
 
 ---
 
 ## Cell–nucleus pairing parameters (`analysis cells` route)
 
-Source of truth: `src/analysis/cellular.py`, exposed via the `cells` CLI subcommand in `src/analysis/cli.py`. This route is independent of `analyze-3d` (which uses maximum-overlap assignment, D1) and was not previously catalogued here. See `docs/ALGORITHM_DECISIONS.md` D10 for the bipartite-matching algorithm decision.
+Source of truth: `src/organoid_analysis/quantification/cellular_measurements.py`, exposed via the `cells` CLI subcommand in `src/organoid_analysis/command_line/organoid_commands.py`. This route is independent of `analyze-3d` (which uses maximum-overlap assignment, D1) and was not previously catalogued here. See `docs/ALGORITHM_DECISIONS.md` D10 for the bipartite-matching algorithm decision.
 
 | Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
 |---|---|---|---|---|---|---|---|
@@ -130,7 +130,7 @@ Source of truth: `src/analysis/cellular.py`, exposed via the `cells` CLI subcomm
 
 ## Segmentation-validation matching parameter
 
-Source of truth: `src/analysis/evaluation.py::match_instances`. Stated as a narrative fact in `docs/METHODS.md` and `docs/SCIENTIFIC_SPEC.md` ("Hungarian assignment at IoU ≥ 0.5") but not previously entered in this catalog. See `docs/ALGORITHM_DECISIONS.md` D9.
+Source of truth: `src/organoid_analysis/experimental_statistics/evaluation.py::match_instances`. Stated as a narrative fact in `docs/METHODS.md` and `docs/SCIENTIFIC_SPEC.md` ("Hungarian assignment at IoU ≥ 0.5") but not previously entered in this catalog. See `docs/ALGORITHM_DECISIONS.md` D9.
 
 | Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
 |---|---|---|---|---|---|---|---|
@@ -140,7 +140,7 @@ Source of truth: `src/analysis/evaluation.py::match_instances`. Stated as a narr
 
 ## Data-contract spacing/position tolerances
 
-Source of truth: `src/analysis/io.py` (`ome_spacing`, `load_sample`) and `src/analysis/cli.py` (`_run_cells`, `_run_multilevel`). The same literal tolerance is repeated at `io.py:142,182,194,245` and `cli.py:91,99,156,163`.
+Source of truth: `src/organoid_analysis/microscopy_io/tiff_contract.py` (`ome_spacing`, `load_sample`) and `src/organoid_analysis/command_line/organoid_commands.py` (`_run_cells`, `_run_multilevel`). The same literal tolerance is repeated at `io.py:142,182,194,245` and `cli.py:91,99,156,163`.
 
 | Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
 |---|---|---|---|---|---|---|---|
@@ -150,7 +150,7 @@ Source of truth: `src/analysis/io.py` (`ome_spacing`, `load_sample`) and `src/an
 
 ## Statistical testing parameters (`stats.py`)
 
-Source of truth: `src/analysis/stats.py`. See `docs/ALGORITHM_DECISIONS.md` D11 for the LMM/BH-FDR method decision.
+Source of truth: `src/organoid_analysis/experimental_statistics/stats.py`. See `docs/ALGORITHM_DECISIONS.md` D11 for the LMM/BH-FDR method decision.
 
 | Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
 |---|---|---|---|---|---|---|---|
@@ -159,9 +159,9 @@ Source of truth: `src/analysis/stats.py`. See `docs/ALGORITHM_DECISIONS.md` D11 
 
 ---
 
-## Exploratory statistics/ML parameters (`src/ui/analysis.py`, Tutorials 2-5)
+## Exploratory statistics/ML parameters (`src/organoid_analysis/experimental_statistics/phenotype_exploration.py`, Tutorials 2-5)
 
-Source of truth: `src/ui/analysis.py`. These functions are explicitly scoped as reusable exploratory tutorial workflows (module docstring: "centralises the analysis workflows that live in Tutorials 2-5"), not part of the core `analyze`/`analyze-3d` measurement pipeline, and their outputs (classifier accuracy, feature importance, shape category) are exploratory/descriptive, not validated biological classifications.
+Source of truth: `src/organoid_analysis/experimental_statistics/phenotype_exploration.py`. These functions are explicitly scoped as reusable exploratory tutorial workflows (module docstring: "centralises the analysis workflows that live in Tutorials 2-5"), not part of the core `analyze`/`analyze-3d` measurement pipeline, and their outputs (classifier accuracy, feature importance, shape category) are exploratory/descriptive, not validated biological classifications.
 
 | Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
 |---|---|---|---|---|---|---|---|
@@ -173,18 +173,18 @@ Source of truth: `src/ui/analysis.py`. These functions are explicitly scoped as 
 
 ## Notes
 
-- All values have a machine-readable home in `src/analysis/config.py` or `src/analysis/multilevel3d/config.py`; no silent magic numbers gate scientific behavior.
+- All values have a machine-readable home in `src/organoid_analysis/config.py` or `src/organoid_analysis/quantification/multilevel_relationships/config.py`; no silent magic numbers gate scientific behavior.
 - Thresholds marked `Not validated on real data` require independent calibration to justify a biological claim. The pipeline labels such results as research-use only and does not claim clinical or biological endpoint validity.
 - Viability gates (0.30/0.60) are documented as starting gates, not experimentally calibrated assay thresholds.
 
 ## Traceability
 
-- Multilevel config: `src/analysis/multilevel3d/config.py`
-- Classical config defaults + validation: `src/analysis/config.py`
-- CLI exposure: `src/analysis/cli.py`
-- Cellpose 3D segmentation: `src/segmentation/cellpose.py`, `src/segmentation/auto_config.py`, UI exposure in `src/ui/vtk_viewer/integrated_app.py`
-- Cell–nucleus pairing: `src/analysis/cellular.py`, CLI exposure in `src/analysis/cli.py::_run_cells`
-- Segmentation-validation matching: `src/analysis/evaluation.py`
-- Data-contract tolerances: `src/analysis/io.py`, `src/analysis/cli.py`
-- Statistical testing: `src/analysis/stats.py`
-- Exploratory tutorial statistics/ML: `src/ui/analysis.py`
+- Multilevel config: `src/organoid_analysis/quantification/multilevel_relationships/config.py`
+- Classical config defaults + validation: `src/organoid_analysis/config.py`
+- CLI exposure: `src/organoid_analysis/command_line/organoid_commands.py`
+- Cellpose 3D segmentation: `src/organoid_analysis/segmentation/cellpose_inference.py`, `src/organoid_analysis/segmentation/parameter_estimation.py`, UI exposure in `src/organoid_analysis/web_interface/segmentation_workspace.py`
+- Cell–nucleus pairing: `src/organoid_analysis/quantification/cellular_measurements.py`, CLI exposure in `src/organoid_analysis/command_line/organoid_commands.py::_run_cells`
+- Segmentation-validation matching: `src/organoid_analysis/experimental_statistics/evaluation.py`
+- Data-contract tolerances: `src/organoid_analysis/microscopy_io/tiff_contract.py`, `src/organoid_analysis/command_line/organoid_commands.py`
+- Statistical testing: `src/organoid_analysis/experimental_statistics/stats.py`
+- Exploratory tutorial statistics/ML: `src/organoid_analysis/experimental_statistics/phenotype_exploration.py`

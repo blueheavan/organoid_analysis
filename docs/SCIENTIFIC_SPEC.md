@@ -2,7 +2,7 @@
 
 Version: 1.0.0
 Date: 2026-09-02
-Classification: S3 (Inferential) for the pipeline as a whole, because `src/analysis/stats.py`'s condition-comparison hypothesis testing (linear mixed-effects model + Benjamini-Hochberg FDR-corrected pairwise contrasts; `cfg["stats"]["enabled"]` defaults to `true`) is exactly the "hypothesis testing, differential analysis" example category the S3 rubric names. Core measurement/QC (morphology, hierarchy, topology, viability-state gating) is S2 (Analytical) on its own; see docs/ALGORITHM_DECISIONS.md D11 for the S3 component's method, validation status, and known small-sample-inference limitation. The bundled exploratory UI tutorial workflows (`src/ui/analysis.py`: trained classifiers, clustering) are also S3-shaped but are explicitly out of scope of this specification's measurement claims (see docs/PARAMETERS.md, "Exploratory statistics/ML parameters").
+Classification: S3 (Inferential) for the pipeline as a whole, because `src/organoid_analysis/experimental_statistics/stats.py`'s condition-comparison hypothesis testing (linear mixed-effects model + Benjamini-Hochberg FDR-corrected pairwise contrasts; `cfg["stats"]["enabled"]` defaults to `true`) is exactly the "hypothesis testing, differential analysis" example category the S3 rubric names. Core measurement/QC (morphology, hierarchy, topology, viability-state gating) is S2 (Analytical) on its own; see docs/ALGORITHM_DECISIONS.md D11 for the S3 component's method, validation status, and known small-sample-inference limitation. The bundled exploratory UI tutorial workflows (`src/organoid_analysis/experimental_statistics/phenotype_exploration.py`: trained classifiers, clustering) are also S3-shaped but are explicitly out of scope of this specification's measurement claims (see docs/PARAMETERS.md, "Exploratory statistics/ML parameters").
 
 ## 1. Scientific Objective and Question
 
@@ -99,7 +99,7 @@ Classification: S3 (Inferential) for the pipeline as a whole, because `src/analy
 
 **Technical replicates:** Multiple images from the same well or culture. These capture measurement variability but not biological variability.
 
-**Common mistake:** Treating organoids or technical replicates as biological replicates (pseudoreplication). The software outputs per-organoid measurements but does not perform statistical tests. Researchers must account for the nested structure in downstream analysis.
+**Common mistake:** Treating organoids or technical replicates as biological replicates (pseudoreplication). The software outputs per-organoid measurements and its classical workflow can perform exploratory mixed-effects tests, but those tests depend on correctly supplied well, batch, and biological-replicate identifiers. Researchers must verify the nested design and must not interpret object-level rows as independent biological replicates.
 
 ## 7. Output Semantics
 

@@ -99,7 +99,7 @@ This document records the scientific rationale for consequential algorithmic cho
 
 **Rationale:** MAD is robust to outliers, unlike mean/std which are inflated by the very outliers being detected. This prevents a single extreme object from masking the next-level outliers.
 
-**Original literature:** The 1.4826 (equivalently, its reciprocal 0.67448975) consistency constant that rescales MAD into a σ-equivalent robust estimator under a Gaussian assumption is documented in Rousseeuw, P. J., & Croux, C. (1993). Alternatives to the Median Absolute Deviation. *Journal of the American Statistical Association*, 88(424), 1273–1283. https://doi.org/10.1080/01621459.1993.10476408. The constant itself is the reciprocal of the 0.75-quantile of the standard normal distribution, Φ⁻¹(0.75). `src/analysis/multilevel3d/qc.py` uses the reciprocal form (0.67448975 × …); `src/analysis/features.py` and `src/analysis/viability.py` use the direct form (… × 1.4826); both are the same constant, named and cross-referenced at each definition site so the two spellings do not appear to be different numbers.
+**Original literature:** The 1.4826 (equivalently, its reciprocal 0.67448975) consistency constant that rescales MAD into a σ-equivalent robust estimator under a Gaussian assumption is documented in Rousseeuw, P. J., & Croux, C. (1993). Alternatives to the Median Absolute Deviation. *Journal of the American Statistical Association*, 88(424), 1273–1283. https://doi.org/10.1080/01621459.1993.10476408. The constant itself is the reciprocal of the 0.75-quantile of the standard normal distribution, Φ⁻¹(0.75). `src/organoid_analysis/quantification/multilevel_relationships/qc.py` uses the reciprocal form (0.67448975 × …); `src/organoid_analysis/quantification/features.py` and `src/organoid_analysis/experimental_statistics/viability.py` use the direct form (… × 1.4826); both are the same constant, named and cross-referenced at each definition site so the two spellings do not appear to be different numbers.
 
 **Validation:** `PASS — controlled phantoms; real-data outlier calibration NOT ASSESSED.`
 
@@ -151,13 +151,13 @@ This document records the scientific rationale for consequential algorithmic cho
 - Otsu, N. (1979). A threshold selection method from gray-level histograms. *IEEE Transactions on Systems, Man, and Cybernetics*, 9(1), 62–66. https://doi.org/10.1109/TSMC.1979.4310076
 - Vincent, L., & Soille, P. (1991). Watersheds in digital spaces: an efficient algorithm based on immersion simulations. *IEEE Transactions on Pattern Analysis and Machine Intelligence*, 13(6), 583–598. https://doi.org/10.1109/34.87344
 
-**Rejected:** A trained/learned segmentation model for the classical route — deliberately out of scope; this route is the parameter-free/classical alternative to Cellpose (see `src/segmentation/`).
+**Rejected:** A trained/learned segmentation model for the classical route — deliberately out of scope; this route is the parameter-free/classical alternative to Cellpose (see `src/organoid_analysis/segmentation/`).
 
 **Validation:** `PARTIAL — unit/synthetic-phantom tests cover the split/threshold logic (test_segmentation.py); real-image detection accuracy is assessed only via the optional independent-annotation route in docs/METHODS.md, not a general claim.`
 
 **Strength labeling:** established methods (Otsu; distance-transform watershed), combined by heuristic parameter choices (seed height, minimum seed separation — see docs/PARAMETERS.md).
 
-**Code location:** `src/analysis/segmentation.py::segment`, `::watershed_instances`.
+**Code location:** `src/organoid_analysis/segmentation/watershed_instances.py::segment`, `::watershed_instances`.
 
 ---
 
@@ -177,7 +177,7 @@ This document records the scientific rationale for consequential algorithmic cho
 
 **Strength labeling:** established method (Hungarian assignment); `iou_threshold=0.5` is a conventional choice (see docs/PARAMETERS.md), not independently calibrated for this pipeline.
 
-**Code location:** `src/analysis/evaluation.py::match_instances`.
+**Code location:** `src/organoid_analysis/experimental_statistics/evaluation.py::match_instances`.
 
 ---
 
@@ -197,13 +197,13 @@ This document records the scientific rationale for consequential algorithmic cho
 
 **Strength labeling:** established method (bipartite assignment); the QC gate thresholds (`min_cell_volume_um3`, `min_nucleus_volume_um3`, `max_nc_ratio`, `min_nucleus_containment`) are heuristic (see docs/PARAMETERS.md).
 
-**Code location:** `src/analysis/cellular.py::pair_and_filter_cells`.
+**Code location:** `src/organoid_analysis/quantification/cellular_measurements.py::pair_and_filter_cells`.
 
 ---
 
 ## D11. Linear mixed-effects model with BH-FDR pairwise contrasts for condition comparison
 
-**Task:** Test whether a continuous morphology feature (volume, sphericity) differs across experimental conditions while accounting for biological-replicate structure (`src/analysis/stats.py`, invoked from `pipeline.py` when `cfg["stats"]["enabled"]`).
+**Task:** Test whether a continuous morphology feature (volume, sphericity) differs across experimental conditions while accounting for biological-replicate structure (`src/organoid_analysis/experimental_statistics/stats.py`, invoked from `pipeline.py` when `cfg["stats"]["enabled"]`).
 
 **Selected:** A linear mixed-effects model (condition as fixed effect, `condition::biological_replicate` as a random intercept) fit by REML, giving an omnibus Wald test and all-pairwise contrasts between conditions. Falls back to OLS with replicate-clustered standard errors when the random-effects fit is singular (variance below `1e-6 × scale`) or does not converge. Pairwise p-values are Benjamini–Hochberg FDR corrected. `volume_um3` is log10-transformed before fitting; `sphericity` is not.
 
@@ -223,7 +223,7 @@ This document records the scientific rationale for consequential algorithmic cho
 
 **Strength labeling:** established statistical methods (LMM; BH-FDR), combined by an engineering fallback rule (LMM→OLS singular-fit threshold) that is heuristic and not independently validated.
 
-**Code location:** `src/analysis/stats.py::condition_pairwise_tests`, `::fit_model`.
+**Code location:** `src/organoid_analysis/experimental_statistics/stats.py::condition_pairwise_tests`, `::fit_model`.
 
 ---
 
@@ -237,14 +237,14 @@ This document records the scientific rationale for consequential algorithmic cho
 
 | Decision | Code location |
 |---|---|
-| D1 | `src/analysis/multilevel3d/hierarchy.py` |
-| D2 | `src/analysis/multilevel3d/pipeline.py` (lines ~193-212) |
-| D3 | `src/analysis/features.py::geometry`, `::surface_mesh` |
-| D4 | `src/analysis/multilevel3d/topology.py` |
-| D5 | `src/analysis/multilevel3d/qc.py::_volume_outliers` |
-| D6 | `src/analysis/multilevel3d/spatial.py` |
-| D7 | `src/analysis/features.py::marker_measurements`, `src/analysis/viability.py`, `src/analysis/report.py` |
-| D8 | `src/analysis/segmentation.py::segment`, `::watershed_instances` |
-| D9 | `src/analysis/evaluation.py::match_instances` |
-| D10 | `src/analysis/cellular.py::pair_and_filter_cells` |
-| D11 | `src/analysis/stats.py::condition_pairwise_tests`, `::fit_model` |
+| D1 | `src/organoid_analysis/quantification/multilevel_relationships/hierarchy.py` |
+| D2 | `src/organoid_analysis/workflows/multilevel_measurement_workflow.py` (lines ~193-212) |
+| D3 | `src/organoid_analysis/quantification/features.py::geometry`, `::surface_mesh` |
+| D4 | `src/organoid_analysis/quantification/multilevel_relationships/topology.py` |
+| D5 | `src/organoid_analysis/quantification/multilevel_relationships/qc.py::_volume_outliers` |
+| D6 | `src/organoid_analysis/quantification/multilevel_relationships/spatial.py` |
+| D7 | `src/organoid_analysis/quantification/features.py::marker_measurements`, `src/organoid_analysis/experimental_statistics/viability.py`, `src/organoid_analysis/result_export/report.py` |
+| D8 | `src/organoid_analysis/segmentation/watershed_instances.py::segment`, `::watershed_instances` |
+| D9 | `src/organoid_analysis/experimental_statistics/evaluation.py::match_instances` |
+| D10 | `src/organoid_analysis/quantification/cellular_measurements.py::pair_and_filter_cells` |
+| D11 | `src/organoid_analysis/experimental_statistics/stats.py::condition_pairwise_tests`, `::fit_model` |

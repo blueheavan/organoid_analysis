@@ -82,9 +82,9 @@ Metadata supplied by the caller is preserved verbatim and never invented (`_add_
 | ID | Severity | Description | Status |
 |---|---|---|---|
 | F-1 | P4 | `cli.py` had a no-op `key.replace("_","_")` — misleading, fixed | Resolved (P3/P4, no scientific impact) |
-| F-2 | P4 | In-progress uncommitted label-compaction refactor (`src/analysis/labels.py`) deduplicates logic across 4 files; behavior preserved (all tests green) | Open — refactor itself is beneficial; commit when ready |
+| F-2 | P4 | In-progress uncommitted label-compaction refactor (`src/organoid_analysis/quantification/labels.py`) deduplicates logic across 4 files; behavior preserved (all tests green) | Open — refactor itself is beneficial; commit when ready |
 | F-3 | P2 | `analyze-3d`'s exported `analysis_summary.json` had zero code/environment provenance (no git commit, source hash, or package versions), unlike the classical `analyze` pipeline | Resolved 2026-09-03 — `_run_multilevel` now writes a `provenance` block (git commit + dirty flag, `multilevel3d/*.py` source hashes, package versions); regression test in `test_multilevel3d.py` |
-| F-4 | P2 | This report's own Gate 11 baseline cited git commit `280bd06`, which does not exist in this repository's actual history | Resolved 2026-09-03 — corrected in the Gate 11 table below |
+| F-4 | P2 | This report's own Gate 11 baseline cited git commit `280bd06`, which does not exist in this repository's actual history | Open — the historical evidence is retained below, but a new release validation must establish a reproducible baseline |
 
 No P0/P1 findings **for this report's scope** (the `analyze-3d` multilevel module). An independent scientific-software-development-validation audit on 2026-09-03 found two P1 findings in the separately-validated *classical* `analyze` pipeline (`viability.calibrate()`'s control condition-scoping, and anti-conservative small-sample p-values in `stats.py`) — both fixed and regression-tested; see `docs/ALGORITHM_DECISIONS.md` D7/D11 and `docs/SCIENTIFIC_SPEC.md` (reclassified S2→S3) for that pipeline's own findings and current status. No scientific algorithm/threshold was changed merely to satisfy a test; changes were fixes for confirmed defects, each with its own regression test asserting the corrected (not the old, defective) behavior.
 
@@ -102,7 +102,7 @@ This is a research-readiness assessment only. It does not establish conformity w
 
 | Component | Version |
 |---|---|
-| Git commit | `280bd06` — **not present in this repository's actual git history** (`git log` shows only `90bcb7d Initial project import`); this baseline predates the repository's current squashed-import history and cannot be used to reproduce this exact state from this repo alone. Treat the package/environment versions below, not this commit hash, as the reproducibility anchor for this report; re-baseline against current `HEAD` before relying on this table for a fresh audit. |
+| Git commit | Historical report value `280bd06` is **not present in this repository's actual history**. This table is retained as historical evidence only and is not a reproducible baseline for the current release; re-validation against a tagged current commit remains required. |
 | Platform | macOS Apple Silicon (osx-arm64), pixi environment |
 | Python | 3.12 (pixi `python = "3.12.*"`) |
 | NumPy | 2.5.2 |
@@ -125,4 +125,4 @@ Environment is pinned via `pixi.lock`. The multilevel measurement step is determ
 | Validation plan | `docs/VALIDATION_PLAN.md` |
 | This report | `docs/VALIDATION_REPORT.md` |
 | Classical validation record | `docs/VALIDATION.md` |
-| Tests | `src/analysis/tests/test_multilevel3d.py` |
+| Tests | `tests/workflows/test_multilevel_measurement_workflow.py` |

@@ -79,7 +79,7 @@ results/segmentation_output/run-*/
 若 TIFF 含有一致且完整的 OME physical-spacing metadata：
 
 ```bash
-pixi run python -m analysis analyze-3d \
+pixi run python -m organoid_analysis analyze-3d \
   --organoid-labels /absolute/path/organoid_labels.ome.tif \
   --cell-labels /absolute/path/cell_labels.ome.tif \
   --nucleus-labels /absolute/path/nucleus_labels.ome.tif \
@@ -90,7 +90,7 @@ pixi run python -m analysis analyze-3d \
 没有完整 OME metadata 时，必须显式提供真实采集 spacing（单位为 µm）：
 
 ```bash
-pixi run python -m analysis analyze-3d \
+pixi run python -m organoid_analysis analyze-3d \
   --organoid-labels /absolute/path/organoid_labels.tif \
   --cell-labels /absolute/path/cell_labels.tif \
   --nucleus-labels /absolute/path/nucleus_labels.tif \
@@ -111,7 +111,7 @@ pixi run python -m analysis analyze-3d \
 查看全部选项：
 
 ```bash
-pixi run python -m analysis analyze-3d --help
+pixi run python -m organoid_analysis analyze-3d --help
 ```
 
 ### 查看 Result
@@ -250,7 +250,7 @@ tests/                     # UI 与 service 测试
 pixi run analysis-test
 pixi run test
 pixi run check
-pixi run python -m analysis --help
+pixi run python -m organoid_analysis --help
 ```
 
 方法、参数、输入域、验证范围与已知限制见 [docs](docs/) 下的科学文档。真实数据上的生物学精度与参数敏感性应针对实际样本、成像条件和研究问题独立评估。

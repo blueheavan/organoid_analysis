@@ -3425,7 +3425,7 @@ packages:
   size: 433687
   timestamp: 1786599629846
 - pypi: ./
-  name: organoid3d-pipeline
+  name: organoid-analysis
   requires_dist:
   - numpy>=1.26,<3
   - scipy>=1.11,<2

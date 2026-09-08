@@ -1,7 +1,7 @@
 """Launch a Streamlit app on a free port, then shut it down once the browser tab closes.
 
 Usage:
-    python scripts/run_app.py src/ui/app.py [--start-port 8501] [--idle-timeout 10]
+    python scripts/run_app.py src/organoid_analysis/web_interface/organoid_workspace.py [--start-port 8501] [--idle-timeout 10]
 """
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ def wait_until_serving(port: int, timeout: float) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("target", help="Streamlit entry-point script, e.g. src/ui/app.py")
+    parser.add_argument("target", help="Streamlit entry-point script, e.g. src/organoid_analysis/web_interface/organoid_workspace.py")
     parser.add_argument("--start-port", type=int, default=8501)
     parser.add_argument("--startup-timeout", type=float, default=30.0,
                          help="Seconds to wait for the server to start accepting connections")
