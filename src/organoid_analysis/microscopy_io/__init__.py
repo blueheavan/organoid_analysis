@@ -13,7 +13,11 @@ from .zstack_reader import (
     load_zstack,
     read_axes,
 )
-from .voxel_spacing import isotropic_xy_size_um, validate_voxel_spacing_xyz
+from .voxel_spacing import (
+    isotropic_xy_size_um,
+    resolve_spacing_source,
+    validate_voxel_spacing_xyz,
+)
 
 __all__ = [
     "Spacing",
@@ -26,5 +30,6 @@ __all__ = [
     "load_zstack",
     "read_axes",
     "isotropic_xy_size_um",
+    "resolve_spacing_source",
     "validate_voxel_spacing_xyz",
 ]

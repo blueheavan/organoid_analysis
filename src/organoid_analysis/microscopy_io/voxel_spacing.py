@@ -30,3 +30,34 @@ def isotropic_xy_size_um(x_um: float, y_um: float) -> float:
             "or use a workflow that preserves independent X/Y spacing."
         )
     return x
+
+
+SpacingSource = str  # one of "metadata", "default", "user_override"
+
+
+def resolve_spacing_source(
+    value: float,
+    metadata_value: float | None,
+    default_value: float,
+    *,
+    rel_tol: float = 1e-6,
+) -> SpacingSource:
+    """Classify where a spacing-like config value actually came from.
+
+    Used to attach honest provenance to a frozen run config instead of
+    silently letting a metadata-derived value and the hardcoded fallback look
+    the same. Three outcomes:
+
+    - ``"metadata"``: matches the value read from image metadata (the value
+      was accepted as auto-detected, not hand-typed over it).
+    - ``"default"``: no metadata was available and the value matches the
+      hardcoded fallback (never invented from metadata).
+    - ``"user_override"``: anything else -- metadata was available but the
+      value differs from it, or no metadata was available and the value
+      differs from the fallback. Either way, a human explicitly chose it.
+    """
+    if metadata_value is not None and math.isclose(value, metadata_value, rel_tol=rel_tol):
+        return "metadata"
+    if metadata_value is None and math.isclose(value, default_value, rel_tol=rel_tol):
+        return "default"
+    return "user_override"

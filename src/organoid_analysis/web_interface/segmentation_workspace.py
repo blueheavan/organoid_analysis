@@ -46,7 +46,7 @@ from organoid_analysis.segmentation.cellpose_inference import (  # noqa: E402
     validate_stacks,
 )
 from organoid_analysis.segmentation.parameter_estimation import estimate_diameter_from_stack  # noqa: E402
-from organoid_analysis.microscopy_io import isotropic_xy_size_um  # noqa: E402
+from organoid_analysis.microscopy_io import isotropic_xy_size_um, resolve_spacing_source  # noqa: E402
 from organoid_analysis.visualization.volume_viewer import ChannelConfig, st_volume_viewer  # noqa: E402
 from organoid_analysis.quantification.mask_features import (  # noqa: E402
     count_mask_objects,
@@ -596,27 +596,63 @@ def render_sidebar() -> SegmentationConfig:
                 "- **Scope** — nuclei/cell masks support nuclei/cell measurements. They do "
                 "not automatically define a whole-organoid outer boundary or a viability state."
             )
+        nuclei_diameter = st.number_input(
+            "Nuclei diameter (px)", 5.0, 200.0, _default_for("nuclei_diameter", backend_defaults.nuclei_diameter),
+            help="Set manually, or press 'Auto-detect' after uploading to "
+            "estimate it from the image.",
+        )
+        cell_diameter = st.number_input(
+            "Cell diameter (px)", 5.0, 300.0, _default_for("cell_diameter", backend_defaults.cell_diameter)
+        )
+        anisotropy = st.number_input(
+            "Z / XY anisotropy", 0.1, 20.0, _default_for("anisotropy", backend_defaults.anisotropy),
+            help="Auto-filled from TIFF metadata when available; otherwise "
+            "set from your microscope Z step / XY pixel size.",
+        )
+        xy_spacing_um = st.number_input(
+            "XY pixel size (µm)", 0.001, 100.0,
+            _default_for("xy_spacing_um", backend_defaults.xy_spacing_um),
+            help="Physical XY voxel spacing. Set to your microscope's pixel "
+            "size so volumes/areas are in real units.",
+        )
+        # Record where anisotropy/xy_spacing actually came from -- metadata
+        # (accepted as auto-detected), the hardcoded fallback (no metadata was
+        # available), or a manual override -- so the frozen run config never
+        # lets an assumed voxel size look the same as a measured one.
+        metadata_anisotropy = suggestions.get("anisotropy")
+        metadata_xy_spacing_um = suggestions.get("xy_spacing_um")
+        anisotropy_source = resolve_spacing_source(
+            anisotropy, metadata_anisotropy, backend_defaults.anisotropy
+        )
+        xy_spacing_source = resolve_spacing_source(
+            xy_spacing_um, metadata_xy_spacing_um, backend_defaults.xy_spacing_um
+        )
+        _SOURCE_LABEL = {
+            "metadata": "from TIFF metadata",
+            "default": "fallback default, no metadata read",
+            "user_override": "manually overridden",
+        }
+        if xy_spacing_source == "default" or anisotropy_source == "default":
+            st.caption(
+                "⚠️ No usable Z/XY spacing metadata was read for this stack — "
+                "volumes/areas will use the manually set values above, which "
+                "default to an assumed voxel size, not a measured one."
+            )
+        elif "user_override" in (xy_spacing_source, anisotropy_source):
+            st.caption(
+                f"XY spacing: {_SOURCE_LABEL[xy_spacing_source]}"
+                f" · anisotropy: {_SOURCE_LABEL[anisotropy_source]}"
+            )
         return SegmentationConfig(
             model_type=model_type,
-            nuclei_diameter=st.number_input(
-                "Nuclei diameter (px)", 5.0, 200.0, _default_for("nuclei_diameter", backend_defaults.nuclei_diameter),
-                help="Set manually, or press 'Auto-detect' after uploading to "
-                "estimate it from the image.",
-            ),
-            cell_diameter=st.number_input(
-                "Cell diameter (px)", 5.0, 300.0, _default_for("cell_diameter", backend_defaults.cell_diameter)
-            ),
-            anisotropy=st.number_input(
-                "Z / XY anisotropy", 0.1, 20.0, _default_for("anisotropy", backend_defaults.anisotropy),
-                help="Auto-filled from TIFF metadata when available; otherwise "
-                "set from your microscope Z step / XY pixel size.",
-            ),
-            xy_spacing_um=st.number_input(
-                "XY pixel size (µm)", 0.001, 100.0,
-                _default_for("xy_spacing_um", backend_defaults.xy_spacing_um),
-                help="Physical XY voxel spacing. Set to your microscope's pixel "
-                "size so volumes/areas are in real units.",
-            ),
+            nuclei_diameter=nuclei_diameter,
+            cell_diameter=cell_diameter,
+            anisotropy=anisotropy,
+            anisotropy_source=anisotropy_source,
+            metadata_anisotropy=metadata_anisotropy,
+            xy_spacing_um=xy_spacing_um,
+            xy_spacing_source=xy_spacing_source,
+            metadata_xy_spacing_um=metadata_xy_spacing_um,
             nuclei_flow_threshold=st.slider("Nuclei flow threshold", 0.0, 1.0, backend_defaults.nuclei_flow_threshold),
             cell_flow_threshold=st.slider("Cell flow threshold", 0.0, 1.0, backend_defaults.cell_flow_threshold),
             nuclei_cellprob_threshold=st.slider(

@@ -21,7 +21,16 @@ class SegmentationConfig:
     nuclei_diameter: float = 30.0
     cell_diameter: float = 50.0
     anisotropy: float = 2.9
+    # Provenance for `anisotropy`: "metadata" (read from the uploaded TIFF via
+    # Auto-detect), "default" (no metadata was available, using the fallback
+    # above), or "user_override" (a human typed a different value). Frozen
+    # into the saved run config so downstream volume/area/distance figures can
+    # be traced back to whether they used a real or an assumed voxel size.
+    anisotropy_source: str = "default"
+    metadata_anisotropy: float | None = None
     xy_spacing_um: float = 0.414
+    xy_spacing_source: str = "default"
+    metadata_xy_spacing_um: float | None = None
     nuclei_flow_threshold: float = 0.4
     cell_flow_threshold: float = 0.6
     nuclei_cellprob_threshold: float = 0.0
