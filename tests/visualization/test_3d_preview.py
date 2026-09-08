@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -13,11 +12,11 @@ import tifffile
 
 from organoid_analysis.microscopy_io import Spacing, load_zstack
 from organoid_analysis.microscopy_io.metadata import (
+    _resolution_to_um_per_px,
     classify_axes,
     parse_spacing_imagej,
     parse_spacing_ome,
     reject_rgb,
-    _resolution_to_um_per_px,
 )
 from organoid_analysis.microscopy_io.zstack_reader import _reorder_to_czyx
 from organoid_analysis.visualization import (
@@ -259,7 +258,6 @@ class RenderingTests(unittest.TestCase):
         self.assertTrue(np.array_equal(gray, np.zeros((2, 3, 4), dtype=np.uint8)))
 
     def test_surface_sphere_has_faces(self) -> None:
-        grid = 20
         vol = np.zeros((16, 16, 16), dtype=np.uint8)
         for z in range(16):
             for y in range(16):

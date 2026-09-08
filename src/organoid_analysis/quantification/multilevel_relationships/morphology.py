@@ -6,8 +6,10 @@ import pandas as pd
 from scipy import ndimage as ndi
 
 from organoid_analysis.quantification.features import geometry
-from organoid_analysis.quantification.labels import bbox_touches_volume_boundary, compact_instance_labels
-
+from organoid_analysis.quantification.labels import (
+    bbox_touches_volume_boundary,
+    compact_instance_labels,
+)
 
 MORPHOLOGY_COLUMNS = [
     "voxel_count", "volume_um3", "surface_area_um2", "sphericity", "centroid_z_um", "centroid_y_um",

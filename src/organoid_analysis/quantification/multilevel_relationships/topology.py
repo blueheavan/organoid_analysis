@@ -4,7 +4,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-
 EDGE_COLUMNS = ["organoid_id", "cell_id_1", "cell_id_2", "contact_area_um2", "inter_organoid_contact"]
 
 

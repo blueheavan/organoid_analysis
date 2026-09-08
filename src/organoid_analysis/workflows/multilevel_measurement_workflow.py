@@ -1,18 +1,23 @@
 """Orchestration of hierarchy, 3D morphology, topology, spatial features, QC."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 import time
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
 
 from organoid_analysis.quantification.multilevel_relationships.config import Multilevel3DConfig
-from organoid_analysis.quantification.multilevel_relationships.hierarchy import assign_parents_by_overlap
+from organoid_analysis.quantification.multilevel_relationships.hierarchy import (
+    assign_parents_by_overlap,
+)
 from organoid_analysis.quantification.multilevel_relationships.morphology import measure_instances
 from organoid_analysis.quantification.multilevel_relationships.qc import add_qc_flags
 from organoid_analysis.quantification.multilevel_relationships.spatial import cell_spatial_features
-from organoid_analysis.quantification.multilevel_relationships.topology import direct_contact_edges, topology_per_cell
+from organoid_analysis.quantification.multilevel_relationships.topology import (
+    direct_contact_edges,
+    topology_per_cell,
+)
 from organoid_analysis.quantification.multilevel_relationships.validation import validate_inputs
 
 

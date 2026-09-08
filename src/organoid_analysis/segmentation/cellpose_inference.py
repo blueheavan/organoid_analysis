@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import json
+import threading
+import zipfile
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime
-import json
 from pathlib import Path
-import threading
-from typing import Callable
-import zipfile
 
 import numpy as np
 import tifffile
@@ -310,7 +310,7 @@ def _wrap_run_3d(
             self.start = start
             self.end = end
 
-        def setValue(self, value: int) -> None:
+        def setValue(self, value: int) -> None:  # noqa: N802 (Cellpose calls this exact name)
             if on_progress is None:
                 return
             local = max(0.0, min(1.0, (value - 25) / 30.0))

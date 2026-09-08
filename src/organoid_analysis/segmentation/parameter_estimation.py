@@ -25,7 +25,7 @@ from pathlib import Path
 import numpy as np
 import tifffile
 
-from organoid_analysis.microscopy_io.metadata import Spacing, resolve_spacing
+from organoid_analysis.microscopy_io.metadata import resolve_spacing
 
 # Slices used for the fast diameter pre-estimate (one Z-spaced through the stack).
 _ESTIMATE_SLICES = 6

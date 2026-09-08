@@ -10,7 +10,7 @@ overlays); the rest are useful alternatives.
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 LutPoint = tuple[float, float, float, float]
 Lut = Sequence[LutPoint]

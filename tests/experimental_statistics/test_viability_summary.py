@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
-import pytest
+
 from organoid_analysis.config import load_config
-from organoid_analysis.experimental_statistics.viability import calibrate, classify
 from organoid_analysis.experimental_statistics.replicate_aggregation import make_summaries
+from organoid_analysis.experimental_statistics.viability import calibrate, classify
 
 
 def control_rows():

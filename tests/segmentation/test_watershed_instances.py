@@ -1,8 +1,9 @@
 import numpy as np
 import pytest
+
 from organoid_analysis.config import load_config
-from organoid_analysis.segmentation.watershed_instances import compare_instance_qc, segment
 from organoid_analysis.experimental_statistics.evaluation import match_instances
+from organoid_analysis.segmentation.watershed_instances import compare_instance_qc, segment
 
 
 def test_touching_spheres_split_into_two_instances_in_anisotropic_grid():

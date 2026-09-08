@@ -1,9 +1,14 @@
 import numpy as np
 import pytest
 
-from organoid_analysis.quantification.cellular_measurements import analyze_cells, cell_geometry, cell_neighborhood, pair_and_filter_cells
 from organoid_analysis.command_line.organoid_commands import main
 from organoid_analysis.microscopy_io.tiff_contract import write_labels
+from organoid_analysis.quantification.cellular_measurements import (
+    analyze_cells,
+    cell_geometry,
+    cell_neighborhood,
+    pair_and_filter_cells,
+)
 
 
 def spheres():

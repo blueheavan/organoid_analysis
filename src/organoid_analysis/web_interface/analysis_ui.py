@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import hashlib
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np

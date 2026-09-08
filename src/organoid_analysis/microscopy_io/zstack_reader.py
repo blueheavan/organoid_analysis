@@ -22,7 +22,7 @@ from typing import Any
 import numpy as np
 import tifffile
 
-from .metadata import Spacing, resolve_spacing, classify_axes, reject_rgb
+from .metadata import Spacing, classify_axes, reject_rgb, resolve_spacing
 
 
 @dataclass

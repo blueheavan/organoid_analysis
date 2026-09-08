@@ -1,8 +1,8 @@
 import numpy as np
-import pytest
 from scipy import ndimage as ndi
-from organoid_analysis.quantification.features import marker_measurements
+
 from organoid_analysis.config import load_config
+from organoid_analysis.quantification.features import marker_measurements
 
 
 def labels_and_bbox():

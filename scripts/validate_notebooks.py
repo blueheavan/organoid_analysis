@@ -6,7 +6,6 @@ from pathlib import Path
 import nbformat
 from nbconvert.exporters import PythonExporter
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN_MARKERS = ("google.colab", "/content/drive", "drive.mount(")
 

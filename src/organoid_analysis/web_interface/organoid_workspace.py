@@ -34,18 +34,24 @@ try:  # noqa: E402  (importable from the organoid_analysis.web_interface package
     from organoid_analysis.web_interface.segmentation_workspace import (
         render_results_tab as _render_results,
     )
-    from organoid_analysis.web_interface.segmentation_workspace import render_sidebar as _render_sidebar
+    from organoid_analysis.web_interface.segmentation_workspace import (
+        render_sidebar as _render_sidebar,
+    )
     HAS_VTK = True
 except Exception:  # noqa: BLE001  (vtk viewer/GPU unavailable -> degraded mode)
     HAS_VTK = False
 
 try:  # noqa: E402  (statistical analysis layer)
-    from organoid_analysis.web_interface.analysis_ui import render_analysis as _render_tutorial_stats
+    from organoid_analysis.web_interface.analysis_ui import (
+        render_analysis as _render_tutorial_stats,
+    )
     HAS_STATS = True
 except Exception:  # noqa: BLE001
     HAS_STATS = False
 
-from organoid_analysis.web_interface.multilevel_results import render_multilevel_results_section as _render_multilevel_results
+from organoid_analysis.web_interface.multilevel_results import (
+    render_multilevel_results_section as _render_multilevel_results,
+)
 
 
 def _summary_line() -> str:

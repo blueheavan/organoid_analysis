@@ -1,12 +1,13 @@
 """TIFF axis, spacing, and experimental-design checks. Internal order: Z,Y,X."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
 import hashlib
 import re
 import subprocess
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import tifffile

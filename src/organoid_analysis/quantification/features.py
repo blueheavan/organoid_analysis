@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 import numpy as np
 from scipy import ndimage as ndi
 from skimage.measure import marching_cubes, mesh_surface_area

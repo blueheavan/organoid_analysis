@@ -1,26 +1,51 @@
 """One-field-at-a-time orchestration with provenance and explicit failure status."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
 import importlib.metadata
 import json
 import platform
 import sys
 import time
+from datetime import UTC, datetime
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import yaml
+
 from organoid_analysis import __version__
 from organoid_analysis.config import load_config
-from organoid_analysis.microscopy_io.tiff_contract import META_FIELDS, PATH_FIELDS, read_manifest, load_sample, load_truth_labels, write_labels, sha256, git_commit_hash
-from organoid_analysis.segmentation.watershed_instances import QC_COLUMNS, compare_instance_qc, instance_qc_summary, segment
 from organoid_analysis.experimental_statistics.evaluation import match_instances
-from organoid_analysis.quantification.features import GEOMETRY_COLUMNS, MARKER_COLUMNS, measure_instances
-from organoid_analysis.experimental_statistics.viability import calibrate, classify
 from organoid_analysis.experimental_statistics.replicate_aggregation import make_summaries
 from organoid_analysis.experimental_statistics.stats import condition_pairwise_tests
-from organoid_analysis.result_export.report import plot_qc, plot_size_comparison, plot_morphology_viability, write_html
+from organoid_analysis.experimental_statistics.viability import calibrate, classify
+from organoid_analysis.microscopy_io.tiff_contract import (
+    META_FIELDS,
+    PATH_FIELDS,
+    git_commit_hash,
+    load_sample,
+    load_truth_labels,
+    read_manifest,
+    sha256,
+    write_labels,
+)
+from organoid_analysis.quantification.features import (
+    GEOMETRY_COLUMNS,
+    MARKER_COLUMNS,
+    measure_instances,
+)
+from organoid_analysis.result_export.report import (
+    plot_morphology_viability,
+    plot_qc,
+    plot_size_comparison,
+    write_html,
+)
+from organoid_analysis.segmentation.watershed_instances import (
+    QC_COLUMNS,
+    compare_instance_qc,
+    instance_qc_summary,
+    segment,
+)
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 # Modules that implement the classical pipeline, now spread across the
@@ -124,7 +149,7 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
     (out / "config.resolved.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
     design.to_csv(out / "manifest.resolved.csv", index=False)
     origin = "synthetic_phantom" if synthetic else "user_images_unvalidated"
-    provenance = {"pipeline_version": __version__, "git_commit": git_commit_hash(), "started_utc": datetime.now(timezone.utc).isoformat(),
+    provenance = {"pipeline_version": __version__, "git_commit": git_commit_hash(), "started_utc": datetime.now(UTC).isoformat(),
                   "data_origin": origin, "python": sys.version, "platform": platform.platform(),
                   "manifest": str(manifest_path), "manifest_sha256": sha256(manifest_path),
                   "configuration": cfg, "status": "incomplete",
@@ -207,7 +232,7 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
     plot_morphology_viability(objects, units, replicates, condition_table, out, synthetic)
     write_html(out, objects, sample_table, condition_table, calibration, synthetic, failures, cfg)
     provenance.update(status="partial" if failures else "complete", failures=failures,
-                      completed_utc=datetime.now(timezone.utc).isoformat(), elapsed_seconds=time.perf_counter()-start,
+                      completed_utc=datetime.now(UTC).isoformat(), elapsed_seconds=time.perf_counter()-start,
                        n_detected_organoids=len(objects), n_geometry_eligible_organoids=int(objects.morphology_eligible.sum()),
                        n_samples=len(design), n_failed_samples=len(failures),
                        n_samples_with_segmentation_truth=len(validation_metrics))

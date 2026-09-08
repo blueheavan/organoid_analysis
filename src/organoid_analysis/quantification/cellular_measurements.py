@@ -17,7 +17,6 @@ from .labels import (
     relabel_from_source_ids,
 )
 
-
 PAIR_COLUMNS = [
     "cell_id",
     "original_cell_id",

@@ -27,9 +27,10 @@ import base64
 import json
 import math
 import zlib
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Sequence
+from typing import Literal
 
 import numpy as np
 
@@ -431,7 +432,6 @@ def build_mask_overlay_payload(
     object distinctly instead of rendering a single monochrome surface for all
     labels.
     """
-    from skimage import measure
 
     labels = np.asarray(mask)
     if labels.ndim != 3:

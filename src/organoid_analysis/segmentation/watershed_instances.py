@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 import numpy as np
 from scipy import ndimage as ndi
 from skimage.filters import threshold_otsu

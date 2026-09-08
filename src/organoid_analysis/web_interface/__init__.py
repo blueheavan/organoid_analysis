@@ -10,8 +10,8 @@ Package layout:
 * ``app``          — unified one-page entry point.
 """
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 
 def _prioritize_project_packages() -> None:

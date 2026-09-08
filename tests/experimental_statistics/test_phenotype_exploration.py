@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import tempfile
 import unittest
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -14,8 +12,8 @@ from organoid_analysis.experimental_statistics.phenotype_exploration import (
     check_normality,
     cluster_characterization,
     cluster_feature_importance,
-    compare_two_groups,
     cohens_d,
+    compare_two_groups,
     create_dataset_inventory,
     detect_feature_columns,
     detect_outliers_iqr,
@@ -149,7 +147,9 @@ class MLClassificationTests(unittest.TestCase):
     def test_feature_importance_present(self) -> None:
         X, y, label_map = prepare_binary_data(self.df, self.features, "Well", "A01", "A07")
         _, fitted, _, _, _ = train_binary_classifiers(X, y, label_map)
-        from organoid_analysis.experimental_statistics.phenotype_exploration import feature_importance
+        from organoid_analysis.experimental_statistics.phenotype_exploration import (
+            feature_importance,
+        )
 
         importance = feature_importance(fitted, self.features)
         self.assertEqual(len(importance), len(self.features))

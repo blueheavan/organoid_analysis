@@ -12,15 +12,15 @@ Z-stack TIFF IO and physical-metadata handling now lives in
 
 from .cellpose_inference import (  # noqa: F401
     MODEL_OPTIONS,
+    RestoredSegmentationRun,
     SegmentationConfig,
     SegmentationResult,
-    RestoredSegmentationRun,
     create_model,
     get_accelerator,
+    list_saved_results,
     normalize_preview,
     read_stack,
     read_stack_multichannel,
-    list_saved_results,
     restore_saved_result,
     save_result,
     segment_stacks,

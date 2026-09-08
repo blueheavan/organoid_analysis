@@ -1,11 +1,17 @@
-from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
 import tifffile
+
 import organoid_analysis.microscopy_io.tiff_contract as analysis_io
-from organoid_analysis.microscopy_io.tiff_contract import canonical_czyx, git_commit_hash, ome_spacing, read_manifest, load_sample
 from organoid_analysis.config import load_config
+from organoid_analysis.microscopy_io.tiff_contract import (
+    canonical_czyx,
+    git_commit_hash,
+    load_sample,
+    ome_spacing,
+    read_manifest,
+)
 
 
 def test_axis_order_is_explicit_and_exact():

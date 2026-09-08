@@ -46,6 +46,14 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
+# E501 (line too long): this codebase deliberately writes dense argument
+# lists / dataclass field lists on single lines; enforcing 100 cols here
+# would force a large, purely cosmetic reformat with no behavior value.
+# N806/N803 (non-lowercase variable/argument name): `X`/`y`/`X_train` etc.
+# are the standard scikit-learn feature-matrix/label-vector convention used
+# throughout experimental_statistics/phenotype_exploration.py; renaming them
+# away from that convention would reduce readability, not improve it.
+ignore = ["E501", "N806", "N803"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -104,6 +112,10 @@ test-render = "python -m pytest -v -m render"
 lint = "ruff check src tests scripts"
 format = "ruff format src tests scripts"
 typecheck = "mypy src/organoid_analysis"
+# typecheck runs last: pixi's depends-on chain stops at the first failure,
+# and mypy currently has a large pre-existing backlog (unrelated to any one
+# change) that would otherwise hide whether lint/test/check ever ran.
+ci = { depends-on = ["lint", "test", "check", "typecheck"] }
 preview = "python scripts/run_app.py src/organoid_analysis/web_interface/preview_2d.py"
 app = "python scripts/run_app.py src/organoid_analysis/web_interface/organoid_workspace.py"
 # --- data management ---

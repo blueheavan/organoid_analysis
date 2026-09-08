@@ -16,9 +16,11 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from organoid_analysis.visualization.volume_viewer.viewer_payload import build_viewer_payload, render_viewer_html
+from organoid_analysis.visualization.volume_viewer.viewer_payload import (
+    build_viewer_payload,
+    render_viewer_html,
+)
 from tests.visualization._optional_deps import HAS_PLAYWRIGHT
-from tests.visualization.test_viewer import _sphere_stack
 
 ARTIFACTS = Path(__file__).parent / "artifacts"
 
@@ -53,7 +55,7 @@ async def _render_and_capture(html_path: Path, png: Path) -> tuple[dict, Path]:
         await page.goto(html_path.as_uri(), wait_until="load", timeout=60_000)
         try:
             await asyncio.wait_for(rendered.wait(), timeout=25)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
         await page.wait_for_timeout(2500)
         await page.evaluate("""() => {

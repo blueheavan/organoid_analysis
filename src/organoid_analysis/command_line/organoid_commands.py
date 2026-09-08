@@ -80,8 +80,13 @@ def main(argv=None) -> int:
 
 
 def _run_cells(arguments) -> dict:
+    from organoid_analysis.microscopy_io.tiff_contract import (
+        SPACING_ATOL_UM,
+        SPACING_RTOL,
+        read_tiff,
+        write_labels,
+    )
     from organoid_analysis.quantification.cellular_measurements import analyze_cells
-    from organoid_analysis.microscopy_io.tiff_contract import SPACING_ATOL_UM, SPACING_RTOL, read_tiff, write_labels
 
     cell_stack, cell_spacing, _ = read_tiff(arguments.cell_labels, arguments.axes)
     nucleus_stack, nucleus_spacing, _ = read_tiff(arguments.nucleus_labels, arguments.axes)
@@ -138,10 +143,16 @@ def _run_multilevel(arguments) -> dict:
     import importlib.metadata
     import platform
 
+    from organoid_analysis.microscopy_io.tiff_contract import (
+        SPACING_ATOL_UM,
+        SPACING_RTOL,
+        git_commit_hash,
+        read_tiff,
+        sha256,
+    )
     from organoid_analysis.quantification.multilevel_relationships import Multilevel3DConfig
-    from organoid_analysis.workflows.multilevel_measurement_workflow import analyze_multilevel_3d
     from organoid_analysis.result_export.measurement_tables import export_results
-    from organoid_analysis.microscopy_io.tiff_contract import SPACING_ATOL_UM, SPACING_RTOL, git_commit_hash, read_tiff, sha256
+    from organoid_analysis.workflows.multilevel_measurement_workflow import analyze_multilevel_3d
 
     def read_single(path: str, role: str) -> tuple[np.ndarray, tuple | None]:
         stack, spacing, _ = read_tiff(path, arguments.axes)

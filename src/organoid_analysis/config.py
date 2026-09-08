@@ -1,9 +1,10 @@
 """Explicit defaults, strict configuration validation, and units."""
 from __future__ import annotations
 
+import math
 from copy import deepcopy
 from pathlib import Path
-import math
+
 import yaml
 
 DEFAULTS = {

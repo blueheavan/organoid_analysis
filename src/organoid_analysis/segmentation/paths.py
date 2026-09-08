@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Any
 
-
 # Analysis input now comes from pipelines' exported results (e.g. results/),
 # not an external data/ folder. DATA_DIR is kept only as a legacy constant so
 # existing importers do not break; it is no longer auto-created on import.

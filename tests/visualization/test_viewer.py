@@ -15,7 +15,6 @@ import zlib
 import numpy as np
 
 from organoid_analysis.visualization.volume_viewer import (
-    ChannelConfig,
     MAX_CHANNELS,
     build_surface_payload,
     build_viewer_payload,
@@ -23,8 +22,8 @@ from organoid_analysis.visualization.volume_viewer import (
     spec_to_dict,
     validate_spacing,
 )
-from organoid_analysis.visualization.volume_viewer.viewer_payload import _voxel_major_zyxc
 from organoid_analysis.visualization.volume_viewer.rendering_presets import PRESETS
+from organoid_analysis.visualization.volume_viewer.viewer_payload import _voxel_major_zyxc
 
 
 def _sphere_stack(shape=(16, 20, 24), seed=0) -> np.ndarray:

@@ -10,7 +10,11 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from organoid_analysis.visualization.volume_viewer import ChannelConfig, build_viewer_payload, render_viewer_html
+from organoid_analysis.visualization.volume_viewer import (
+    ChannelConfig,
+    build_viewer_payload,
+    render_viewer_html,
+)
 from tests.visualization._optional_deps import HAS_PLAYWRIGHT
 
 ARTIFACTS = Path(__file__).parent / "artifacts"
@@ -47,7 +51,7 @@ async def _capture(spec, name: str, selectors=("#viewer",), timeout_s=45) -> tup
             await page.goto(source.as_uri(), wait_until="load", timeout=90_000)
             try:
                 await asyncio.wait_for(rendered.wait(), timeout=timeout_s)
-            except asyncio.TimeoutError as exc:
+            except TimeoutError as exc:
                 raise AssertionError(f"viewer did not render: {errors}") from exc
             await page.wait_for_timeout(1500)
             diag = await page.evaluate("window.__viewer_diag(false)")

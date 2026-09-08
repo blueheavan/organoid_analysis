@@ -25,8 +25,8 @@ import os
 # app (and Cellpose segmentation) can start from any shell / launcher.
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
-import queue
 import hashlib
+import queue
 import tempfile
 import threading
 import time
@@ -36,6 +36,15 @@ import numpy as np
 import streamlit as st
 from streamlit.components.v1 import html as _st_html
 
+from organoid_analysis.microscopy_io import (  # noqa: E402
+    isotropic_xy_size_um,
+    resolve_spacing_source,
+)
+from organoid_analysis.quantification.mask_features import (  # noqa: E402
+    count_mask_objects,
+    extract_mask_features,
+    summarize_features,
+)
 from organoid_analysis.segmentation.cellpose_inference import (  # noqa: E402
     SegmentationConfig,
     create_model,
@@ -45,13 +54,12 @@ from organoid_analysis.segmentation.cellpose_inference import (  # noqa: E402
     segment_stacks,
     validate_stacks,
 )
-from organoid_analysis.segmentation.parameter_estimation import estimate_diameter_from_stack  # noqa: E402
-from organoid_analysis.microscopy_io import isotropic_xy_size_um, resolve_spacing_source  # noqa: E402
-from organoid_analysis.visualization.volume_viewer import ChannelConfig, st_volume_viewer  # noqa: E402
-from organoid_analysis.quantification.mask_features import (  # noqa: E402
-    count_mask_objects,
-    extract_mask_features,
-    summarize_features,
+from organoid_analysis.segmentation.parameter_estimation import (
+    estimate_diameter_from_stack,  # noqa: E402
+)
+from organoid_analysis.visualization.volume_viewer import (  # noqa: E402
+    ChannelConfig,
+    st_volume_viewer,
 )
 
 

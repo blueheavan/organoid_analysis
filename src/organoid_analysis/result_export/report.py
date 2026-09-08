@@ -1,20 +1,23 @@
 """Publication-exportable plots, orthogonal QC, 3D surfaces, and an offline HTML report."""
 from __future__ import annotations
 
-from pathlib import Path
 import base64
 import html
 import json
 import textwrap
+from pathlib import Path
+
+import matplotlib
 import numpy as np
 import pandas as pd
-import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy import ndimage as ndi
 from skimage.segmentation import find_boundaries
-from organoid_analysis.experimental_statistics.viability import STATES, STATE_COLORS
+
+from organoid_analysis.experimental_statistics.viability import STATE_COLORS, STATES
 
 COLORS = ["#277DA8", "#D77632", "#665EA8", "#329E82", "#BA5578", "#9C823E", "#607C8E", "#6D9361"]
 

@@ -4,7 +4,10 @@ import json
 
 import pandas as pd
 
-from organoid_analysis.web_interface.multilevel_results import RESULT_TABLES, load_multilevel_result_tables
+from organoid_analysis.web_interface.multilevel_results import (
+    RESULT_TABLES,
+    load_multilevel_result_tables,
+)
 
 
 def test_load_multilevel_result_tables(tmp_path):

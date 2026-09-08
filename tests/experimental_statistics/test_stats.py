@@ -6,8 +6,12 @@ import tifffile
 import yaml
 
 from organoid_analysis.config import load_config
+from organoid_analysis.experimental_statistics.stats import (
+    _pairwise_contrasts,
+    condition_pairwise_tests,
+    fit_model,
+)
 from organoid_analysis.workflows.organoid_measurement_workflow import analyze
-from organoid_analysis.experimental_statistics.stats import _pairwise_contrasts, condition_pairwise_tests, fit_model
 
 
 def _objects(condition_values: dict, n_replicates: int = 4, feature: str = "volume_um3") -> pd.DataFrame:

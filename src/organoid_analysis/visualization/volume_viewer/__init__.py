@@ -17,9 +17,10 @@ from __future__ import annotations
 
 import numpy as np
 
+from .rendering_presets import PRESETS  # noqa: F401
 from .viewer_payload import (  # noqa: F401
-    ChannelConfig,
     MAX_CHANNELS,
+    ChannelConfig,
     ViewerSpec,
     build_mask_overlay_payload,
     build_surface_payload,
@@ -29,7 +30,6 @@ from .viewer_payload import (  # noqa: F401
     spec_to_dict,
     validate_spacing,
 )
-from .rendering_presets import PRESETS  # noqa: F401
 
 __all__ = [
     "ChannelConfig",

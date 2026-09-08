@@ -12,7 +12,9 @@ Conventions
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 import numpy as np
+
 from organoid_analysis.microscopy_io import Spacing
 
 CAMERA_PRESETS: dict[str, str] = {

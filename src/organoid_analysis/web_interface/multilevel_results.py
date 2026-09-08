@@ -2,12 +2,11 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
-import pandas as pd
 import numpy as np
-
+import pandas as pd
 
 RESULT_TABLES = {
     "Organoids": ("features/organoid_features.parquet", "organoid_features.parquet"),
@@ -38,7 +37,10 @@ def _render_current_session_runner() -> None:
     """
     import streamlit as st
 
-    from organoid_analysis.segmentation.cellpose_inference import list_saved_results, restore_saved_result
+    from organoid_analysis.segmentation.cellpose_inference import (
+        list_saved_results,
+        restore_saved_result,
+    )
 
     saved_runs = list_saved_results()
     if saved_runs:
@@ -88,9 +90,11 @@ def _render_current_session_runner() -> None:
             st.error("Saved voxel spacing is unavailable; use the analyze-3d CLI with explicit spacing instead.")
             return
         try:
-            from organoid_analysis.workflows.multilevel_measurement_workflow import analyze_multilevel_3d
             from organoid_analysis.result_export.measurement_tables import export_results
             from organoid_analysis.segmentation.cellpose_inference import read_stack
+            from organoid_analysis.workflows.multilevel_measurement_workflow import (
+                analyze_multilevel_3d,
+            )
 
             with tempfile.NamedTemporaryFile(suffix=".tif") as handle:
                 handle.write(organoid_upload.getbuffer())

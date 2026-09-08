@@ -1,8 +1,9 @@
 import numpy as np
 import pytest
-from organoid_analysis.quantification.features import geometry, measure_instances
-from organoid_analysis.microscopy_io.tiff_contract import Sample
+
 from organoid_analysis.config import load_config
+from organoid_analysis.microscopy_io.tiff_contract import Sample
+from organoid_analysis.quantification.features import geometry, measure_instances
 from organoid_analysis.segmentation.watershed_instances import SegmentationResult
 
 

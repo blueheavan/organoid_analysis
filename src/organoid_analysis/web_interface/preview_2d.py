@@ -15,16 +15,21 @@ isometric); free rotation is only available in the interactive Surface mode.
 
 from __future__ import annotations
 
+import tempfile
 from dataclasses import asdict
 from pathlib import Path
-import tempfile
 
 import numpy as np
 import streamlit as st
 
 from organoid_analysis.microscopy_io import load_zstack
 from organoid_analysis.microscopy_io.metadata import Spacing
-from organoid_analysis.visualization import build_surface, render_mip_image, render_surface_image, render_volume_image
+from organoid_analysis.visualization import (
+    build_surface,
+    render_mip_image,
+    render_surface_image,
+    render_volume_image,
+)
 from organoid_analysis.visualization._stpv import apply_stpv_patch
 
 st.set_page_config(page_title="3D Preview", layout="wide")
@@ -155,11 +160,11 @@ def main() -> None:
             return
         try:
             apply_stpv_patch()
-            from organoid_analysis.visualization._stpv import stpyvista_surface
             from organoid_analysis.visualization import surface_to_dict
+            from organoid_analysis.visualization._stpv import stpyvista_surface
 
             stpyvista_surface([surface_to_dict(s) for s in surfs])
-        except Exception as exc:  # interactive unavailable -> offscreen fallback
+        except Exception:  # interactive unavailable -> offscreen fallback
             st.caption("Interactive surface unavailable; showing static render.")
             img = render_surface_image(surfs, preset=preset)
             st.image(img, width="stretch")

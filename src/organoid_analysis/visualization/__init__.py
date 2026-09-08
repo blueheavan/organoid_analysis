@@ -11,10 +11,10 @@ Implements the "Route B (full)" design:
 
 from .capabilities import probe_gpu_mapper
 from .projection_rendering import (
-    render_volume_image,
-    render_mip_image,
-    normalize_to_gray,
     CAMERA_PRESETS,
+    normalize_to_gray,
+    render_mip_image,
+    render_volume_image,
 )
 from .surface_rendering import build_surface, render_surface_image, surface_to_dict
 

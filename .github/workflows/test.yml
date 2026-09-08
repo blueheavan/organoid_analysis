@@ -18,5 +18,12 @@ jobs:
         with:
           cache: true
 
-      - name: Run test suite
-        run: pixi run test
+      # `ci` runs lint, test, check, then typecheck (in that order -- pixi's
+      # depends-on chain stops at the first failure, and mypy currently has a
+      # large pre-existing backlog unrelated to any one change, so it runs
+      # last to keep lint/test/check's pass/fail signal visible regardless).
+      # This is expected to fail on the typecheck step until that backlog is
+      # paid down as its own tracked effort; treat a failure here as "check
+      # which step failed," not as "nothing was verified."
+      - name: Run lint, tests, notebook check, and typecheck
+        run: pixi run ci

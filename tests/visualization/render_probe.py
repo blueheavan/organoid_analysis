@@ -1,4 +1,6 @@
-import asyncio, os
+import asyncio
+import os
+
 import numpy as np
 from PIL import Image
 from playwright.async_api import async_playwright

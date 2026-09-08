@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import tempfile
 import threading
 import time
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
@@ -14,8 +14,8 @@ import tifffile
 from organoid_analysis.segmentation.cellpose_inference import (
     SegmentationConfig,
     _wrap_run_3d,
-    normalize_preview,
     list_saved_results,
+    normalize_preview,
     read_stack,
     read_stack_multichannel,
     restore_saved_result,

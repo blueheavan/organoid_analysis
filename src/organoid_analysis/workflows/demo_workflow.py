@@ -1,16 +1,19 @@
 """Seeded synthetic phantoms. These are NOT real organoid microscopy observations."""
 from __future__ import annotations
 
-from pathlib import Path
 import json
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from scipy import ndimage as ndi
 import tifffile
 import yaml
+from scipy import ndimage as ndi
+
 from organoid_analysis.config import load_config
-from .organoid_measurement_workflow import analyze
 from organoid_analysis.experimental_statistics.evaluation import match_instances
+
+from .organoid_measurement_workflow import analyze
 
 
 def generate_demo(out: str | Path, seed: int = 1729) -> Path:
