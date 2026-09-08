@@ -130,7 +130,7 @@ Source of truth: `src/organoid_analysis/quantification/cellular_measurements.py`
 
 ## Segmentation-validation matching parameter
 
-Source of truth: `src/organoid_analysis/experimental_statistics/evaluation.py::match_instances`. Stated as a narrative fact in `docs/METHODS.md` and `docs/SCIENTIFIC_SPEC.md` ("Hungarian assignment at IoU ≥ 0.5") but not previously entered in this catalog. See `docs/ALGORITHM_DECISIONS.md` D9.
+Source of truth: `src/organoid_analysis/validation/segmentation_metrics.py::match_instances`. Stated as a narrative fact in `docs/METHODS.md` and `docs/SCIENTIFIC_SPEC.md` ("Hungarian assignment at IoU ≥ 0.5") but not previously entered in this catalog. See `docs/ALGORITHM_DECISIONS.md` D9.
 
 | Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
 |---|---|---|---|---|---|---|---|
@@ -150,7 +150,7 @@ Source of truth: `src/organoid_analysis/microscopy_io/tiff_contract.py` (`ome_sp
 
 ## Statistical testing parameters (`stats.py`)
 
-Source of truth: `src/organoid_analysis/experimental_statistics/stats.py`. See `docs/ALGORITHM_DECISIONS.md` D11 for the LMM/BH-FDR method decision.
+Source of truth: `src/organoid_analysis/statistics/inference.py`. See `docs/ALGORITHM_DECISIONS.md` D11 for the LMM/BH-FDR method decision.
 
 | Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
 |---|---|---|---|---|---|---|---|
@@ -159,9 +159,9 @@ Source of truth: `src/organoid_analysis/experimental_statistics/stats.py`. See `
 
 ---
 
-## Exploratory statistics/ML parameters (`src/organoid_analysis/experimental_statistics/phenotype_exploration.py`, Tutorials 2-5)
+## Exploratory statistics/ML parameters (`src/organoid_analysis/statistics/exploration.py`, Tutorials 2-5)
 
-Source of truth: `src/organoid_analysis/experimental_statistics/phenotype_exploration.py`. These functions are explicitly scoped as reusable exploratory tutorial workflows (module docstring: "centralises the analysis workflows that live in Tutorials 2-5"), not part of the core `analyze`/`analyze-3d` measurement pipeline, and their outputs (classifier accuracy, feature importance, shape category) are exploratory/descriptive, not validated biological classifications.
+Source of truth: `src/organoid_analysis/statistics/exploration.py`. These functions are explicitly scoped as reusable exploratory tutorial workflows (module docstring: "centralises the analysis workflows that live in Tutorials 2-5"), not part of the core `analyze`/`analyze-3d` measurement pipeline, and their outputs (classifier accuracy, feature importance, shape category) are exploratory/descriptive, not validated biological classifications.
 
 | Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
 |---|---|---|---|---|---|---|---|
@@ -184,7 +184,7 @@ Source of truth: `src/organoid_analysis/experimental_statistics/phenotype_explor
 - CLI exposure: `src/organoid_analysis/command_line/organoid_commands.py`
 - Cellpose 3D segmentation: `src/organoid_analysis/segmentation/cellpose_inference.py`, `src/organoid_analysis/segmentation/parameter_estimation.py`, UI exposure in `src/organoid_analysis/web_interface/segmentation_workspace.py`
 - Cell–nucleus pairing: `src/organoid_analysis/quantification/cellular_measurements.py`, CLI exposure in `src/organoid_analysis/command_line/organoid_commands.py::_run_cells`
-- Segmentation-validation matching: `src/organoid_analysis/experimental_statistics/evaluation.py`
+- Segmentation-validation matching: `src/organoid_analysis/validation/segmentation_metrics.py`
 - Data-contract tolerances: `src/organoid_analysis/microscopy_io/tiff_contract.py`, `src/organoid_analysis/command_line/organoid_commands.py`
-- Statistical testing: `src/organoid_analysis/experimental_statistics/stats.py`
-- Exploratory tutorial statistics/ML: `src/organoid_analysis/experimental_statistics/phenotype_exploration.py`
+- Statistical testing: `src/organoid_analysis/statistics/inference.py`
+- Exploratory tutorial statistics/ML: `src/organoid_analysis/statistics/exploration.py`

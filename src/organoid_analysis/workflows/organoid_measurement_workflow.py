@@ -15,10 +15,6 @@ import yaml
 
 from organoid_analysis import __version__
 from organoid_analysis.config import load_config
-from organoid_analysis.experimental_statistics.evaluation import match_instances
-from organoid_analysis.experimental_statistics.replicate_aggregation import make_summaries
-from organoid_analysis.experimental_statistics.stats import condition_pairwise_tests
-from organoid_analysis.experimental_statistics.viability import calibrate, classify
 from organoid_analysis.microscopy_io.tiff_contract import (
     META_FIELDS,
     PATH_FIELDS,
@@ -29,6 +25,7 @@ from organoid_analysis.microscopy_io.tiff_contract import (
     sha256,
     write_labels,
 )
+from organoid_analysis.phenotyping.viability import calibrate, classify
 from organoid_analysis.quantification.features import (
     GEOMETRY_COLUMNS,
     MARKER_COLUMNS,
@@ -46,12 +43,15 @@ from organoid_analysis.segmentation.watershed_instances import (
     instance_qc_summary,
     segment,
 )
+from organoid_analysis.statistics.aggregation import make_summaries
+from organoid_analysis.statistics.inference import condition_pairwise_tests
+from organoid_analysis.validation.segmentation_metrics import match_instances
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 # Modules that implement the classical pipeline, now spread across the
-# microscopy_io/segmentation/quantification/experimental_statistics/result_export
-# subpackages rather than living alongside this file; hashed together for the
-# run's provenance record.
+# microscopy_io/segmentation/quantification/validation/phenotyping/statistics/
+# result_export subpackages rather than living alongside this file; hashed
+# together for the run's provenance record.
 _CLASSIC_SOURCE_FILES = sorted([
     _PACKAGE_ROOT / "config.py",
     _PACKAGE_ROOT / "microscopy_io" / "tiff_contract.py",
@@ -59,10 +59,10 @@ _CLASSIC_SOURCE_FILES = sorted([
     _PACKAGE_ROOT / "quantification" / "labels.py",
     _PACKAGE_ROOT / "quantification" / "cellular_measurements.py",
     _PACKAGE_ROOT / "quantification" / "features.py",
-    _PACKAGE_ROOT / "experimental_statistics" / "evaluation.py",
-    _PACKAGE_ROOT / "experimental_statistics" / "stats.py",
-    _PACKAGE_ROOT / "experimental_statistics" / "replicate_aggregation.py",
-    _PACKAGE_ROOT / "experimental_statistics" / "viability.py",
+    _PACKAGE_ROOT / "validation" / "segmentation_metrics.py",
+    _PACKAGE_ROOT / "statistics" / "inference.py",
+    _PACKAGE_ROOT / "statistics" / "aggregation.py",
+    _PACKAGE_ROOT / "phenotyping" / "viability.py",
     _PACKAGE_ROOT / "result_export" / "report.py",
     Path(__file__),
 ])

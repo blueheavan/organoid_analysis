@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from organoid_analysis.experimental_statistics.phenotype_exploration import (
+from organoid_analysis.statistics.exploration import (
     assess_data_quality,
     categorize_prolate_oblate,
     check_equal_variance,
@@ -147,7 +147,7 @@ class MLClassificationTests(unittest.TestCase):
     def test_feature_importance_present(self) -> None:
         X, y, label_map = prepare_binary_data(self.df, self.features, "Well", "A01", "A07")
         _, fitted, _, _, _ = train_binary_classifiers(X, y, label_map)
-        from organoid_analysis.experimental_statistics.phenotype_exploration import (
+        from organoid_analysis.statistics.exploration import (
             feature_importance,
         )
 

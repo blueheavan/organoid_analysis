@@ -12,8 +12,8 @@ import pandas as pd
 import seaborn as sns
 import streamlit as st
 
-from organoid_analysis.experimental_statistics import phenotype_exploration as analysis
 from organoid_analysis.segmentation.paths import DATA_DIR, DATA_DIR_EXISTS
+from organoid_analysis.statistics import exploration as analysis
 
 EXPECTED_FILES = {
     "Fig-3 osmotic stress": "Fig-3-41592_2025_2685_MOESM10_ESM.xlsx",

@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 
 from organoid_analysis.config import load_config
-from organoid_analysis.experimental_statistics.replicate_aggregation import make_summaries
-from organoid_analysis.experimental_statistics.viability import calibrate, classify
+from organoid_analysis.phenotyping.viability import calibrate, classify
+from organoid_analysis.statistics.aggregation import make_summaries
 
 
 def control_rows():

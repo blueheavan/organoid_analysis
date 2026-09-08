@@ -11,7 +11,7 @@ import yaml
 from scipy import ndimage as ndi
 
 from organoid_analysis.config import load_config
-from organoid_analysis.experimental_statistics.evaluation import match_instances
+from organoid_analysis.validation.segmentation_metrics import match_instances
 
 from .organoid_measurement_workflow import analyze
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .viability import STATES
+from organoid_analysis.phenotyping.viability import STATES
 
 MORPHOLOGY = ["volume_um3", "surface_area_um2", "sphericity", "equivalent_diameter_um"]
 META = ["condition", "biological_replicate", "unit_id", "batch_id", "control"]

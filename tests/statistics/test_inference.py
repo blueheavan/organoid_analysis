@@ -6,7 +6,7 @@ import tifffile
 import yaml
 
 from organoid_analysis.config import load_config
-from organoid_analysis.experimental_statistics.stats import (
+from organoid_analysis.statistics.inference import (
     _pairwise_contrasts,
     condition_pairwise_tests,
     fit_model,
