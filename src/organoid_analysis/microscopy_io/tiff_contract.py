@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import subprocess
 import xml.etree.ElementTree as ET
@@ -277,8 +278,17 @@ def git_commit_hash(repo_root: Path | None = None) -> str | None:
     working tree has uncommitted changes. Returns None (never raises) when
     not run from a git repository or git is unavailable -- provenance capture
     must never fail a run.
+
+    ``repo_root`` lets a caller pass the actual project directory explicitly;
+    absent that, the ORGANOID_ANALYSIS_PROJECT_ROOT environment variable
+    (see organoid_analysis.segmentation.paths) is checked before falling back
+    to this file's location in the package tree. In practice ``git`` finds
+    its own repository root from any subdirectory, so this fallback rarely
+    matters, but it should not silently assume a fixed number of parent
+    directories forever either.
     """
-    root = repo_root or Path(__file__).resolve().parents[3]
+    env_root = os.environ.get("ORGANOID_ANALYSIS_PROJECT_ROOT")
+    root = repo_root or (Path(env_root).resolve() if env_root else Path(__file__).resolve().parents[3])
     try:
         commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True,
                                 text=True, timeout=5, check=False)
