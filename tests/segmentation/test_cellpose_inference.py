@@ -14,6 +14,7 @@ import tifffile
 from organoid_analysis.segmentation.cellpose_inference import (
     SegmentationConfig,
     _wrap_run_3d,
+    build_provenance,
     list_saved_results,
     normalize_preview,
     read_stack,
@@ -92,6 +93,54 @@ class SegmentationTests(unittest.TestCase):
             self.assertEqual(restored.config, config)
             np.testing.assert_array_equal(restored.nuclei_masks, nuclei)
             np.testing.assert_array_equal(restored.cell_masks, cells)
+
+
+class ProvenanceTests(unittest.TestCase):
+    """P2-6 audit finding: a saved run must carry enough provenance to trace
+    its numbers back to inputs/environment/model, and must never fabricate a
+    model weight identity it cannot actually determine."""
+
+    def test_save_result_writes_a_provenance_file_alongside_summary(self) -> None:
+        nuclei = np.array([[[0, 1], [2, 0]]], dtype=np.uint32)
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            result = save_result(
+                nuclei, None, SegmentationConfig(), Path(temporary_directory),
+                nuclei_input_sha256="deadbeef" * 8, nuclei_channel=1, nuclei_dtype="uint16",
+            )
+            provenance_path = result.run_directory / "provenance.json"
+            self.assertTrue(provenance_path.exists())
+            provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+            self.assertEqual(provenance["nuclei_input"]["sha256"], "deadbeef" * 8)
+            self.assertEqual(provenance["nuclei_input"]["channel"], 1)
+            self.assertEqual(provenance["nuclei_input"]["dtype"], "uint16")
+            self.assertIsNone(provenance["cell_input"])
+            self.assertIn("git_commit", provenance)
+            self.assertIn("pipeline_version", provenance)
+            self.assertIn("config", provenance)
+
+    def test_missing_model_weight_file_is_reported_unavailable_not_fabricated(self) -> None:
+        config = SegmentationConfig(model_type="cpdino-vitb")
+        provenance = build_provenance(
+            config, (1, 2, 2),
+            nuclei_input_sha256="abc123", nuclei_channel=0, nuclei_dtype="uint16",
+        )
+        # A model_type string that (almost certainly) has no matching file
+        # under ~/.cellpose/models/ in the test environment must never be
+        # reported as a real checksum.
+        if provenance["model"]["source"] != "local_weight_file":
+            self.assertEqual(provenance["model"]["model_weight_sha256"], "unavailable")
+            self.assertIsNone(provenance["model"]["weight_path"])
+
+    def test_cell_input_provenance_recorded_when_a_cell_stack_is_given(self) -> None:
+        config = SegmentationConfig()
+        provenance = build_provenance(
+            config, (1, 2, 2),
+            nuclei_input_sha256="nuc", nuclei_channel=0, nuclei_dtype="uint16",
+            cell_input_sha256="cel", cell_channel=1, cell_dtype="uint8",
+        )
+        self.assertEqual(provenance["cell_input"]["sha256"], "cel")
+        self.assertEqual(provenance["cell_input"]["channel"], 1)
+        self.assertEqual(provenance["cell_input"]["dtype"], "uint8")
 
     def test_concurrent_model_inference_is_serialized(self) -> None:
         class FakeModel:

@@ -34,8 +34,13 @@ def validate_notebook(path: Path) -> list[str]:
 def main() -> int:
     notebooks = sorted((PROJECT_ROOT / "notebooks").glob("*.ipynb"))
     if not notebooks:
-        print("No notebooks found.", file=sys.stderr)
-        return 1
+        # Notebooks are optional in this repository (none are currently
+        # tracked or required). Absence is not a validation failure -- a
+        # nonzero exit here would silently block every task after `check` in
+        # `pixi run ci`'s depends-on chain (which stops at the first
+        # failure), including `typecheck`, without any test ever failing.
+        print("No notebooks found; notebook validation not applicable.")
+        return 0
 
     errors = [error for path in notebooks for error in validate_notebook(path)]
     if errors:

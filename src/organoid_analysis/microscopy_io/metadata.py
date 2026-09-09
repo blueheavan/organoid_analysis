@@ -89,6 +89,37 @@ class Spacing:
         return self.z / xy
 
 
+# Registered-grid comparison outcomes for two stacks meant to be paired as
+# channels of the same acquisition (e.g. a nuclei stack + a cell/cytoplasm
+# stack uploaded separately). Distinct from Spacing.complete: this compares
+# *two* spacings against each other, not one spacing's own completeness.
+GRID_CONSISTENT = "consistent"
+GRID_CONFLICT = "conflict"
+GRID_PARTIAL = "partial"
+
+
+def compare_registered_grid(a: Spacing, b: Spacing) -> str:
+    """Classify whether two stacks describe the same physical acquisition grid.
+
+    Returns ``GRID_CONSISTENT`` when both spacings are complete and agree on
+    X, Y, and Z within ``SPACING_RTOL``/``SPACING_ATOL_UM``; ``GRID_CONFLICT``
+    when both are complete but disagree on any axis beyond tolerance -- the
+    two stacks do not describe the same acquisition grid and must not be
+    treated as registered channels; and ``GRID_PARTIAL`` when at least one
+    side is missing spacing metadata, so agreement can be neither confirmed
+    nor refuted from metadata alone.
+    """
+    if not (a.complete and b.complete):
+        return GRID_PARTIAL
+    assert a.x is not None and a.y is not None and a.z is not None
+    assert b.x is not None and b.y is not None and b.z is not None
+    agrees = all(
+        np.isclose(value_a, value_b, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM)
+        for value_a, value_b in ((a.x, b.x), (a.y, b.y), (a.z, b.z))
+    )
+    return GRID_CONSISTENT if agrees else GRID_CONFLICT
+
+
 def parse_spacing_ome(ome_metadata: str | None, time_index: int | None = None) -> Spacing:
     """Parse voxel spacing from OME-XML via ``ome_types``.
 

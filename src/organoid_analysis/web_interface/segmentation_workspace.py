@@ -37,6 +37,10 @@ import streamlit as st
 from streamlit.components.v1 import html as _st_html
 
 from organoid_analysis.microscopy_io import (  # noqa: E402
+    GRID_CONFLICT,
+    GRID_PARTIAL,
+    ZStack,
+    compare_registered_grid,
     isotropic_xy_size_um,
     resolve_spacing_source,
 )
@@ -47,6 +51,7 @@ from organoid_analysis.quantification.mask_features import (  # noqa: E402
 )
 from organoid_analysis.segmentation.cellpose_inference import (  # noqa: E402
     SegmentationConfig,
+    config_spacing,
     create_model,
     get_accelerator,
     read_stack_multichannel,
@@ -137,12 +142,6 @@ def _set_tab_busy(busy: bool, slot=None) -> None:
         _st_html(html, height=0, width=0)
 
 
-def config_spacing(config: SegmentationConfig) -> tuple[float, float, float]:
-    """Physical spacing (x, y, z) in µm from XY pixel size and anisotropy."""
-    sy = sx = config.xy_spacing_um
-    return (sx, sy, sx * config.anisotropy)
-
-
 # Streamlit's websocket message-size limit defaults to 200MB; the viewer HTML
 # also carries mesh/surface data alongside the raw arrays, so budget well
 # under that for the base64-encoded intensity + mask volumes alone.
@@ -182,7 +181,31 @@ def _fit_viewer_payload_budget(
     return volumes, mask, spacing
 
 
-def _read_upload(upload, path: Path, label: str, role: str) -> tuple[np.ndarray, str, int, object]:
+def resolve_auto_suggestion(
+    raw_suggestion: dict | None, current_identity: tuple[str, int] | None
+) -> dict:
+    """Return ``raw_suggestion`` only if it was produced from the currently
+    loaded nuclei stack + channel; otherwise return an empty suggestion.
+
+    ``raw_suggestion`` must carry the ``source_digest``/``source_channel`` of
+    the nuclei stack it was computed from (see the "Auto-detect parameters"
+    button in ``render_preview_tab``). Without this check, an auto-detected
+    diameter/spacing/anisotropy computed for one uploaded stack would keep
+    being applied as if it were measured from a later, different upload or a
+    different channel of the same TIFF -- silently mislabeling the new run's
+    physical spacing as "from metadata" when it is actually stale data from
+    an unrelated file. A pure function so this identity check is testable
+    without spinning up Streamlit.
+    """
+    if not raw_suggestion or current_identity is None:
+        return {}
+    source_identity = (raw_suggestion.get("source_digest"), raw_suggestion.get("source_channel"))
+    if source_identity != current_identity:
+        return {}
+    return raw_suggestion
+
+
+def _read_upload(upload, path: Path, label: str, role: str) -> tuple[np.ndarray, str, int, ZStack]:
     """Decode an upload once per content digest and select its active channel."""
     digest = hashlib.sha256(upload.getbuffer()).hexdigest()
     digest_key = f"{role}_upload_digest"
@@ -225,14 +248,53 @@ def render_preview_tab(config: SegmentationConfig) -> None:
             cells = None
             cells_digest = None
             cells_channel = None
+            cells_zstack = None
             if cells_upload is not None:
-                cells, cells_digest, cells_channel, _ = _read_upload(
+                cells, cells_digest, cells_channel, cells_zstack = _read_upload(
                     cells_upload, temporary_path / "cells_input.tif", "Cell/cytoplasm", "cells"
                 )
                 validate_stacks(nuclei, cells)
         except (OSError, ValueError) as error:
             st.error(str(error))
             return
+
+        nuclei_identity = (nuclei_digest, nuclei_channel)
+        if st.session_state.get("nuclei_identity") != nuclei_identity:
+            st.session_state["nuclei_identity"] = nuclei_identity
+            # A previously auto-detected diameter/spacing/anisotropy was
+            # measured from a *different* nuclei stack or channel; it must
+            # never be silently carried over into this one and mislabeled as
+            # "from metadata" (see resolve_auto_suggestion, P1-1 audit finding).
+            st.session_state.pop("auto_suggest", None)
+
+        if cells is not None and cells_zstack is not None:
+            grid_status = compare_registered_grid(nuclei_zstack.spacing, cells_zstack.spacing)
+            if grid_status == GRID_CONFLICT:
+                st.error(
+                    "Nuclei and cell/cytoplasm stacks report different physical "
+                    f"voxel spacing in their metadata (nuclei={nuclei_zstack.spacing}, "
+                    f"cell={cells_zstack.spacing}). They cannot be treated as "
+                    "registered channels of the same acquisition."
+                )
+                return
+            if grid_status == GRID_PARTIAL:
+                st.warning(
+                    "Voxel spacing metadata is incomplete on at least one of the "
+                    "nuclei/cell stacks, so agreement on the physical acquisition "
+                    "grid cannot be confirmed from metadata."
+                )
+                confirmed = st.checkbox(
+                    "I confirm the nuclei and cell/cytoplasm stacks were acquired "
+                    "on the same physical grid (same field of view, voxel size, "
+                    "and Z step).",
+                    key=f"grid_confirm_{nuclei_digest}_{nuclei_channel}_{cells_digest}_{cells_channel}",
+                )
+                if not confirmed:
+                    st.info(
+                        "Confirm the acquisition grid above to continue with a "
+                        "cell/cytoplasm stack."
+                    )
+                    return
 
         input_key = (
             nuclei_digest,
@@ -285,33 +347,57 @@ def render_preview_tab(config: SegmentationConfig) -> None:
             auto_col0 = st.columns(2)
             with auto_col0[0]:
                 with st.spinner("Estimating nuclei diameter (fast 2D pass)…"):
-                    est = estimate_diameter_from_stack(
+                    nuclei_diameter_est = estimate_diameter_from_stack(
                         get_model(config.model_type), nuclei
                     )
+                # A cell's actual diameter cannot be derived from the nuclei
+                # stack alone (P2-5 audit finding); only estimate it when an
+                # independent cell/cytoplasm stack was actually uploaded.
+                cell_diameter_est = None
+                if cells is not None:
+                    with st.spinner("Estimating cell diameter (fast 2D pass)…"):
+                        cell_diameter_est = estimate_diameter_from_stack(
+                            get_model(config.model_type), cells
+                        )
             with auto_col0[1]:
                 try:
                     anisotropy = nuclei_zstack.spacing.anisotropy
-                    xy_spacing_um = (
-                        isotropic_xy_size_um(
+                    xy_spacing_um = None
+                    if nuclei_zstack.spacing.complete:
+                        assert nuclei_zstack.spacing.x is not None
+                        assert nuclei_zstack.spacing.y is not None
+                        xy_spacing_um = isotropic_xy_size_um(
                             nuclei_zstack.spacing.x, nuclei_zstack.spacing.y
                         )
-                        if nuclei_zstack.spacing.complete
-                        else None
-                    )
                 except ValueError as error:
                     st.error(str(error))
                     return
-            suggestion = {"nuclei_diameter": est, "cell_diameter": est}
+            # Tagged with the exact nuclei stack + channel this suggestion was
+            # computed from, so a later upload/channel switch can never reuse
+            # it (see resolve_auto_suggestion, P1-1 audit finding).
+            suggestion = {
+                "nuclei_diameter": nuclei_diameter_est,
+                "source_digest": nuclei_digest,
+                "source_channel": nuclei_channel,
+            }
+            if cell_diameter_est is not None:
+                suggestion["cell_diameter"] = cell_diameter_est
             if anisotropy is not None:
                 suggestion["anisotropy"] = anisotropy
             if xy_spacing_um is not None:
                 suggestion["xy_spacing_um"] = xy_spacing_um
             st.session_state["auto_suggest"] = suggestion
             msg = "Auto-detected: "
-            if est:
-                msg += f"nuclei diameter ≈ **{est:.1f} px**"
+            if nuclei_diameter_est:
+                msg += f"nuclei diameter ≈ **{nuclei_diameter_est:.1f} px**"
             else:
-                msg += "could not estimate diameter (no objects found)"
+                msg += "could not estimate nuclei diameter (no objects found)"
+            if cell_diameter_est:
+                msg += f", cell diameter ≈ **{cell_diameter_est:.1f} px**"
+            elif cells is not None:
+                msg += ", could not estimate cell diameter (no objects found)"
+            else:
+                msg += ". No cell/cytoplasm stack uploaded — cell diameter left as manual/default."
             if anisotropy is not None:
                 msg += (
                     f", XY spacing ≈ **{xy_spacing_um:.4g} µm**, "
@@ -320,14 +406,21 @@ def render_preview_tab(config: SegmentationConfig) -> None:
             else:
                 msg += ". No Z/XY spacing in metadata — please set anisotropy manually."
             st.success(msg)
-            if suggestion:
-                st.rerun()
+            st.rerun()
 
         if st.button("Run 3D segmentation", type="primary"):
-            _run_segmentation(nuclei, cells, config)
+            _run_segmentation(
+                nuclei, cells, config,
+                nuclei_digest=nuclei_digest, nuclei_channel=nuclei_channel,
+                cells_digest=cells_digest, cells_channel=cells_channel,
+            )
 
 
-def _run_segmentation(nuclei, cells, config: SegmentationConfig) -> None:
+def _run_segmentation(
+    nuclei, cells, config: SegmentationConfig,
+    *, nuclei_digest: str, nuclei_channel: int,
+    cells_digest: str | None, cells_channel: int | None,
+) -> None:
     task = {"start": time.monotonic(), "frac": 0.0, "estimated": None}
     result_queue: queue.Queue = queue.Queue()
 
@@ -342,7 +435,14 @@ def _run_segmentation(nuclei, cells, config: SegmentationConfig) -> None:
             masks = segment_stacks(
                 get_model(config.model_type), nuclei, cells, config, on_progress=report
             )
-            saved = save_result(masks[0], masks[1], config)
+            saved = save_result(
+                masks[0], masks[1], config,
+                nuclei_input_sha256=nuclei_digest, nuclei_channel=nuclei_channel,
+                nuclei_dtype=str(nuclei.dtype),
+                cell_input_sha256=cells_digest,
+                cell_channel=cells_channel,
+                cell_dtype=str(cells.dtype) if cells is not None else None,
+            )
             result_queue.put(("ok", saved, masks))
         except Exception as error:  # noqa: BLE001 - propagate worker failures to the UI
             result_queue.put(("error", error, None))
@@ -553,8 +653,13 @@ def render_sidebar() -> SegmentationConfig:
         "cpsam": "cpsam — original CellposeSAM",
     }
     # Auto-detected suggestions (filled by the "Auto-detect" button in the
-    # preview tab) become the defaults for the number inputs.
-    suggestions = st.session_state.get("auto_suggest") or {}
+    # preview tab) become the defaults for the number inputs -- but only when
+    # they were computed from the nuclei stack/channel currently loaded (see
+    # resolve_auto_suggestion, P1-1 audit finding: a stale suggestion from a
+    # previous upload must never silently carry over to a new one).
+    suggestions = resolve_auto_suggestion(
+        st.session_state.get("auto_suggest"), st.session_state.get("nuclei_identity")
+    )
 
     def _default_for(key: str, fallback: float) -> float:
         value = suggestions.get(key)
@@ -576,7 +681,7 @@ def render_sidebar() -> SegmentationConfig:
             index=list(model_labels).index(backend_defaults.model_type),
             format_func=lambda m: model_labels[m],
         )
-        if suggestions:
+        if suggestions and suggestions.get("nuclei_diameter") is not None:
             st.success(
                 "Auto-detected: "
                 f"diameter ≈ {suggestions['nuclei_diameter']:.1f} px"
@@ -585,6 +690,11 @@ def render_sidebar() -> SegmentationConfig:
                     if suggestions.get("anisotropy")
                     else ""
                 )
+            )
+        elif suggestions:
+            st.info(
+                "Auto-detect ran but could not estimate a nuclei diameter "
+                "(no objects found); using manual/default values below."
             )
         with st.expander("Organoid tips", expanded=False):
             st.markdown(
@@ -597,8 +707,11 @@ def render_sidebar() -> SegmentationConfig:
                 "from metadata when present).\n"
                 "- **Resolution** — down-sample for speed, then re-run at full "
                 "resolution for final analysis.\n"
-                "- **Model** — `cpdino-vitb` is fastest; `cpsam_v2` is most "
-                "accurate for densely packed structures.\n"
+                "- **Model** — `cpdino-vitb` is the fastest option; `cpsam_v2` is "
+                "another available Cellpose foundation model. This pipeline has no "
+                "independent target-domain benchmark comparing them, so pick based "
+                "on your own QC on representative images rather than a claimed "
+                "accuracy ranking.\n"
                 "- **QC** — inspect every representative condition for missed, merged and "
                 "Z-fragmented objects. Changing a model or threshold changes the measured population.\n"
                 "- **Scope** — nuclei/cell masks support nuclei/cell measurements. They do "

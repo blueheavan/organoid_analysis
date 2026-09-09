@@ -11,6 +11,7 @@ from organoid_analysis.segmentation.parameter_estimation import (
     _downsample_2d,
     auto_anisotropy,
     estimate_diameter_from_stack,
+    suggest_config,
 )
 
 
@@ -113,6 +114,42 @@ class DiameterEstimateTests(unittest.TestCase):
     def test_rejects_non_3d(self) -> None:
         with self.assertRaises(ValueError):
             estimate_diameter_from_stack(_CircleModel(), np.zeros((100, 100)))
+
+
+class SuggestConfigCellDiameterTests(unittest.TestCase):
+    """P2-5 audit finding: cell_diameter must never be silently copied from
+    the nuclei estimate -- a cell's actual diameter is not derivable from a
+    nucleus stack alone."""
+
+    def test_no_cell_stack_yields_no_data_derived_cell_diameter(self) -> None:
+        nuclei_stack = np.zeros((10, 100, 100), dtype=np.float32)
+        result = suggest_config(_CircleModel(radius_px=15.0), nuclei_stack)
+        self.assertIn("nuclei_diameter", result)
+        self.assertNotIn(
+            "cell_diameter", result,
+            "cell_diameter must not be fabricated when no cell/cytoplasm stack was given",
+        )
+
+    def test_cell_stack_is_estimated_independently_of_nuclei_stack(self) -> None:
+        # Different spatial shapes make `_CircleModel`'s returned diameter
+        # (which depends on the post-downsample array shape) genuinely differ
+        # between the two stacks. If `suggest_config` still copied the nuclei
+        # estimate into `cell_diameter` (the pre-fix bug), this would fail
+        # because the copied value would equal the nuclei estimate rather
+        # than the cell stack's own, different, estimate.
+        model = _CircleModel(radius_px=15.0)
+        nuclei_stack = np.zeros((10, 100, 100), dtype=np.float32)
+        cell_stack = np.zeros((10, 140, 140), dtype=np.float32)
+        result = suggest_config(model, nuclei_stack, cell_stack=cell_stack)
+
+        expected_nuclei_est = estimate_diameter_from_stack(model, nuclei_stack)
+        expected_cell_est = estimate_diameter_from_stack(model, cell_stack)
+        self.assertIsNotNone(expected_nuclei_est)
+        self.assertIsNotNone(expected_cell_est)
+        self.assertNotAlmostEqual(expected_nuclei_est, expected_cell_est, delta=0.01)
+
+        self.assertAlmostEqual(result["nuclei_diameter"], expected_nuclei_est, delta=0.01)
+        self.assertAlmostEqual(result["cell_diameter"], expected_cell_est, delta=0.01)
 
 
 if __name__ == "__main__":

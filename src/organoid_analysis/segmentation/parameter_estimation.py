@@ -169,16 +169,21 @@ def suggest_config(
     stack: np.ndarray,
     *,
     anisotropy: float | None = None,
+    cell_stack: np.ndarray | None = None,
 ):
     """Return a dict of auto-suggested parameters.
 
-    Brutal but safe: ``anisotropy`` (physical) is returned verbatim when given
-    or when inferable from the file; ``nuclei_diameter`` is estimated from the
-    stack. ``cell_diameter`` defaults to the nucleus estimate (a cell is roughly
-    one nucleus plus cytoplasm), which the user can still override.
+    ``anisotropy`` (physical) is returned verbatim when given or when
+    inferable from the file; ``nuclei_diameter`` is estimated from ``stack``.
+    ``cell_diameter`` is independently estimated from ``cell_stack`` when one
+    is provided. A cell's actual diameter is not derivable from a nucleus
+    stack alone, so when no cell/cytoplasm stack is given, no data-derived
+    ``cell_diameter`` is returned -- callers should keep the existing
+    manual/default value rather than treat this as measured from the image.
     """
-    est = estimate_diameter_from_stack(model, stack)
-    result = {"nuclei_diameter": est, "cell_diameter": est}
+    result: dict[str, float | None] = {"nuclei_diameter": estimate_diameter_from_stack(model, stack)}
+    if cell_stack is not None:
+        result["cell_diameter"] = estimate_diameter_from_stack(model, cell_stack)
     if anisotropy is not None:
         result["anisotropy"] = anisotropy
     return result

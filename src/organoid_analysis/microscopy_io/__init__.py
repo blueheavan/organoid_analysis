@@ -1,7 +1,11 @@
 """Z-stack TIFF IO and metadata handling."""
 
 from .metadata import (
+    GRID_CONFLICT,
+    GRID_CONSISTENT,
+    GRID_PARTIAL,
     Spacing,
+    compare_registered_grid,
     parse_axes,
     parse_spacing_imagej,
     parse_spacing_ome,
@@ -21,6 +25,10 @@ from .zstack_reader import (
 
 __all__ = [
     "Spacing",
+    "GRID_CONSISTENT",
+    "GRID_CONFLICT",
+    "GRID_PARTIAL",
+    "compare_registered_grid",
     "parse_spacing_ome",
     "parse_spacing_imagej",
     "resolve_spacing",

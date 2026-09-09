@@ -235,21 +235,32 @@ TIFF 缺少完整物理 metadata。请提供：
 ## 项目结构与测试
 
 ```text
-src/
-├── analysis/              # CLI、经典分析与 multilevel3d
-├── segmentation/          # Cellpose 3D、TIFF I/O、分割结果保存
-└── ui/                    # Streamlit 应用与结果查看器
+src/organoid_analysis/
+├── command_line/           # CLI 入口（organoid_commands.py 等）
+├── config.py                # 顶层运行配置
+├── microscopy_io/          # TIFF/OME 读取、体素间距 (spacing) 解析与统一契约
+├── segmentation/            # Cellpose 3D 与经典 (watershed) 分割
+├── quantification/          # per-object mask 特征、multilevel 关系
+├── phenotyping/             # 细胞/器官表型分类
+├── statistics/               # 混合效应/聚类稳健推断
+├── validation/               # 科学验证辅助
+├── workflows/                # Web/CLI 共用的读取→分割→测量→导出编排
+├── result_export/            # 结果导出 (CSV/OME-TIFF 等)
+├── visualization/             # 3D 体渲染查看器
+└── web_interface/            # Streamlit 应用
 configs/                   # YAML 分析配置
 data/                      # 示例与本地数据
 docs/                      # 方法、参数与验证说明
 results/                   # 本地分割和分析输出
-tests/                     # UI 与 service 测试
+tests/                     # 单元、集成与 UI 测试，镜像上述包结构
 ```
 
 ```bash
-pixi run analysis-test
+pixi run lint
 pixi run test
+pixi run test-render
 pixi run check
+pixi run typecheck
 pixi run python -m organoid_analysis --help
 ```
 

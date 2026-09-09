@@ -12,10 +12,17 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from organoid_analysis.microscopy_io import isotropic_xy_size_um, resolve_spacing_source
+from organoid_analysis.microscopy_io import (
+    GRID_CONFLICT,
+    GRID_CONSISTENT,
+    GRID_PARTIAL,
+    Spacing,
+    compare_registered_grid,
+    isotropic_xy_size_um,
+    resolve_spacing_source,
+)
 from organoid_analysis.quantification.mask_features import extract_mask_features
-from organoid_analysis.segmentation.cellpose_inference import SegmentationConfig
-from organoid_analysis.web_interface.segmentation_workspace import config_spacing
+from organoid_analysis.segmentation.cellpose_inference import SegmentationConfig, config_spacing
 
 # --- resolve_spacing_source ------------------------------------------------
 
@@ -136,3 +143,51 @@ def test_override_differing_from_metadata_keeps_original_metadata_value():
 def test_unequal_xy_pixel_size_raises_instead_of_averaging():
     with pytest.raises(ValueError, match="equal X/Y pixel sizes"):
         isotropic_xy_size_um(0.5, 0.6)
+
+
+# --- compare_registered_grid (P1-2 audit finding) ---------------------------
+#
+# The web upload path pairs a nuclei stack and a cell/cytoplasm stack uploaded
+# as two separate files and stacks them as registered channels. Before this
+# fix, only their array *shape* was checked; two files with the same shape
+# but a different physical voxel grid (different microscope settings, or a
+# mismatched crop) would pass silently and their volumes/areas would be
+# computed against the wrong spacing.
+
+
+def test_same_shape_and_matching_spacing_is_consistent():
+    a = Spacing(x=0.65, y=0.65, z=2.0)
+    b = Spacing(x=0.65, y=0.65, z=2.0)
+    assert compare_registered_grid(a, b) == GRID_CONSISTENT
+
+
+def test_differing_xy_spacing_is_a_conflict():
+    a = Spacing(x=0.65, y=0.65, z=2.0)
+    b = Spacing(x=0.325, y=0.325, z=2.0)
+    assert compare_registered_grid(a, b) == GRID_CONFLICT
+
+
+def test_differing_z_spacing_is_a_conflict():
+    a = Spacing(x=0.65, y=0.65, z=2.0)
+    b = Spacing(x=0.65, y=0.65, z=4.0)
+    assert compare_registered_grid(a, b) == GRID_CONFLICT
+
+
+def test_nuclei_metadata_complete_cell_metadata_missing_is_partial():
+    a = Spacing(x=0.65, y=0.65, z=2.0)
+    b = Spacing(x=None, y=None, z=None)
+    assert compare_registered_grid(a, b) == GRID_PARTIAL
+
+
+def test_both_metadata_missing_is_partial():
+    a = Spacing(x=None, y=None, z=None)
+    b = Spacing(x=None, y=None, z=None)
+    assert compare_registered_grid(a, b) == GRID_PARTIAL
+
+
+def test_within_tolerance_rounding_is_still_consistent():
+    # Metadata rounding noise (well within SPACING_RTOL) must not be flagged
+    # as a real acquisition-grid conflict.
+    a = Spacing(x=0.6500, y=0.6500, z=2.0000)
+    b = Spacing(x=0.6505, y=0.6498, z=2.0010)
+    assert compare_registered_grid(a, b) == GRID_CONSISTENT

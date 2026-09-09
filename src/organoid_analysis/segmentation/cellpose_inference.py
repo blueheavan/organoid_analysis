@@ -1,17 +1,23 @@
 from __future__ import annotations
 
+import importlib.metadata
 import json
+import platform
+import sys
 import threading
 import zipfile
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
 import tifffile
 
+from organoid_analysis import __version__
 from organoid_analysis.microscopy_io import Spacing, ZStack, load_zstack, read_axes
+from organoid_analysis.microscopy_io.tiff_contract import git_commit_hash
+from organoid_analysis.microscopy_io.tiff_contract import sha256 as _hash_file
 from organoid_analysis.segmentation.paths import SEGMENTATION_OUTPUT_DIR, detect_torch_acceleration
 
 
@@ -53,6 +59,18 @@ _3D_CAPABLE = set(MODEL_OPTIONS)
 # and Streamlit caches one model across sessions. Serialize model inference so
 # concurrent sessions cannot use one model or overwrite one another's adapter.
 _INFERENCE_LOCK = threading.Lock()
+
+
+def config_spacing(config: SegmentationConfig) -> tuple[float, float, float]:
+    """Physical spacing (x, y, z) in µm from XY pixel size and anisotropy.
+
+    Lives here (not in web_interface) because it is pure spacing math with no
+    UI dependency, and ``save_result``'s provenance record needs it too --
+    keeping the dependency direction microscopy_io -> segmentation ->
+    ... -> web_interface intact rather than the reverse.
+    """
+    sy = sx = config.xy_spacing_um
+    return (sx, sy, sx * config.anisotropy)
 
 
 @dataclass(frozen=True)
@@ -328,11 +346,117 @@ def _wrap_run_3d(
     return restore
 
 
+def _model_identity(model_type: str) -> dict:
+    """Best-effort description of the actual Cellpose weights used.
+
+    Cellpose's foundation models expose no reliable API for a weight-file
+    path or checksum, so this looks for a locally cached weight file under
+    Cellpose's own model cache directory; when one cannot be found, it
+    records ``"unavailable"`` rather than fabricating an identity (per the
+    P2-6 audit requirement).
+    """
+    weight_path = Path.home() / ".cellpose" / "models" / model_type
+    if weight_path.is_file():
+        return {
+            "logical_name": model_type,
+            "source": "local_weight_file",
+            "weight_path": str(weight_path),
+            "model_weight_sha256": _hash_file(weight_path),
+        }
+    return {
+        "logical_name": model_type,
+        "source": "cellpose_model_registry",
+        "weight_path": None,
+        "model_weight_sha256": "unavailable",
+    }
+
+
+def _package_version(package: str) -> str:
+    try:
+        return importlib.metadata.version(package)
+    except importlib.metadata.PackageNotFoundError:
+        return "unavailable"
+
+
+def build_provenance(
+    config: SegmentationConfig,
+    input_shape: tuple[int, ...],
+    *,
+    nuclei_input_sha256: str | None,
+    nuclei_channel: int,
+    nuclei_dtype: str | None,
+    cell_input_sha256: str | None = None,
+    cell_channel: int | None = None,
+    cell_dtype: str | None = None,
+) -> dict:
+    """Everything needed to trace a saved run back to its exact inputs,
+    environment, model, and configuration (Gate 11 reproducibility).
+
+    Callers should pass through content digests/channels/dtypes they already
+    computed (e.g. the Web upload path's per-file SHA256) rather than this
+    function re-reading input files itself.
+    """
+    try:
+        import torch
+
+        torch_version = torch.__version__
+        accelerator = get_accelerator()
+    except Exception:  # noqa: BLE001 - provenance capture must never fail a run
+        torch_version = "unavailable"
+        accelerator = "unavailable"
+    try:
+        from cellpose import version as _cellpose_version
+
+        cellpose_version = str(_cellpose_version)
+    except Exception:  # noqa: BLE001
+        cellpose_version = "unavailable"
+
+    x_um, y_um, z_um = config_spacing(config)
+    cell_input = None
+    if cell_input_sha256 is not None or cell_channel is not None:
+        cell_input = {
+            "sha256": cell_input_sha256 or "unavailable",
+            "channel": cell_channel,
+            "dtype": cell_dtype or "unavailable",
+            "shape": list(input_shape),
+        }
+    return {
+        "pipeline_version": __version__,
+        "git_commit": git_commit_hash(),
+        "timestamp_utc": datetime.now(UTC).isoformat(),
+        "python": sys.version,
+        "platform": platform.platform(),
+        "torch": torch_version,
+        "cellpose": cellpose_version,
+        "packages": {pkg: _package_version(pkg) for pkg in ("numpy", "scipy")},
+        "accelerator": accelerator,
+        "model": _model_identity(config.model_type),
+        "config": asdict(config),
+        "nuclei_input": {
+            "sha256": nuclei_input_sha256 or "unavailable",
+            "channel": nuclei_channel,
+            "dtype": nuclei_dtype or "unavailable",
+            "shape": list(input_shape),
+        },
+        "cell_input": cell_input,
+        "spacing_um": {"x": x_um, "y": y_um, "z": z_um},
+        "xy_spacing_source": config.xy_spacing_source,
+        "anisotropy_source": config.anisotropy_source,
+    }
+
+
 def save_result(
     nuclei_masks: np.ndarray,
     cell_masks: np.ndarray | None,
     config: SegmentationConfig,
     output_directory: Path = SEGMENTATION_OUTPUT_DIR,
+    *,
+    nuclei_input_sha256: str | None = None,
+    nuclei_channel: int = 0,
+    nuclei_dtype: str | None = None,
+    cell_input_sha256: str | None = None,
+    cell_channel: int | None = None,
+    cell_dtype: str | None = None,
 ) -> SegmentationResult:
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     run_directory = output_directory / f"run-{timestamp}"
@@ -340,6 +464,7 @@ def save_result(
 
     nuclei_mask_path = run_directory / "nuclei_masks_3d.tif"
     summary_path = run_directory / "summary.json"
+    provenance_path = run_directory / "provenance.json"
     archive_path = run_directory / "segmentation_results.zip"
     nuclei_masks = _validated_mask(nuclei_masks, nuclei_masks.shape, "nuclei")
     paths = [nuclei_mask_path]
@@ -363,9 +488,23 @@ def save_result(
     }
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     paths.append(summary_path)
+
+    provenance = build_provenance(
+        config,
+        nuclei_masks.shape,
+        nuclei_input_sha256=nuclei_input_sha256,
+        nuclei_channel=nuclei_channel,
+        nuclei_dtype=nuclei_dtype,
+        cell_input_sha256=cell_input_sha256,
+        cell_channel=cell_channel,
+        cell_dtype=cell_dtype,
+    )
+    provenance_path.write_text(json.dumps(provenance, indent=2) + "\n", encoding="utf-8")
+    paths.append(provenance_path)
+
     with zipfile.ZipFile(archive_path, "w") as archive:
         for path in paths:
-            compression = zipfile.ZIP_DEFLATED if path == summary_path else zipfile.ZIP_STORED
+            compression = zipfile.ZIP_DEFLATED if path in (summary_path, provenance_path) else zipfile.ZIP_STORED
             archive.write(path, path.name, compress_type=compression)
 
     return SegmentationResult(
