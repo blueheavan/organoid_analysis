@@ -56,6 +56,42 @@ def test_bh_fdr_padj_never_below_raw_p():
     assert (pairwise.padj >= pairwise.p_raw - 1e-12).all()
 
 
+def test_pairwise_output_is_self_describing_and_scale_correct():
+    """P2-2 audit finding: pairwise_contrasts.csv's ``estimate`` for
+    volume_um3 is a log10-scale difference but the column name alone did not
+    say so, and the CSV gave no indication that BH-FDR is applied within one
+    feature's contrasts only, not globally across every feature."""
+    objects = _objects(
+        {"A": (1000.0, 50.0), "B": (2000.0, 50.0)}, feature="volume_um3",
+    )
+    pairwise, _ = condition_pairwise_tests(objects, features=("volume_um3",))
+    row = pairwise.iloc[0]
+
+    assert row.estimate_scale == "log10_difference"
+    assert row.multiplicity_family == "within-feature pairwise contrasts (volume_um3)"
+    # geometric_mean_ratio must back-transform the log10-scale estimate, not
+    # just restate the difference or a hardcoded 1.0.
+    assert row.geometric_mean_ratio == pytest.approx(10 ** row.estimate)
+    assert row.ci95_low < row.estimate < row.ci95_high
+    assert row.standard_error > 0
+    assert row.ci95_high - row.ci95_low == pytest.approx(
+        2 * st.t.ppf(0.975, row.df_denom) * row.standard_error
+    )
+
+
+def test_raw_scale_feature_reports_no_geometric_mean_ratio():
+    """sphericity is not log10-transformed; a geometric-mean ratio computed
+    from its raw-scale difference would be scientifically meaningless, so it
+    must be reported as NaN rather than a plausible-looking number."""
+    objects = _objects(
+        {"A": (0.80, 0.01), "B": (0.85, 0.01)}, feature="sphericity",
+    )
+    pairwise, _ = condition_pairwise_tests(objects, features=("sphericity",))
+    row = pairwise.iloc[0]
+    assert row.estimate_scale == "raw_difference"
+    assert np.isnan(row.geometric_mean_ratio)
+
+
 def test_lmm_pairwise_uses_small_cluster_t_reference_not_asymptotic_z():
     """Regression test for the P1 anti-conservative-p-value audit finding.
 
@@ -80,7 +116,7 @@ def test_lmm_pairwise_uses_small_cluster_t_reference_not_asymptotic_z():
     fit, model_used = fit_model(d, "volume_um3", "grp")
     assert model_used.startswith("LMM")  # this test only exercises the LMM branch
     n_clusters = d["grp"].nunique()
-    _, _, p_values, dof = _pairwise_contrasts(fit, ["A", "B"], n_clusters)
+    _, _, _, p_values, dof = _pairwise_contrasts(fit, ["A", "B"], n_clusters)
     assert dof == [n_clusters - 1]
     t_stat = float(np.ravel(fit.t_test(np.array([[0, 1]])).tvalue)[0])
     expected_t_p = float(2 * st.t.sf(abs(t_stat), n_clusters - 1))

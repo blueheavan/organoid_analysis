@@ -72,7 +72,9 @@ def fit_model(d: pd.DataFrame, feature: str, group_col: str):
     return fit, "OLS(clustered SE)"
 
 
-def _pairwise_contrasts(fit, conditions: list[str], n_clusters: int) -> tuple[list[str], list[float], list[float], list[int]]:
+def _pairwise_contrasts(
+    fit, conditions: list[str], n_clusters: int
+) -> tuple[list[str], list[float], list[float], list[float], list[int]]:
     """Pairwise condition contrasts with a small-cluster-corrected p-value.
 
     ``fit.t_test(...)`` gives a correctly t(G-1)-referenced p-value already
@@ -92,7 +94,7 @@ def _pairwise_contrasts(fit, conditions: list[str], n_clusters: int) -> tuple[li
     is_lmm = hasattr(fit, "cov_re")
     df_denom = max(n_clusters - 1, 1)
     reference = conditions[0]
-    pairs, estimates, p_values, dof = [], [], [], []
+    pairs, estimates, standard_errors, p_values, dof = [], [], [], [], []
     for i in range(len(conditions)):
         for j in range(i + 1, len(conditions)):
             ci, cj = conditions[i], conditions[j]
@@ -109,9 +111,15 @@ def _pairwise_contrasts(fit, conditions: list[str], n_clusters: int) -> tuple[li
                 p_value = float(np.atleast_1d(test.pvalue)[0])
             pairs.append(f"{cj} vs {ci}")
             estimates.append(float(np.atleast_1d(test.effect)[0]))
+            # test.sd is the (model-appropriate) standard error of the
+            # contrast; combined with the same t(G-1) reference used for
+            # p_value above (not test.conf_int(), which would use the LMM
+            # branch's uncorrected asymptotic z reference) to build a CI
+            # consistent with the small-sample-corrected p-value.
+            standard_errors.append(float(np.ravel(test.sd)[0]))
             p_values.append(p_value)
             dof.append(df_denom)
-    return pairs, estimates, p_values, dof
+    return pairs, estimates, standard_errors, p_values, dof
 
 
 def condition_pairwise_tests(
@@ -152,11 +160,35 @@ def condition_pairwise_tests(
         condition_row = [i for i, name in enumerate(wald.table.index) if "condition" in str(name)][0]
         omnibus_p = float(wald.table.iloc[condition_row]["pvalue"])
 
-        pairs, estimates, p_raw, dof = _pairwise_contrasts(fit, conditions, n_clusters)
+        pairs, estimates, standard_errors, p_raw, dof = _pairwise_contrasts(fit, conditions, n_clusters)
         rejected, p_adj, _, _ = multipletests(p_raw, method="fdr_bh")
+        # ``estimate`` is on the model's fitted scale, which is log10 for
+        # LOG10_FEATURES (volume_um3) and raw units otherwise (P2-2 audit
+        # finding: the CSV previously left this scale implicit). t(G-1) is
+        # the same reference used for p_raw above, not statsmodels' own
+        # asymptotic-z conf_int() (see _pairwise_contrasts).
+        is_log10 = feature in LOG10_FEATURES
+        estimate_scale = "log10_difference" if is_log10 else "raw_difference"
+        t_crit = float(scipy_stats.t.ppf(0.975, dof[0])) if dof else float("nan")
+        ci_low = [e - t_crit * se for e, se in zip(estimates, standard_errors)]
+        ci_high = [e + t_crit * se for e, se in zip(estimates, standard_errors)]
         pairwise_frames.append(pd.DataFrame({
             "feature": feature, "contrast": pairs, "estimate": estimates,
-            "p_raw": p_raw, "padj": p_adj, "significant_fdr05": rejected, "df_denom": dof,
+            "estimate_scale": estimate_scale,
+            # Back-transformed ratio of geometric means between the two
+            # conditions; only meaningful when the model was fit on a log10
+            # scale. NaN (not 1.0 or the raw difference) for raw-scale
+            # features so it is never mistaken for a ratio that was actually
+            # computed.
+            "geometric_mean_ratio": [10 ** e if is_log10 else np.nan for e in estimates],
+            "standard_error": standard_errors,
+            "ci95_low": ci_low, "ci95_high": ci_high,
+            "df_denom": dof, "p_raw": p_raw, "padj": p_adj, "significant_fdr05": rejected,
+            # BH-FDR is applied within one feature's own pairwise contrasts
+            # only (P2-2 audit finding) -- e.g. volume_um3 and sphericity each
+            # get their own independent FDR correction, not one shared
+            # correction across every feature x contrast in this table.
+            "multiplicity_family": f"within-feature pairwise contrasts ({feature})",
         }))
         # omnibus_p is NOT small-sample corrected for the LMM branch (see
         # fit_model's docstring); pairwise p_raw/padj above are, for both branches.
@@ -164,5 +196,9 @@ def condition_pairwise_tests(
                             "omnibus_p_small_sample_corrected": not model_used.startswith("LMM")}
 
     pairwise = (pd.concat(pairwise_frames, ignore_index=True) if pairwise_frames
-                else pd.DataFrame(columns=["feature", "contrast", "estimate", "p_raw", "padj", "significant_fdr05"]))
+                else pd.DataFrame(columns=[
+                    "feature", "contrast", "estimate", "estimate_scale", "geometric_mean_ratio",
+                    "standard_error", "ci95_low", "ci95_high", "df_denom", "p_raw", "padj",
+                    "significant_fdr05", "multiplicity_family",
+                ]))
     return pairwise, omnibus
