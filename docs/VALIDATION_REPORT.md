@@ -1,9 +1,11 @@
 # Validation Report — Multilevel 3D Analysis
 
-Version: 1.0.0
-Date: 2026-09-02
+Version: 1.1.0
+Date: 2026-09-09
 Classification: S3 (Inferential) for the pipeline as a whole (see docs/SCIENTIFIC_SPEC.md for evidence); this report's scope remains the `analyze-3d` multilevel measurement step specifically, which is S2 on its own — the S3-triggering component (`stats.py`) belongs to the classical `analyze` pipeline and is validated separately (docs/ALGORITHM_DECISIONS.md D11).
 Audit separation tier: **Tier D** (same agent and context as implementation) → `LIMITED INDEPENDENCE`.
+
+> 2026-09-09 update: This report's reproducibility baseline is refreshed from `3c9793c` to the current HEAD `3b1fda9` (5 commits ahead), and an S1 data-handling verification entry (VR-11) covering the unified TIFF axis/spacing reader behavior (docs/ALGORITHM_DECISIONS.md D12) is added to `docs/VALIDATION_PLAN.md`. No measurement algorithm changed; D12 is a data-reader/unit-handling behavior unification verified by its own regression tests and re-loading of the real sample images.
 
 This report records the scientific V&V of the `analyze-3d` multilevel 3D organoid analysis against `docs/VALIDATION_PLAN.md`. It separates **software correctness** (verification, this pass) from **biological validity** (which remains NOT ASSESSED / INSUFFICIENT EVIDENCE unless a fully independent real-data study is performed). The classical morphology/viability workflow is validated separately in `docs/VALIDATION.md` and is not re-validated here.
 
@@ -34,7 +36,7 @@ Per item: `PASS`, `PARTIAL`, `FAIL`, `NOT ASSESSED`, `INSUFFICIENT EVIDENCE`, `N
 | Formal QC flags (VR-7) | `PASS` | border, MAD-outlier, too-small, parent-failed, anucleate, multinucleated, direct-mismatch all produced; MAD==0 path handled |
 | Reproducibility/determinism (VR-9) | `PASS` | identical feature tables across two runs (organoid/cell/nucleus/topology/qc) |
 | Failure modes / out-of-domain (VR-10) | `PASS` | missing spacing, conflicting metadata, shape mismatch, non-finite intensity handled explicitly |
-| Full automated suite | `PASS` | `pixi run test` (single authoritative suite as of `3c9793c`): 195 passed, 8 skipped (Playwright unavailable in this environment), 8 render-marked tests deselected by default (`pixi run test-render` runs them: 8 passed) |
+| Full automated suite | `PASS` | `pixi run test` at HEAD `3b1fda9`: 199 passed, 8 skipped (Playwright-gated headless render tests), 8 render-marked deselected by default; `pixi run test-render`: 8 passed. Lint (`ruff`) clean. mypy non-blocking backlog unchanged (documented, unrelated to measurement). |
 
 ### Independent-oracle note (VR-2/3/5)
 
@@ -51,7 +53,10 @@ The pipeline does not force sphericity into [0,1]; values >1.05 are flagged. Thi
 
 ## 3. Representative real-data validation (VR-8)
 
-**Result: `INSUFFICIENT EVIDENCE — NOT ASSESSED` for biological accuracy.** Real registered organoid/cell/nucleus volumes were not available and a fully independent real-data study was not performed in this pass. The synthetic phantom over-estimates real-tissue conditions (high contrast, regular ellipsoids). No real-data claim is made.
+**Result: `INSUFFICIENT EVIDENCE — NOT ASSESSED` for biological accuracy.**
+
+- **Reader path (S1, D12, real-data-backed):** all 5 real sample images in `data/images/` were loaded through the reader path (`load_zstack`) at HEAD `3b1fda9`. All return correct `ZYX` volumes (uint16), with physical spacing read from embedded metadata where present: `Human-Colon-Organoids-C1.tif` → 2.0 µm, `ZeroG-Breast-Cancer-Spheroid-C1.tif` → 1.5 µm; the remaining samples carry no spacing metadata and correctly report `None` rather than fabricating a value. This independently re-confirms the D12 S1 change did not regress real-sample reading.
+- **Multilevel measurement (VR-8):** still `INSUFFICIENT EVIDENCE`. No real **registered organoid+cell+nucleus label volume set** exists in the repository (all prior Cellpose runs under `results/segmentation_output/` report `cell_count: 0`, so they cannot form the three-level hierarchy the pipeline requires). Lifting this requires user-provided real registered label volumes; the synthetic phantom over-estimates real-tissue conditions (high contrast, regular ellipsoids). **No real-data biological accuracy claim is made.**
 
 ## 4. Parameter / calibration validity
 
@@ -85,6 +90,7 @@ Metadata supplied by the caller is preserved verbatim and never invented (`_add_
 | F-2 | P4 | In-progress uncommitted label-compaction refactor (`src/organoid_analysis/quantification/labels.py`) deduplicates logic across 4 files; behavior preserved (all tests green) | Open — refactor itself is beneficial; commit when ready |
 | F-3 | P2 | `analyze-3d`'s exported `analysis_summary.json` had zero code/environment provenance (no git commit, source hash, or package versions), unlike the classical `analyze` pipeline | Resolved 2026-09-03 — `_run_multilevel` now writes a `provenance` block (git commit + dirty flag, `multilevel3d/*.py` source hashes, package versions); regression test in `test_multilevel3d.py` |
 | F-4 | P2 | This report's own Gate 11 baseline cited git commit `280bd06`, which does not exist in this repository's actual history | Resolved 2026-09-08 — Gate 11 now cites `3c9793c` (an actual commit in this repository's history, `git log` verified) with package versions read directly from the installed pixi environment, not carried forward from the unreproducible historical entry |
+| F-5 | P3 | This report's Gate 11 baseline and full-suite row went stale after HEAD advanced past `3c9793c` (D12 TIFF reader unification and subsequent commits), and the S1 data-handling change (D12) lacked its own verification entry | Resolved 2026-09-09 — Gate 11 refreshed to HEAD `3b1fda9`; full-suite counts and lint status updated; VR-11 added to `docs/VALIDATION_PLAN.md` covering the D12 axis/spacing/unit behavior (see the S1 verification entry) |
 
 No P0/P1 findings **for this report's scope** (the `analyze-3d` multilevel module). An independent scientific-software-development-validation audit on 2026-09-03 found two P1 findings in the separately-validated *classical* `analyze` pipeline (`viability.calibrate()`'s control condition-scoping, and anti-conservative small-sample p-values in `stats.py`) — both fixed and regression-tested; see `docs/ALGORITHM_DECISIONS.md` D7/D11 and `docs/SCIENTIFIC_SPEC.md` (reclassified S2→S3) for that pipeline's own findings and current status. No scientific algorithm/threshold was changed merely to satisfy a test; changes were fixes for confirmed defects, each with its own regression test asserting the corrected (not the old, defective) behavior.
 
@@ -102,7 +108,7 @@ This is a research-readiness assessment only. It does not establish conformity w
 
 | Component | Version |
 |---|---|
-| Git commit | `3c9793c` (verified present via `git log`; supersedes the historical `280bd06` value, which was never a real commit in this repository -- see F-4) |
+| Git commit | `3b1fda9` (verified present via `git log`; supersedes the earlier `3c9793c` value, which superseded the historical `280bd06` value that was never a real commit in this repository -- see F-4) |
 | Platform | macOS Apple Silicon (osx-arm64), pixi environment |
 | Python | 3.12 (pixi `python = "3.12.*"`) |
 | NumPy | 2.5.2 |
