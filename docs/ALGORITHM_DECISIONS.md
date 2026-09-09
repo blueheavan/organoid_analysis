@@ -29,7 +29,7 @@ This document records the scientific rationale for consequential algorithmic cho
 
 **Failure modes:** A child straddling multiple parents gets the parent with plurality overlap. This is surfaced to the user via `crosses_multiple_parents`, `parent_overlap_fraction < low_parent_overlap_fraction`, and `parent_assignment_failed` QC flags rather than being silently dropped.
 
-**Validation:** `PARTIAL — PASS for algorithmic correctness on controlled phantoms (test_multilevel3d.py); real-world assignment accuracy against expert annotation NOT ASSESSED.`
+**Validation:** `PARTIAL — PASS for algorithmic correctness on controlled phantoms (test_multilevel_measurement_workflow.py); real-world assignment accuracy against expert annotation NOT ASSESSED.`
 
 **Strength labeling:** established method (maximum overlap assignment).
 
@@ -47,7 +47,7 @@ This document records the scientific rationale for consequential algorithmic cho
 
 **Failure modes:** A mismatch between the cell-derived organoid and the direct nucleus overlap is recorded as the `direct_organoid_parent_mismatch` QC flag, not silently resolved.
 
-**Validation:** `PASS — controlled phantom (test_multilevel3d.py::test_nucleus_inherits_organoid_from_assigned_cell_and_retains_direct_overlap_audit).`
+**Validation:** `PASS — controlled phantom (test_multilevel_measurement_workflow.py::test_nucleus_inherits_organoid_from_assigned_cell_and_retains_direct_overlap_audit).`
 
 **Strength labeling:** heuristic (design choice to enforce a consistent hierarchy).
 
@@ -67,7 +67,7 @@ This document records the scientific rationale for consequential algorithmic cho
 - MIP / single-slice / density projections — explicitly excluded by project principle (never treat 2D projection as 3D measurement).
 - Smoothed or downsampled mesh for measurements — used only for preview, never for reported area. Documented discretization bias is retained rather than hidden.
 
-**Failure modes / known bias:** Voxel discretization inflates area and can push sphericity slightly above 1.0. Values >1.05 are flagged (`sphericity_above_geometric_range`), never silently clipped into [0,1]. Empirical check on a 15-voxel-radius sphere (spacing 1): volume ratio ≈ 1.013, area ratio ≈ 1.098, sphericity ≈ 0.919. This is the documented discretization bias, not a defect.
+**Failure modes / known bias:** Voxel discretization inflates area and can push sphericity slightly above 1.0. Values >1.05 are flagged (`sphericity_above_geometric_range`), never silently clipped into [0,1]. Empirical check on a 15-voxel-radius sphere (spacing 1): volume ratio ≈ 1.0007, area ratio ≈ 1.0895, sphericity ≈ 0.9183. This is the documented discretization bias, not a defect.
 
 **Validation:** `PARTIAL — PASS for volume/centroid/axis analytical agreement on phantoms; surface-area absolute accuracy on real biological organoids NOT ASSESSED (requires independent surface measurement reference).`
 
@@ -85,7 +85,7 @@ This document records the scientific rationale for consequential algorithmic cho
 
 **Rejected:** centroid-distance, kNN, Delaunay-based adjacency for contact claims.
 
-**Validation:** `PASS — controlled phantom verifies X-face contact area = 25 × Z×Y for a 5×5×5 cell pair with 5×5 shared X-face (test_multilevel3d.py).`
+**Validation:** `PASS — controlled phantom verifies X-face contact area = 25 × Z×Y for a 5×5×5 cell pair with 5×5 shared X-face (test_multilevel_measurement_workflow.py).`
 
 **Strength labeling:** defined operational definition.
 
@@ -120,6 +120,22 @@ This document records the scientific rationale for consequential algorithmic cho
 **Validation:** `PASS — computing path is deterministic/gradient-tested; biological meaning NOT ASSESSED.`
 
 **Strength labeling:** heuristic; explicitly documented as equivalent-radius, not local-radius.
+
+---
+
+## D6b. Moment-equivalent principal axes (ellipsoid fit from voxel second moment)
+
+**Task:** Compute principal axis lengths (major, intermediate, minor) for organoid/cell/nucleus envelope geometry.
+
+**Selected:** Voxel-centroid-centered second-moment matrix with intrinsic voxel moment included: `covariance = centered.T @ centered / n + diag(spacing²/12)`, where `centered` are voxel coordinates relative to centroid scaled by spacing. Eigenvalues λ sorted descending; axis lengths = `2√(5λ)`. The `+ spacing²/12` term accounts for each voxel's intrinsic uniform-density second moment, making the axes describe a moment-equivalent ellipsoid rather than the point-cloud covariance alone.
+
+**Rationale:** The uniform-density voxel has a known intrinsic second moment (I = side⁵/12 per axis), which shifts the covariance to represent the solid object's inertia tensor. The factor `2√(5λ)` converts the second-moment eigenvalues to the equivalent ellipsoid's principal axis lengths (for a uniform ellipsoid, `I_xx = M/5 (b²+c²)`, so axis `a = √(5λ_a)` for the major axis from the diagonalized inertia). This is a standard morphometric definition used in 3D shape analysis.
+
+**Rejected:** Raw point-cloud covariance (without intrinsic voxel moment) — systematically underestimates axis lengths for small objects; single-axis extent (max-min) — ignores shape anisotropy.
+
+**Validation:** `PASS — analytical ellipsoid test (tests/quantification/test_cellular_measurements.py:136–147) verifies major/intermediate/minor = 12/8/6 µm for a 6×4×3 µm spacing-2 ellipsoid; values are pinned by the independent analytical expectation.`
+
+**Strength labeling:** established morphometric definition (moment-equivalent ellipsoid).
 
 ---
 
@@ -215,11 +231,11 @@ This document records the scientific rationale for consequential algorithmic cho
 
 **Documentation note:** `docs/METHODS.md` previously stated "No automatic inferential tests are included," which was inaccurate once this module shipped; that statement has been corrected (see `docs/METHODS.md`, Treatment summaries) to describe this module and its assumptions.
 
-**Failure modes:** A feature/condition combination with fewer than `stats.min_replicates_per_condition` (default 3) biological replicates in a condition is silently excluded from that feature's test rather than raising; callers must treat an empty result as "not enough data to test." (2026-09-03 audit fix: `pipeline.py` now filters `objects` through `complete_unit_objects()` before calling `condition_pairwise_tests`, matching `summary.py`'s own exclusion of organoids from partially-failed acquisition units; regression test `test_complete_unit_objects_excludes_incomplete_units` in `test_pipeline.py`.)
+**Failure modes:** A feature/condition combination with fewer than `stats.min_replicates_per_condition` (default 3) biological replicates in a condition is silently excluded from that feature's test rather than raising; callers must treat an empty result as "not enough data to test." (2026-09-03 audit fix: `organoid_measurement_workflow.py` now filters `objects` through `complete_unit_objects()` before calling `condition_pairwise_tests`, matching `aggregation.py`'s own exclusion of organoids from partially-failed acquisition units; regression test `test_complete_unit_objects_excludes_incomplete_units` in `test_organoid_measurement_workflow.py`.)
 
 **Small-sample p-value correction (2026-09-03 audit fix):** An independent scientific-software audit found that both branches originally reported Wald p-values against an asymptotic z reference, which is anti-conservative (overstates significance) at the pipeline's own documented minimum of 3 replicates/condition (empirically confirmed against this repository's statsmodels 0.14.6). Fixed: the OLS-fallback branch now fits with `use_t=True`, which statsmodels resolves to a cluster-robust t(G−1) reference (G = number of replicate clusters) — the standard small-cluster correction (Cameron & Miller, 2015, *Journal of Human Resources*, 50(2), 317–372). The LMM branch has no equivalent built-in correction in statsmodels (no Satterthwaite/Kenward-Roger for `MixedLM`), so `_pairwise_contrasts` now manually applies the same t(G−1) reference to its pairwise contrasts. **Residual limitation:** this is a standard but approximate small-cluster correction, not full Satterthwaite/Kenward-Roger; and the LMM branch's *omnibus* Wald test (`omnibus_p` in `stats_results.json`, flagged via the `omnibus_p_small_sample_corrected` field) remains asymptotic/uncorrected — treat it as a rough screening result, not confirmatory. The pairwise, BH-FDR-corrected contrasts in `pairwise_contrasts.csv` are the primary, corrected output.
 
-**Validation:** `PARTIAL — the small-sample p-value correction above is independently derived and verified (regression tests in test_stats.py assert the corrected p-value against a hand-computed t(G-1) reference, and that it is strictly more conservative than the uncorrected z reference); no independent review against an external Satterthwaite/Kenward-Roger reference implementation (e.g. R's lmerTest) has been performed, and the omnibus test remains NOT ASSESSED for small-sample validity.`
+**Validation:** `PARTIAL — the small-sample p-value correction above is independently derived and verified (regression tests in test_inference.py assert the corrected p-value against a hand-computed t(G-1) reference, and that it is strictly more conservative than the uncorrected z reference); no independent review against an external Satterthwaite/Kenward-Roger reference implementation (e.g. R's lmerTest) has been performed, and the omnibus test remains NOT ASSESSED for small-sample validity.`
 
 **Strength labeling:** established statistical methods (LMM; BH-FDR), combined by an engineering fallback rule (LMM→OLS singular-fit threshold) that is heuristic and not independently validated.
 

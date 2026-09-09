@@ -23,6 +23,17 @@ Source of truth: `src/organoid_analysis/quantification/multilevel_relationships/
 
 ---
 
+## Principal-axis method (fixed definition, not user-configurable)
+
+Source: `src/organoid_analysis/quantification/features.py:72–73` (function `geometry`).
+
+| Item | Value | Unit | Origin | Rationale |
+|---|---|---|---|---|
+| Intrinsic voxel second-moment term | `spacing²/12` | µm² | exact (uniform density in a cubic voxel) | Accounts for each voxel's internal inertia; shifts point-cloud covariance to solid-object covariance. |
+| Axis length conversion | `2√(5λ)` | µm | established morphometric formula (moment-equivalent ellipsoid) | For a uniform ellipsoid with semi-axes a,b,c: I_xx = M/5(b²+c²); eigenvalues λ of covariance/5 = (a²+b²)/20 etc.; major axis a = 2√(5λ_max). |
+
+---
+
 ## Classical analysis config defaults
 
 Source of truth: `src/organoid_analysis/config.py` (module `DEFAULTS`), validated by `validate_config`.

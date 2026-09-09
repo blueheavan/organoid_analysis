@@ -32,8 +32,8 @@ _ESTIMATE_SLICES = 6
 # Downsample factor for the fast 2D pre-segmentation (diameter is not
 # resolution-critical, so a coarse pass is plenty and much faster).
 _ESTIMATE_DOWNSAMPLE = 0.5
-# Coverage quantile used to pick the "typical" object size instead of the
-# median, which is more robust to background noise objects.
+# Coverage quantile used to pick the "typical" object size; 0.5 (median)
+# is chosen for robustness to background noise objects.
 _DIAMETER_QUANTILE = 0.5
 
 # Cellpose call parameters for the fast diameter *pre-estimate* only (never

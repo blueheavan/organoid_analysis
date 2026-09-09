@@ -18,14 +18,14 @@ This plan predeclares, for each critical requirement, the reference standard, ev
 - **Minimum N:** 1.
 - **Metric:** error raised on shape mismatch, non-3D, negative or boolean labels, non-finite intensity.
 - **Acceptance:** `PASS` if contract is enforced and tests cover each violation type.
-- **Status:** `PASS` — enforced by `validation.py`; tests in `test_multilevel3d.py`.
+- **Status:** `PASS` — enforced by `validation.py`; tests in `tests/workflows/test_multilevel_measurement_workflow.py`.
 
 ## VR-2 Hierarchy correctness (maximum-overlap parent assignment)
 
 - **Requirement:** Each cell is assigned to its max-overlap organoid; each nucleus to its max-overlap cell; nucleus organoid membership inherits through its cell; direct-overlap audit is retained.
 - **Reference standard:** Hand-computed overlap counts on a controlled phantom with known geometry.
 - **Evaluation unit:** per object.
-- **Dataset:** `synthetic_labels()` phantom (test_multilevel3d.py).
+- **Dataset:** `synthetic_labels()` phantom (`tests/workflows/test_multilevel_measurement_workflow.py`).
 - **Independence level:** independent author computes expected assignments by hand.
 - **Minimum evaluable N:** 5 cells, 5 nuclei spanning multiple parents.
 - **Metric:** fraction of objects with correct parent; QC flags `crosses_multiple_parents`, `parent_assignment_failed`, `low_parent_overlap`, `direct_organoid_parent_mismatch` set correctly.

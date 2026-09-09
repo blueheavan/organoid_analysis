@@ -192,6 +192,48 @@ def test_empty_single_tiny_and_invalid_labels_are_handled():
         analyze_multilevel_3d(empty, empty, empty, (1, 0, 1))
 
 
+def test_bool_labels_rejected():
+    """VR-1: boolean label masks must be rejected (not silently coerced)."""
+    bool_mask = np.zeros((3, 3, 3), dtype=bool)
+    bool_mask[1, 1, 1] = True
+    uint_mask = np.zeros((3, 3, 3), dtype=np.uint32)
+    uint_mask[1, 1, 1] = 1
+    with pytest.raises(ValueError, match="nonnegative integer instance IDs"):
+        analyze_multilevel_3d(bool_mask, uint_mask, uint_mask, (1, 1, 1))
+    with pytest.raises(ValueError, match="nonnegative integer instance IDs"):
+        analyze_multilevel_3d(uint_mask, bool_mask, uint_mask, (1, 1, 1))
+    with pytest.raises(ValueError, match="nonnegative integer instance IDs"):
+        analyze_multilevel_3d(uint_mask, uint_mask, bool_mask, (1, 1, 1))
+
+
+def test_negative_labels_rejected():
+    """VR-1: signed-integer labels with negative values must be rejected."""
+    neg = np.zeros((3, 3, 3), dtype=np.int32)
+    neg[1, 1, 1] = -1
+    pos = np.zeros((3, 3, 3), dtype=np.uint32)
+    pos[1, 1, 1] = 1
+    with pytest.raises(ValueError, match="nonnegative integer instance IDs"):
+        analyze_multilevel_3d(neg, pos, pos, (1, 1, 1))
+    with pytest.raises(ValueError, match="nonnegative integer instance IDs"):
+        analyze_multilevel_3d(pos, neg, pos, (1, 1, 1))
+    with pytest.raises(ValueError, match="nonnegative integer instance IDs"):
+        analyze_multilevel_3d(pos, pos, neg, (1, 1, 1))
+
+
+def test_nonfinite_nucleus_intensity_rejected():
+    """VR-1: nucleus_intensity with NaN/Inf must be rejected."""
+    labels = np.zeros((3, 3, 3), dtype=np.uint32)
+    labels[1, 1, 1] = 1
+    intensity_nan = labels.astype(float)
+    intensity_nan[1, 1, 1] = np.nan
+    intensity_inf = labels.astype(float)
+    intensity_inf[1, 1, 1] = np.inf
+    with pytest.raises(ValueError, match="finite numeric data"):
+        analyze_multilevel_3d(labels, labels, labels, (1, 1, 1), nucleus_intensity=intensity_nan)
+    with pytest.raises(ValueError, match="finite numeric data"):
+        analyze_multilevel_3d(labels, labels, labels, (1, 1, 1), nucleus_intensity=intensity_inf)
+
+
 def test_parquet_export_summary_and_cli_round_trip(tmp_path):
     organoids, cells, nuclei = synthetic_labels()
     result = analyze_multilevel_3d(organoids, cells, nuclei, (2, .65, .65), metadata={"sample_id": "synthetic"})
@@ -225,3 +267,21 @@ def test_parquet_export_summary_and_cli_round_trip(tmp_path):
     assert provenance["source_code_sha256"]  # nonempty: multilevel3d/*.py hashes present
     assert provenance["packages"]["numpy"]
     assert "python" in provenance and "platform" in provenance
+
+
+def test_multilevel_determinism_two_run_identical():
+    """VR-9: pipeline must be deterministic; two identical runs produce byte-identical outputs."""
+    organoids, cells, nuclei = synthetic_labels()
+    spacing = (2.0, 0.65, 0.65)
+    meta = {"sample_id": "det", "well_id": "B01", "field_id": "2"}
+    r1 = analyze_multilevel_3d(organoids, cells, nuclei, spacing, metadata=meta)
+    r2 = analyze_multilevel_3d(organoids, cells, nuclei, spacing, metadata=meta)
+    pd.testing.assert_frame_equal(r1.organoid_features, r2.organoid_features)
+    pd.testing.assert_frame_equal(r1.cell_features, r2.cell_features)
+    pd.testing.assert_frame_equal(r1.nucleus_features, r2.nucleus_features)
+    pd.testing.assert_frame_equal(r1.cell_topology_edges, r2.cell_topology_edges)
+    pd.testing.assert_frame_equal(r1.qc_flags, r2.qc_flags)
+    # summary contains runtime_seconds which differs per run; compare without it
+    s1 = {k: v for k, v in r1.summary.items() if k != "runtime_seconds"}
+    s2 = {k: v for k, v in r2.summary.items() if k != "runtime_seconds"}
+    assert s1 == s2

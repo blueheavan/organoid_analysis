@@ -27,11 +27,11 @@ Per item: `PASS`, `PARTIAL`, `FAIL`, `NOT ASSESSED`, `INSUFFICIENT EVIDENCE`, `N
 
 | Item | Result | Evidence |
 |---|---|---|
-| Data-contract enforcement (VR-1) | `PASS` | `validation.py` rejects shape mismatch, non-3D, negative/bool labels, non-finite intensity; covered by `test_multilevel3d.py` |
-| Hierarchy assignment (VR-2) | `PASS` | independent phantom: cell101/102→organoid7 (overlap 1.0); nucleus1001→cell101, nucleus1002→cell102; both cells fully within organoid 7 |
-| Physical volume + centroid (VR-3) | `PASS` | 512-voxel organoid (spacing 2,1,1) → volume exactly 1024.0 µm³; 64-voxel cell → 128.0 µm³; exact integer×spacing products |
-| Surface area/sphericity formula (VR-4) | `PARTIAL` | analytical 15-voxel sphere: volume ratio 1.013, area ratio 1.098, sphericity 0.919 — documented discretization bias; >1.05 flagged not clipped. Absolute real-tissue area accuracy: `INSUFFICIENT EVIDENCE` |
-| Face-contact topology (VR-5) | `PASS` | independent phantom: 4×4 shared X-normal face → contact area exactly 16×(Z×Y)=32.0 µm²; degree=1 |
+| Data-contract enforcement (VR-1) | `PASS` | `validation.py` rejects shape mismatch, non-3D, negative/bool labels, non-finite intensity; covered by `tests/workflows/test_multilevel_measurement_workflow.py` |
+| Hierarchy assignment (VR-2) | `PASS` | independent phantom: organoids 10/20; cell101/102→organoid 10 (overlap 1.0); nucleus1001→cell101, nucleus1002→cell102; both cells fully within organoid 10 |
+| Physical volume + centroid (VR-3) | `PASS` | unit-scaling oracle: `np.ones((9,13,17))` × (2,1,1) → volume exactly 8×, area exactly 4×, sphericity invariant (test_geometry.py); multilevel phantom: 125-voxel cell (spacing 2.0,0.65,0.65) → 125×2.0×0.65×0.65 = 105.625 µm³ (test_multilevel_measurement_workflow.py) |
+| Surface area/sphericity formula (VR-4) | `PARTIAL` | analytical 15-voxel sphere: volume ratio 1.0007, area ratio 1.0895, sphericity 0.9183 — documented discretization bias; >1.05 flagged not clipped. Absolute real-tissue area accuracy: `INSUFFICIENT EVIDENCE` |
+| Face-contact topology (VR-5) | `PASS` | independent phantom: 5×5 shared X-normal face → contact area exactly 25×(2.0×0.65)=32.5 µm²; degree=1 |
 | Spatial features (VR-6) | `PARTIAL` | computational correctness PASS on phantom; biological meaning of core/periphery bins `NOT ASSESSED` |
 | Formal QC flags (VR-7) | `PASS` | border, MAD-outlier, too-small, parent-failed, anucleate, multinucleated, direct-mismatch all produced; MAD==0 path handled |
 | Reproducibility/determinism (VR-9) | `PASS` | identical feature tables across two runs (organoid/cell/nucleus/topology/qc) |
@@ -45,9 +45,9 @@ Hierarchy, volume, and contact-area acceptance were computed **independently by 
 ## 2. Numerical correctness details (VR-4)
 
 Analytical sphere, radius 15 voxels, spacing 1:
-- `V_measured / V_true = 1.013` (voxel discretization).
-- `A_measured / A_true = 1.098` (marching-cubes discretization bias, documented).
-- `sphericity = 0.919`.
+- `V_measured / V_true = 1.0007` (voxel discretization; measured 14147 voxels vs analytical 14137.2).
+- `A_measured / A_true = 1.0895` (marching-cubes discretization bias, documented).
+- `sphericity = 0.9183`.
 
 The pipeline does not force sphericity into [0,1]; values >1.05 are flagged. This is the documented and intended behavior, not a defect.
 
