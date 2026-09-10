@@ -1,0 +1,28 @@
+{
+  "oracle": "continuous sphere radius 18 um, rasterized at (2,1,1) um",
+  "volume_relative_error": 0.0035623393150934213,
+  "area_relative_error": 0.1173474420361087,
+  "spec_volume_limit": 0.01,
+  "spec_area_limit": 0.05,
+  "measurements": {
+    "segmented_voxels": 12171,
+    "envelope_voxels": 12171,
+    "segmented_volume_um3": 24342.0,
+    "volume_um3": 24342.0,
+    "surface_area_um2": 4549.28466796875,
+    "sphericity": 0.8928500279547706,
+    "equivalent_diameter_um": 35.95720106647405,
+    "enclosed_void_fraction": 0.0,
+    "principal_axis_major_um": 36.01349608714806,
+    "principal_axis_intermediate_um": 36.01349608714806,
+    "principal_axis_minor_um": 35.98813469004042,
+    "axis_ratio_minor_to_major": 0.9992957807526858,
+    "n_z_slices": 19,
+    "centroid_z_um": 24.0,
+    "extent_z_um": 38.0,
+    "centroid_y_um": 24.0,
+    "extent_y_um": 37.0,
+    "centroid_x_um": 24.0,
+    "extent_x_um": 37.0
+  }
+}

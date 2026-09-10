@@ -1,0 +1,41 @@
+......................................................................   [100%]
+=============================== warnings summary ===============================
+tests/microscopy_io/test_io.py: 3 warnings
+tests/microscopy_io/test_metadata_contract_regressions.py: 8 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:4656: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = shape
+
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:23116: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    out.shape = shape
+
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:9371: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = keyframe.shaped
+
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:9375: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = keyframe.shape
+
+tests/microscopy_io/test_voxel_spacing.py: 48 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/skimage/measure/_marching_cubes_lewiner.py:237: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    ar.shape = shape
+
+tests/microscopy_io/test_voxel_spacing.py::test_voxel_volume_uses_real_metadata_spacing_not_the_0_414_default
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/skimage/measure/_marching_cubes_lewiner.py:213: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    faces.shape = -1, 3
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+70 passed, 69 warnings in 1.21s

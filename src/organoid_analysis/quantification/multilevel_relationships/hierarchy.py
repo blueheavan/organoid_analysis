@@ -19,7 +19,9 @@ def assign_parents_by_overlap(parent_labels: np.ndarray, child_labels: np.ndarra
     overlap = (parent_labels > 0) & (child_labels > 0)
     if overlap.any():
         pairs, counts = np.unique(
-            np.column_stack((child_labels[overlap], parent_labels[overlap])), axis=0, return_counts=True
+            # Mixed int64/uint64 would promote to float64 and merge IDs >2**53.
+            np.column_stack((child_labels[overlap].astype(np.uint64),
+                             parent_labels[overlap].astype(np.uint64))), axis=0, return_counts=True
         )
         for (child_id, parent_id), count in zip(pairs, counts):
             by_child[int(child_id)].append((int(parent_id), int(count)))

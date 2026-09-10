@@ -60,7 +60,7 @@ def test_ome_units_convert_to_micrometres():
 
 
 def test_nonuniform_z_positions_are_rejected():
-    xml='<OME><Image><Pixels PhysicalSizeZ="2" PhysicalSizeY="1" PhysicalSizeX="1"><Plane TheZ="0" PositionZ="0"/><Plane TheZ="1" PositionZ="2"/><Plane TheZ="2" PositionZ="7"/></Pixels></Image></OME>'
+    xml='<OME><Image><Pixels PhysicalSizeZ="2" PhysicalSizeY="1" PhysicalSizeX="1"><Plane TheZ="0" PositionZUnit="µm" PositionZ="0"/><Plane TheZ="1" PositionZUnit="µm" PositionZ="2"/><Plane TheZ="2" PositionZUnit="µm" PositionZ="7"/></Pixels></Image></OME>'
     with pytest.raises(ValueError,match='uniformly'):
         ome_spacing(xml)
 

@@ -80,10 +80,16 @@ def main(argv=None) -> int:
 
 
 def _run_cells(arguments) -> dict:
+    import importlib.metadata
+    import platform
+
     from organoid_analysis.microscopy_io.tiff_contract import (
         SPACING_ATOL_UM,
         SPACING_RTOL,
+        git_commit_hash,
         read_tiff,
+        sha256,
+        source_code_hashes,
         write_labels,
     )
     from organoid_analysis.quantification.cellular_measurements import analyze_cells
@@ -121,6 +127,8 @@ def _run_cells(arguments) -> dict:
         min_nucleus_containment=arguments.min_nucleus_containment,
         neighbor_radius_um=arguments.neighbor_radius_um,
     )
+    sentinel = out / "RUN_INCOMPLETE.txt"
+    sentinel.write_text("Export incomplete. Do not interpret partial outputs.\n", encoding="utf-8")
     write_labels(out / "cell_labels.filtered.ome.tif", result.cell_labels, spacing)
     write_labels(out / "nucleus_labels.filtered.ome.tif", result.nucleus_labels, spacing)
     result.features.to_csv(out / "cell_features.csv", index=False, float_format="%.10g")
@@ -133,8 +141,18 @@ def _run_cells(arguments) -> dict:
         "nucleus_labels": str(Path(arguments.nucleus_labels).resolve()),
         "output": str(out),
         "neighborhood_incomplete_cells": int((~result.features["neighborhood_complete"]).sum()) if len(result.features) else 0,
+        "provenance": {
+            "pipeline_version": __version__, "git_commit": git_commit_hash(),
+            "python": sys.version, "platform": platform.platform(),
+            "source_code_sha256": source_code_hashes(),
+            "input_files": {role: {"path": str(Path(path).resolve()), "sha256": sha256(path)}
+                            for role, path in (("cell", arguments.cell_labels), ("nucleus", arguments.nucleus_labels))},
+            "packages": {name: importlib.metadata.version(name) for name in
+                         ("numpy", "scipy", "scikit-image", "tifffile", "pandas")},
+        },
     }
     (out / "cell_analysis_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    sentinel.unlink()
     return summary
 
 
@@ -149,6 +167,7 @@ def _run_multilevel(arguments) -> dict:
         git_commit_hash,
         read_tiff,
         sha256,
+        source_code_hashes,
     )
     from organoid_analysis.quantification.multilevel_relationships import Multilevel3DConfig
     from organoid_analysis.result_export.measurement_tables import export_results
@@ -195,18 +214,16 @@ def _run_multilevel(arguments) -> dict:
     # Provenance capture belongs at this orchestration layer, not inside
     # analyze_multilevel_3d (deliberately headless/pure per multilevel3d's
     # module docstring). Mirrors the classical analyze() pipeline's provenance.
-    _package_root = Path(__file__).resolve().parent.parent
-    multilevel3d_dir = _package_root / "quantification" / "multilevel_relationships"
-    multilevel3d_files = sorted(multilevel3d_dir.glob("*.py")) + [
-        _package_root / "workflows" / "multilevel_measurement_workflow.py",
-        _package_root / "result_export" / "measurement_tables.py",
-    ]
     result.summary["provenance"] = {
         "pipeline_version": __version__,
         "git_commit": git_commit_hash(),
         "python": sys.version,
         "platform": platform.platform(),
-        "source_code_sha256": {p.name: sha256(p) for p in multilevel3d_files},
+        "source_code_sha256": source_code_hashes(),
+        "input_files": {role: {"path": str(Path(path).resolve()), "sha256": sha256(path)}
+                        for role, path in (("organoid", arguments.organoid_labels), ("cell", arguments.cell_labels),
+                                           ("nucleus", arguments.nucleus_labels), ("nucleus_intensity", arguments.nucleus_intensity))
+                        if path},
         "packages": {package: importlib.metadata.version(package) for package in
                     ["numpy", "scipy", "scikit-image", "tifffile", "pandas"]},
     }

@@ -1,0 +1,3 @@
+sample_id,condition,biological_replicate,image_path,spacing_z_um,spacing_y_um,spacing_x_um,unit_id,batch_id,control,structure_path,calcein_path,pi_path,probability_path,labels_path,truth_labels_path,time_index,series_index
+local_1,unannotated_file_1,file_identity_only_1,/Users/jlwang/Desktop/organoid_analysis/data/images/Human-Colon-Organoids-C1.tif,2.0,0.24420000566544012,0.24420000566544012,local_1,batch1,sample,,,,,,,,
+local_4,unannotated_file_4,file_identity_only_4,/Users/jlwang/Desktop/organoid_analysis/data/images/ZeroG-Breast-Cancer-Spheroid-C1.tif,1.5,0.41432040474131704,0.41432040474131704,local_4,batch1,sample,,,,,,,,

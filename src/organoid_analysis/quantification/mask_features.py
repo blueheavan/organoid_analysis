@@ -33,6 +33,7 @@ import numpy as np
 import pandas as pd
 
 from organoid_analysis.microscopy_io import validate_voxel_spacing_xyz
+from organoid_analysis.quantification.labels import compact_instance_labels
 
 
 @dataclass(frozen=True)
@@ -98,7 +99,8 @@ def extract_mask_features(mask: np.ndarray, spacing_um=(1.0, 1.0, 1.0)) -> pd.Da
     labels = validate_mask(mask)
     spacing_zyx = _physical_spacing_zyx(spacing_um)
 
-    props = measure.regionprops(labels, spacing=spacing_zyx)
+    compact, source_ids = compact_instance_labels(labels)
+    props = measure.regionprops(compact, spacing=spacing_zyx)
     rows = []
     for p in props:
         # Geometry (volume/surface/sphericity/axes) is computed by the canonical
@@ -108,7 +110,7 @@ def extract_mask_features(mask: np.ndarray, spacing_um=(1.0, 1.0, 1.0)) -> pd.Da
         # offset precisely so callers don't have to run marching cubes etc. on
         # a full-volume array per object (this was previously O(n_objects x
         # volume) and made "Object features" slow to populate on real masks).
-        binary = np.ascontiguousarray(labels[p.slice] == p.label, dtype=np.uint8)
+        binary = np.ascontiguousarray(compact[p.slice] == p.label, dtype=np.uint8)
         origin_zyx = tuple(s.start for s in p.slice)
         g, _ = _geometry(binary, spacing_zyx, origin_zyx=origin_zyx)
         volume = g["volume_um3"]
@@ -124,7 +126,7 @@ def extract_mask_features(mask: np.ndarray, spacing_um=(1.0, 1.0, 1.0)) -> pd.Da
         elongation = 1.0 - (least / major) if major > 0 else 0.0
         rows.append(
             {
-                "Label": int(p.label),
+                "Label": source_ids[int(p.label)],
                 "volume_um3": round(volume, 4),
                 "surface_area_um2": round(surface, 4),
                 "equivalent_disk_um": round(eq_disk, 4),
@@ -151,12 +153,12 @@ def summarize_features(features: pd.DataFrame) -> MaskSummary:
         return MaskSummary(
             n_objects=0,
             total_volume_um3=0.0,
-            mean_volume_um3=0.0,
-            median_volume_um3=0.0,
-            min_volume_um3=0.0,
-            max_volume_um3=0.0,
-            mean_sphericity=0.0,
-            mean_solidity=0.0,
+            mean_volume_um3=np.nan,
+            median_volume_um3=np.nan,
+            min_volume_um3=np.nan,
+            max_volume_um3=np.nan,
+            mean_sphericity=np.nan,
+            mean_solidity=np.nan,
         )
     return MaskSummary(
         n_objects=int(features.shape[0]),

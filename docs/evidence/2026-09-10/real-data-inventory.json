@@ -1,0 +1,102 @@
+[
+  {
+    "file": "data/images/HCT116-Cells-Monolayer-C1.tif",
+    "sha256": "ed977d3be7205d255335767a1cc4a7b61f81b2db5033a1515158933a0b48b937",
+    "size_bytes": 7869877,
+    "shape": [
+      15,
+      512,
+      512
+    ],
+    "axes": "ZYX",
+    "dtype": "uint16",
+    "spacing": {
+      "x": 0.41513292348643577,
+      "y": 0.41513292348643577,
+      "z": null
+    },
+    "finite": true,
+    "min": 0.0,
+    "max": 57045.0
+  },
+  {
+    "file": "data/images/Human-Colon-Organoids-C1.tif",
+    "sha256": "6eb44c9da1ae69f165bbca3c2d100138d1d733f5ce5642d1ebe36ee54cfd7970",
+    "size_bytes": 8394407,
+    "shape": [
+      16,
+      512,
+      512
+    ],
+    "axes": "ZYX",
+    "dtype": "uint16",
+    "spacing": {
+      "x": 0.24420000566544012,
+      "y": 0.24420000566544012,
+      "z": 2.0
+    },
+    "finite": true,
+    "min": 0.0,
+    "max": 65535.0
+  },
+  {
+    "file": "data/images/PDAC-C1.tif",
+    "sha256": "fee5e8bd291c9bd0b37cf9b4a7727f67b554205cdce5a5fa7bf91313b1da89f2",
+    "size_bytes": 57175006,
+    "shape": [
+      109,
+      512,
+      512
+    ],
+    "axes": "ZYX",
+    "dtype": "uint16",
+    "spacing": {
+      "x": 0.34500008625002154,
+      "y": 0.34500008625002154,
+      "z": null
+    },
+    "finite": true,
+    "min": 0.0,
+    "max": 2112.0
+  },
+  {
+    "file": "data/images/PDAC-C2.tif",
+    "sha256": "70788054bbdd88a7593ac08e3f9556daf08f921cae2be604ba3b4d0426803c99",
+    "size_bytes": 57175006,
+    "shape": [
+      109,
+      512,
+      512
+    ],
+    "axes": "ZYX",
+    "dtype": "uint16",
+    "spacing": {
+      "x": 0.34500008625002154,
+      "y": 0.34500008625002154,
+      "z": null
+    },
+    "finite": true,
+    "min": 0.0,
+    "max": 4095.0
+  },
+  {
+    "file": "data/images/ZeroG-Breast-Cancer-Spheroid-C1.tif",
+    "sha256": "6aaa22d6c0f0e80a7791f2efef9aa7a84855ea0028d8587cff75efe876e79471",
+    "size_bytes": 29441195,
+    "shape": [
+      56,
+      512,
+      512
+    ],
+    "axes": "ZYX",
+    "dtype": "uint16",
+    "spacing": {
+      "x": 0.41432040474131704,
+      "y": 0.41432040474131704,
+      "z": 1.5
+    },
+    "finite": true,
+    "min": 0.0,
+    "max": 65535.0
+  }
+]

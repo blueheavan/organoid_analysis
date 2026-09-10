@@ -1,290 +1,71 @@
-# Algorithm Decisions — Organoid Pipeline
+# Algorithm evidence audit — 2026-09-10
 
-Version: 1.1.0
-Date: 2026-09-03
-Applies to: multilevel 3D analysis (`analysis.analyze-3d`), classical organoid morphology/viability analysis, segmentation-validation instance matching, cell–nucleus pairing (`analysis cells`), and cross-condition statistical testing.
-
-## Decision provenance
-
-This document records the scientific rationale for consequential algorithmic choices in the pipeline. For each decision: the scientific task, credible alternatives considered, the selected method, the alternatives rejected and why, and the validation status. It is a living record and is updated when a method is added or changed.
-
----
+This record describes the current implementation; it does not retrospectively justify its selection. No scientific method was replaced or tuned in this audit. `ESTABLISHED` describes a mathematical/method basis, not suitability for these biological images. Project-data suitability remains `INSUFFICIENT EVIDENCE` unless explicitly bounded below. Installed versions and executable defaults are captured in [installed-methods.txt](evidence/2026-09-10/installed-methods.txt).
 
 ## D1. Parent assignment by maximum voxel overlap
 
-**Task:** Assign each cell to an organoid, and each nucleus to a cell, within a registered 3D instance hierarchy.
-
-**Alternatives considered:**
-- Nearest centroid (Euclidean) assignment.
-- Boundary/contact overlap.
-- Voxel-count majority.
-
-**Selected:** Maximum voxel overlap (argmax of shared voxel count), with deterministic tie-break to the smallest parent ID.
-
-**Rationale:** Voxel overlap measures physical co-occupancy of the child within each parent. For nested 3D structures with potentially non-convex shapes, overlap reflects where the object's mass actually lies. Centroid distance can mis-assign a large, elongated or fragmented child whose centroid falls outside its true parent (e.g., a nucleus that protrudes across a boundary). Overlap is robust to such geometry and is a well-established approach for label-map ancestry.
-
-**Rejected:**
-- Nearest centroid — fails for elongated/border-crossing objects; the centroid may lie in the neighbor's volume.
-- Boundary contact — measures surface adjacency, not containment; two overlapping objects may share no boundary face.
-
-**Failure modes:** A child straddling multiple parents gets the parent with plurality overlap. This is surfaced to the user via `crosses_multiple_parents`, `parent_overlap_fraction < low_parent_overlap_fraction`, and `parent_assignment_failed` QC flags rather than being silently dropped.
-
-**Validation:** `PARTIAL — PASS for algorithmic correctness on controlled phantoms (test_multilevel_measurement_workflow.py); real-world assignment accuracy against expert annotation NOT ASSESSED.`
-
-**Strength labeling:** established method (maximum overlap assignment).
-
----
+`quantification/multilevel_relationships/hierarchy.py` counts label co-occurrences, takes the largest count, and resolves ties to the smallest parent ID. This is an exact operational containment rule, not a calibrated biological assignment model. Origin `HEURISTIC`; basis `CONTEXT_DEPENDENT`; evidence `PARTIAL` (hand-counted assignments and large-ID tests pass). Nearest-centroid assignment is a meaningful alternative for different data, but was not benchmarked. Misregistration, fragments, ties and cross-parent objects require review; same shape/spacing cannot establish registration. No qualified real hierarchy annotations are available.
 
 ## D2. Nucleus-organoid membership inherited through the cell
 
-**Task:** Determine the organoid that contains each nucleus.
+`workflows/multilevel_measurement_workflow.py` inherits the organoid through the cell and retains direct nucleus–organoid overlap as an audit field. Origin/basis `HEURISTIC`; evidence `PARTIAL`. Tests verify transitivity and mismatch flags. Direct overlap is an alternative definition, not an empirically rejected inferior method. No biological transitivity/assignment performance claim is supported.
 
-**Selected:** The nucleus's organoid is the organoid assigned to its parent cell. The nucleus-to-organoid direct overlap is retained as an audit field (`direct_organoid_id`) but never allowed to override the cell-mediated hierarchy.
+## D3. Native-spacing marching-cubes surface
 
-**Rationale:** The two-level hierarchy Cell→Organoid, Nucleus→Cell defines a deterministic nesting. A nucleus should belong to the organoid of the cell that houses it, even if the nucleus's own voxels straddle an organoid boundary. This enforces a consistent interpretation of "this nucleus belongs to this cell, which belongs to this organoid."
+`quantification/features.py::surface_mesh` uses scikit-image 0.26.0's **Lewiner** implementation (the installed default), level 0.5, step 1, padded zero exterior and `allow_degenerate=False`. Lorensen–Cline is historical background, not the exact implementation. [Official method documentation](https://scikit-image.org/docs/stable/api/skimage.measure.html#skimage.measure.marching_cubes) identifies the algorithm and axis-ordered spacing. Origin `PUBLISHED_METHOD`; basis `ESTABLISHED`; implementation evidence `PARTIAL`; suitability for the specification's <5% surface error is `NOT SUPPORTED` / `FAIL`: the radius-18 µm sphere at (2,1,1) µm has 11.7347% area error. Sphericity is the dimensionless isoperimetric expression; it is not clipped. Changing smoothing, surface estimator or tolerance requires a new scientific decision and validation, so none was changed.
 
-**Rejected:** Direct nucleus→organoid overlap as the governing assignment — this would break the transitive cell-chain consistency and create contradictory memberships.
+Classical organoid and Web object-feature geometry fill enclosed holes; multilevel geometry uses raw label voxels. These are different estimands. Classical `cells` reports raw cell volume plus envelope geometry; Web centroids/solidity use raw regionprops despite envelope size/axes. Those differences must be retained in interpretation. Border padding closes truncated objects computationally, not biologically. `mask_features` does not apply the classical eligibility filter. Alternative surface estimators and acquisition-dependent bias correction are NOT ASSESSED.
 
-**Failure modes:** A mismatch between the cell-derived organoid and the direct nucleus overlap is recorded as the `direct_organoid_parent_mismatch` QC flag, not silently resolved.
+## D4. Face-contact topology
 
-**Validation:** `PASS — controlled phantom (test_multilevel_measurement_workflow.py::test_nucleus_inherits_organoid_from_assigned_cell_and_retains_direct_overlap_audit).`
+`topology.py` sums exposed shared voxel faces: Z-normal area = sy*sx, Y-normal = sz*sx, X-normal = sz*sy. Origin `HEURISTIC` (chosen contact definition); basis `ESTABLISHED` for discrete arithmetic, `CONTEXT_DEPENDENT` for biological contact; evidence `PARTIAL`. Controlled tests verify counts and units. Label-face adjacency is a geometric proxy; it does not prove membrane contact. kNN and Delaunay measure different notions of neighborhood. Unassigned/inter-organoid contacts remain explicitly flagged.
 
-**Strength labeling:** heuristic (design choice to enforce a consistent hierarchy).
+## D5. MAD volume QC
 
----
+`qc.py` uses 0.67448975*(V−median)/MAD with cutoff 3.5. Gaussian consistency follows directly from Phi^-1(0.75); it does not justify the cutoff, population pooling, or the MAD=0 rule (`~isclose` to median). Origin `HEURISTIC`, basis `HEURISTIC`, evidence `PARTIAL` for implementation and `INSUFFICIENT EVIDENCE` for biological abnormality. QC flags do not remove objects in multilevel aggregates. `qc_status=pass` means no implemented flag, not validated measurement accuracy.
 
-## D3. True-3D morphology via marching cubes level-0.5 surface
+## D6. Equivalent-radius position and EDT depth
 
-**Task:** Compute physical surface area and sphericity from a 3D label mask.
+`spatial.py` normalizes centroid radius and nearest-voxel EDT by (3V/4π)^(1/3). EDT is distance to the nearest **background voxel center**, not the continuous isosurface; [SciPy's definition](https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.distance_transform_edt.html) is the numerical reference. A rounded centroid outside its assigned parent gives zero. Boundary foreground voxels can have positive depth. Origin `HEURISTIC`; basis `CONTEXT_DEPENDENT`; evidence `PARTIAL`. This differs from `cellular_measurements.py`'s exact centroid-to-exposed-voxel-face distance. Core/periphery cutoffs are uncalibrated. Full-volume EDT storage per parent has unbenchmarked memory scaling.
 
-**Selected:** `skimage.measure.marching_cubes` at `level=0.5`, native physical spacing, step size 1, one-voxel zero padding, no mesh smoothing. Volume = voxel count × voxel volume. Sphericity = `π^(1/3) (6V)^(2/3) / A`.
+## D6b. Moment-equivalent principal axes
 
-**Rationale:** Marching cubes at native spacing with no smoothing preserves the underlying voxel geometry and is the standard surface estimator for binary masks. Zero padding closes the crop surface so an object fully inside the image reports a closed surface. SPHERICITY uses the classic isoperimetric ratio; perfect sphere ⇒ 1.0.
+`features.py` adds diag(spacing²/12) to the covariance of voxel centers. For a uniform interval of width s, Var=s²/12; for a uniform solid ellipsoid with semi-axis a, the matching covariance eigenvalue is a²/5. Thus the full diameter is 2*sqrt(5λ). This corrects the earlier catalog's confused covariance/inertia explanation. Basis `ESTABLISHED` from analytical integration; evidence `PASS` for controlled voxel/moment arithmetic, `INSUFFICIENT EVIDENCE` for biological shape interpretation. It is not a fitted biological boundary ellipsoid.
 
-**Original literature:** Lorensen, W. E., & Cline, H. E. (1987). Marching cubes: A high resolution 3D surface construction algorithm. *ACM SIGGRAPH Computer Graphics*, 21(4), 163–169. https://doi.org/10.1145/37401.37422
+## D7. Marker background and viability signal states
 
-**Rejected:**
-- MIP / single-slice / density projections — explicitly excluded by project principle (never treat 2D projection as 3D measurement).
-- Smoothed or downsampled mesh for measurements — used only for preview, never for reported area. Documented discretization bias is retained rather than hidden.
+`features.py` measures the raw filled ROI against a physical local background shell excluding other labels. It preserves negative corrected means. `phenotyping/viability.py` aggregates controls by wells then biological replicate, scales by batch endpoints, and applies fixed 0.30/0.60 rules. Dtype maximum is only a fallback saturation limit; stored uint16 is not proof of a 16-bit detector. The 1e-9 noise floor is an uncalibrated numerical heuristic.
 
-**Failure modes / known bias:** Voxel discretization inflates area and can push sphericity slightly above 1.0. Values >1.05 are flagged (`sphericity_above_geometric_range`), never silently clipped into [0,1]. Empirical check on a 15-voxel-radius sphere (spacing 1): volume ratio ≈ 1.0007, area ratio ≈ 1.0895, sphericity ≈ 0.9183. This is the documented discretization bias, not a defect.
+[Manufacturer documentation](https://www.thermofisher.com/order/catalog/product/P21493/faqs) supports the distinct esterase/retention and membrane-integrity probe mechanisms. It does **not** support this organoid-level scaling, gates, minimum control N, or a live-cell fraction. Origin `HEURISTIC` for the pipeline rule and `CONTROL_DERIVED` for fitted endpoints; basis `HEURISTIC`; evidence `INSUFFICIENT EVIDENCE`. Synthetic controls share the generator's assumptions and are not an orthogonal assay. Viable-like/mixed/compromised-like states are signal patterns. An independent assay and dye penetration/bleedthrough/background/saturation qualification are missing.
 
-**Validation:** `PARTIAL — PASS for volume/centroid/axis analytical agreement on phantoms; surface-area absolute accuracy on real biological organoids NOT ASSESSED (requires independent surface measurement reference).`
+## D8. Global Otsu and physical-distance watershed
 
-**Strength labeling:** established method (skimage marching cubes surface).
+`watershed_instances.py`: optional Gaussian background subtraction → polarity inversion → Gaussian smoothing → Otsu (or numeric threshold) → physical closing → optional hole filling → small-component removal → physical EDT h-maxima/suppressed seeds → 6-connected watershed → small-instance removal. All thresholds remain unchanged. [Otsu API/method reference](https://scikit-image.org/docs/stable/api/skimage.filters.html#skimage.filters.threshold_otsu) and [watershed API](https://scikit-image.org/docs/stable/api/skimage.segmentation.html#skimage.segmentation.watershed) establish the operations, not their suitability or physical defaults. Basis `ESTABLISHED` for the named methods, `HEURISTIC` for their composition; evidence `PARTIAL`. Probability input must be registered finite [0,1]; imported labels must be connected nonnegative integers. Baselines: unsplit threshold components and imported qualified masks. No superiority comparison was performed. Brightfield halos, nonuniform stain, touching/lumen-containing structures, saturated fluorescence and insufficient Z sampling remain consequential limitations.
 
----
+## D9. One-to-one instance evaluation
 
-## D4. Face-contact topology (cell adjacency), not centroid/kNN/Delaunay
+`validation/segmentation_metrics.py` uses SciPy assignment to maximize valid match count then overlap at IoU≥0.5. Precision/recall and PQ include unmatched instances; matched-only Dice must not conceal misses. Origin `PUBLISHED_METHOD` for assignment; basis `ESTABLISHED`; threshold origin/basis `HEURISTIC`; evidence `PARTIAL`. Synthetic overlap tests verify arithmetic. A different truth filename alone does not establish independence. Split/merge hints use 10% overlap, also uncalibrated. Dense pair matrices have unbenchmarked large-N resource limits.
 
-**Task:** Define which cells are "neighbors" for a contact graph.
+## D10. One-to-one cell–nucleus pairing
 
-**Selected:** Voxel-face adjacency only. An edge exists only when two cell labels share at least one voxel face. Edge weight = physical contact area computed from the anisotropic face area (Z-face → Y×X, Y-face → Z×X, X-face → Z×Y).
+`cellular_measurements.py` uses sparse maximum-weight matching with dummy columns, prioritizing cardinality and then overlap among QC-eligible pairs. It measures full nucleus volume. Origin `PUBLISHED_METHOD` for the solver; basis `CONTEXT_DEPENDENT` for biological pairing; evidence `PARTIAL`. Large mixed integer IDs now preserve identity. This route assumes one-to-one pairing and may exclude multinucleated/anucleate cells; the multilevel route is a distinct alternative allowing multiple nuclei. No independent annotation supports one approach as preferable for all organoids. Radius-neighborhood density is censored at image borders and is not face-contact density.
 
-**Rationale:** Face contact is a direct statement of physical adjacency/contact. Centroid distance, k-nearest-neighbor, and Delaunay triangulation infer proximity, not contact, and are deliberately not treated as contact.
+## D11. Condition inference and exploratory analysis
 
-**Rejected:** centroid-distance, kNN, Delaunay-based adjacency for contact claims.
+`statistics/aggregation.py` gives each complete well equal weight within a biological replicate and bootstraps replicate summaries. `statistics/inference.py` instead fits eligible **object rows**, with a condition fixed effect and condition+replicate random intercept; singular/nonconverged fits fall back to replicate-clustered OLS. The estimands/weighting differ. Replicate IDs must be global across batches within condition, and independent across conditions; paired donors and well-level residual nesting are not modeled. Delimiter collisions were removed in the input worktree.
 
-**Validation:** `PASS — controlled phantom verifies X-face contact area = 25 × Z×Y for a 5×5×5 cell pair with 5×5 shared X-face (test_multilevel_measurement_workflow.py).`
+Volume is log10 transformed; contrasts have effects, SE, t-based CIs and within-feature BH correction. [statsmodels' test API](https://www.statsmodels.org/stable/generated/statsmodels.regression.mixed_linear_model.MixedLMResults.t_test.html) and [multiple-testing API](https://www.statsmodels.org/stable/generated/statsmodels.stats.multitest.multipletests.html) document mechanics. They do not establish that manually using t(G−1) for MixedLM provides calibrated small-sample coverage. LMM omnibus remains asymptotic. Origin `HEURISTIC` for these project choices, basis `CONTEXT_DEPENDENT`, evidence `INSUFFICIENT EVIDENCE` for inferential validity. No type-I-error/CI-coverage simulation, independent study design, or power/precision target is available. No replacement statistical method was selected.
 
-**Strength labeling:** defined operational definition.
+`statistics/exploration.py` retains its normality/variance-driven t/Mann–Whitney selection, object-level splits, RF/logistic/XGBoost and KMeans workflows. Undefined effects, assumption tests and insufficient-sample results now abstain. Learned imputation/scaling occurs within training folds; model selection uses training CV. This follows [scikit-learn's leakage guidance](https://scikit-learn.org/stable/common_pitfalls.html#data-leakage). It does not fix biological-unit leakage from object splits. Cluster ANOVA on the features used to form clusters and cluster-prediction accuracy are circular descriptive diagnostics, not independent phenotype discovery. Shapiro requires [at least three observations](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.shapiro.html); that numerical minimum is not a justified biological sample size.
 
----
+## D12. Reader and preview contracts
 
-## D5. Robust MAD volume-outlier detection
+Two readers remain: `tiff_contract.py` (manifest/CLI, CZYX, OME spacing or explicit calibration) and `zstack_reader.py` (Web, ImageJ/TIFF/OME spacing, ZYX/CZYX). They are **not behaviorally identical**: the former does not infer ImageJ calibration; the latter has no UI time selector and rejects multi-time uploads. The Cellpose adapter alone allows metadata-free QYX/IYX as a legacy Z-stack interpretation, recorded without spacing. Time/series indices must be explicit valid integers. Unknown units, complex quantitative intensities, nonuniform/nonmonotonic Z, conflicting complete spacings and label export overflow reject. Only C=0 plane positions are checked; incomplete per-plane metadata, origins/directions and independent-channel registration remain NOT ASSESSED.
 
-**Task:** Flag unusually large/small organoids/cells/nuclei by volume.
+Preview percentile normalization, uint8 packing, stride downsampling, mesh coarsening and rendering operate on display payloads; raw source arrays feed segmentation/measurement. [SciPy zoom documentation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.zoom.html) distinguishes center-grid and full-pixel geometry: the current Cellpose downsample adapter scales diameter/anisotropy by the requested factor while rounded array sizes and center-grid resampling can differ. Downsampled scientific equivalence is NOT ASSESSED, especially for small/odd XY sizes. No interpolation method was changed.
 
-**Selected:** Robust z-score: `0.67448975 × (V − median) / MAD` with a threshold of 3.5 (constant `mad_z_threshold`), i.e. equivalent to ~3.5 z-units on the robust scale (`MAD * 1.4826`). With MAD = 0 (common in near-identical synthetic populations), finite values differing from the median are flagged.
+## D13. Actual Cellpose 4.2.1.1 model route
 
-**Rationale:** MAD is robust to outliers, unlike mean/std which are inflated by the very outliers being detected. This prevents a single extreme object from masking the next-level outliers.
+`cellpose_inference.py` invokes `CellposeModel(pretrained_model='cpdino-vitb')`, 3 orthogonal-plane flows and 3D dynamics, not a volumetric network trained/validated by this project. `do_3D=True` ignores flow-error thresholds; [Cellpose's 3D documentation](https://cellpose.readthedocs.io/en/latest/do3d.html) agrees with installed `dynamics.compute_masks`. The disabled UI controls now reflect this. The cell pass combines cytoplasm and nuclei channels; diameter suggestions use a separate coarse 2D model pass.
 
-**Original literature:** The 1.4826 (equivalently, its reciprocal 0.67448975) consistency constant that rescales MAD into a σ-equivalent robust estimator under a Gaussian assumption is documented in Rousseeuw, P. J., & Croux, C. (1993). Alternatives to the Median Absolute Deviation. *Journal of the American Statistical Association*, 88(424), 1273–1283. https://doi.org/10.1080/01621459.1993.10476408. The constant itself is the reciprocal of the 0.75-quantile of the standard normal distribution, Φ⁻¹(0.75). `src/organoid_analysis/quantification/multilevel_relationships/qc.py` uses the reciprocal form (0.67448975 × …); `src/organoid_analysis/quantification/features.py` and `src/organoid_analysis/phenotyping/viability.py` use the direct form (… × 1.4826); both are the same constant, named and cross-referenced at each definition site so the two spellings do not appear to be different numbers.
-
-**Validation:** `PASS — controlled phantoms; real-data outlier calibration NOT ASSESSED.`
-
-**Strength labeling:** established robust-statistics technique (median + MAD).
-
----
-
-## D6. Radial position normalized to equivalent-sphere radius
-
-**Task:** Locate a cell within its organoid (core vs periphery).
-
-**Selected:** `normalized_radial_position_equivalent_radius = distance(cell_centroid, organoid_centroid) / r_eq`, where `r_eq = (3V/(4π))^(1/3)` is the equivalent-sphere radius of the organoid's volume.
-
-**Rationale:** Normalizing to an equivalent sphere yields a dimensionless 0..~1+ index. Core = ≤0.5, periphery = ≥0.8 (configurable `core_max_normalized_radial_position`, `peripheral_min_normalized_radial_position`).
-
-**Rejected:** Local-radius normalization — the codebase does not estimate a per-direction local organoid radius and does not claim to.
-
-**Validation:** `PASS — computing path is deterministic/gradient-tested; biological meaning NOT ASSESSED.`
-
-**Strength labeling:** heuristic; explicitly documented as equivalent-radius, not local-radius.
-
----
-
-## D6b. Moment-equivalent principal axes (ellipsoid fit from voxel second moment)
-
-**Task:** Compute principal axis lengths (major, intermediate, minor) for organoid/cell/nucleus envelope geometry.
-
-**Selected:** Voxel-centroid-centered second-moment matrix with intrinsic voxel moment included: `covariance = centered.T @ centered / n + diag(spacing²/12)`, where `centered` are voxel coordinates relative to centroid scaled by spacing. Eigenvalues λ sorted descending; axis lengths = `2√(5λ)`. The `+ spacing²/12` term accounts for each voxel's intrinsic uniform-density second moment, making the axes describe a moment-equivalent ellipsoid rather than the point-cloud covariance alone.
-
-**Rationale:** The uniform-density voxel has a known intrinsic second moment (I = side⁵/12 per axis), which shifts the covariance to represent the solid object's inertia tensor. The factor `2√(5λ)` converts the second-moment eigenvalues to the equivalent ellipsoid's principal axis lengths (for a uniform ellipsoid, `I_xx = M/5 (b²+c²)`, so axis `a = √(5λ_a)` for the major axis from the diagonalized inertia). This is a standard morphometric definition used in 3D shape analysis.
-
-**Rejected:** Raw point-cloud covariance (without intrinsic voxel moment) — systematically underestimates axis lengths for small objects; single-axis extent (max-min) — ignores shape anisotropy.
-
-**Validation:** `PASS — analytical ellipsoid test (tests/quantification/test_cellular_measurements.py:136–147) verifies major/intermediate/minor = 12/8/6 µm for a 6×4×3 µm spacing-2 ellipsoid; values are pinned by the independent analytical expectation.`
-
-**Strength labeling:** established morphometric definition (moment-equivalent ellipsoid).
-
----
-
-## D7. Classical morphology marker measurements & viability state gating
-
-**Task:** Classical organoid-level Calcein/PI viability-like states.
-
-**Selected:** Marker means measured on raw (unnormalized) arrays within the outer envelope; background = median in a physical shell; corrected mean = foreground mean − background median; saturation detection uses an explicit camera limit or integer dtype max; control-scaled endpoints learned per batch from live/dead controls; marker scaled as `(mean − low)/(high − low)`; states gated at 0.60 (high) and 0.30 (low) with indeterminate between.
-
-**Rationale, rejected alternatives, and caveats are fully documented in docs/METHODS.md.** This is an intensity-based signal-pattern characterization, not a cell-count or a validated cell-viability fraction.
-
-**Condition-scoping fix (2026-09-03 audit fix):** An independent audit found `calibrate()` grouped controls by `(control, biological_replicate)` without `condition`, unlike `stats.py`'s composite-key convention — since `biological_replicate` labels (e.g. "R1") are only unique *within* a condition, a batch whose live or dead controls spanned more than one `condition` value could have been silently pooled as if they were one replicate, corrupting the batch's calibration endpoints without any error or QC flag. Fixed: `calibrate()` now rejects (status `unavailable`, reason `controls_span_multiple_conditions`) a batch whose live or dead controls span more than one condition, rather than guessing which grouping was intended. Regression test: `test_controls_spanning_multiple_conditions_are_rejected` in `test_viability_summary.py`.
-
-**Validation:** `PARTIAL — controlled phantom agreement on simplified marker patterns; the condition-scoping fix above is unit-tested; biological calibration against matched controls and independent viability measurements NOT ASSESSED.`
-
-**Strength labeling:** empirically calibrated / heuristic.
-
----
-
-## D8. Otsu global thresholding + physical-distance watershed splitting (classical segmentation)
-
-**Task:** Produce a 3D instance-label mask from a single structural fluorescence/brightfield channel (`segmentation.method: watershed`).
-
-**Selected:** Global Otsu thresholding on the (optionally background-subtracted, Gaussian-smoothed) structural volume, followed by a spacing-aware Euclidean distance transform, h-maxima seed detection at a physical prominence, physical minimum-seed-separation suppression, and masked watershed of the negative distance map.
-
-**Rationale:** Otsu thresholding is a standard, parameter-free global binarization method. Distance-transform watershed is a standard technique for splitting touching, roughly convex objects (such as organoids) without a trained model.
-
-**Original literature:**
-- Otsu, N. (1979). A threshold selection method from gray-level histograms. *IEEE Transactions on Systems, Man, and Cybernetics*, 9(1), 62–66. https://doi.org/10.1109/TSMC.1979.4310076
-- Vincent, L., & Soille, P. (1991). Watersheds in digital spaces: an efficient algorithm based on immersion simulations. *IEEE Transactions on Pattern Analysis and Machine Intelligence*, 13(6), 583–598. https://doi.org/10.1109/34.87344
-
-**Rejected:** A trained/learned segmentation model for the classical route — deliberately out of scope; this route is the parameter-free/classical alternative to Cellpose (see `src/organoid_analysis/segmentation/`).
-
-**Validation:** `PARTIAL — unit/synthetic-phantom tests cover the split/threshold logic (test_segmentation.py); real-image detection accuracy is assessed only via the optional independent-annotation route in docs/METHODS.md, not a general claim.`
-
-**Strength labeling:** established methods (Otsu; distance-transform watershed), combined by heuristic parameter choices (seed height, minimum seed separation — see docs/PARAMETERS.md).
-
-**Code location:** `src/organoid_analysis/segmentation/watershed_instances.py::segment`, `::watershed_instances`.
-
----
-
-## D9. Hungarian (Kuhn–Munkres) one-to-one instance matching for segmentation validation
-
-**Task:** Match predicted instance labels to an independent annotated truth mask for validation metrics (precision/recall/Dice/IoU/panoptic quality), and match synthetic phantom predictions to their known ground truth.
-
-**Selected:** `scipy.optimize.linear_sum_assignment` (Hungarian/Kuhn–Munkres algorithm) maximizing a reward that first maximizes the count of IoU ≥ threshold matches, then total IoU, at a fixed `iou_threshold` (default 0.5).
-
-**Rationale:** One-to-one optimal assignment prevents a many-to-one or greedy match from hiding split/merge errors that a foreground-only overlap metric (e.g. plain Dice) would miss.
-
-**Original literature:** Kuhn, H. W. (1955). The Hungarian method for the assignment problem. *Naval Research Logistics Quarterly*, 2(1–2), 83–97. https://doi.org/10.1002/nav.3800020109
-
-**Rejected:** Greedy nearest-IoU matching — can produce inconsistent, order-dependent assignments when several predictions compete for the same truth object.
-
-**Validation:** `PASS — controlled phantom validation (test_analysis.py, run_demo synthetic validation); real-data annotation matching depends on the availability of an independent truth mask (INSUFFICIENT EVIDENCE without one).`
-
-**Strength labeling:** established method (Hungarian assignment); `iou_threshold=0.5` is a conventional choice (see docs/PARAMETERS.md), not independently calibrated for this pipeline.
-
-**Code location:** `src/organoid_analysis/validation/segmentation_metrics.py::match_instances`.
-
----
-
-## D10. Minimum-weight full bipartite matching for cell–nucleus pairing
-
-**Task:** Pair each cell instance with at most one nucleus instance from two independently segmented, registered label masks (`analysis cells` CLI route, distinct from the `analyze-3d` maximum-overlap hierarchy in D1).
-
-**Selected:** `scipy.sparse.csgraph.min_weight_full_bipartite_matching` on a sparse graph weighted by (cardinality-maximizing bonus + voxel overlap), restricted to candidate pairs that already pass the nucleus-containment/size/N:C-ratio QC gates; every cell gets a guaranteed dummy column so the matching is always full.
-
-**Rationale:** Optimal bipartite matching first maximizes the number of valid one-to-one pairs, then total overlap, which avoids a greedy "closest nucleus wins" rule silently mis-pairing cells that compete for the same nucleus.
-
-**Original literature:** This is an application of the same assignment-problem theory as D9 — Kuhn, H. W. (1955). *Naval Research Logistics Quarterly*, 2(1–2), 83–97. https://doi.org/10.1002/nav.3800020109
-
-**Rejected:** Greedy dominant-overlap pairing (assign each cell its single largest-overlap nucleus without considering competing cells) — can double-assign one nucleus to two cells' "best candidate" lists without resolving the conflict optimally.
-
-**Validation:** `PARTIAL — unit-tested on synthetic label pairs (test_cellular.py per docs/PARAMETERS.md gap noted below); real-data pairing accuracy NOT ASSESSED.`
-
-**Strength labeling:** established method (bipartite assignment); the QC gate thresholds (`min_cell_volume_um3`, `min_nucleus_volume_um3`, `max_nc_ratio`, `min_nucleus_containment`) are heuristic (see docs/PARAMETERS.md).
-
-**Code location:** `src/organoid_analysis/quantification/cellular_measurements.py::pair_and_filter_cells`.
-
----
-
-## D11. Linear mixed-effects model with BH-FDR pairwise contrasts for condition comparison
-
-**Task:** Test whether a continuous morphology feature (volume, sphericity) differs across experimental conditions while accounting for biological-replicate structure (`src/organoid_analysis/statistics/inference.py`, invoked from `pipeline.py` when `cfg["stats"]["enabled"]`).
-
-**Selected:** A linear mixed-effects model (condition as fixed effect, `condition::biological_replicate` as a random intercept) fit by REML, giving an omnibus Wald test and all-pairwise contrasts between conditions. Falls back to OLS with replicate-clustered standard errors when the random-effects fit is singular (variance below `1e-6 × scale`) or does not converge. Pairwise p-values are Benjamini–Hochberg FDR corrected. `volume_um3` is log10-transformed before fitting; `sphericity` is not.
-
-**Rationale:** A random intercept on the biological-replicate unit avoids treating pooled organoids/technical replicates as independent samples (pseudoreplication). BH-FDR correction controls the false discovery rate across the pairwise contrasts performed for each feature. Log-transforming volume addresses its right-skewed, multiplicative-scale distribution before a model that assumes approximately normal, homoscedastic residuals.
-
-**Original literature:** Benjamini, Y., & Hochberg, Y. (1995). Controlling the false discovery rate: a practical and powerful approach to multiple testing. *Journal of the Royal Statistical Society: Series B*, 57(1), 289–300. https://doi.org/10.1111/j.2517-6161.1995.tb02031.x
-
-**Rejected:** An unpaired t-test/ANOVA on pooled per-organoid values — would treat organoids as independent biological replicates (pseudoreplication), overstating significance.
-
-**Documentation note:** `docs/METHODS.md` previously stated "No automatic inferential tests are included," which was inaccurate once this module shipped; that statement has been corrected (see `docs/METHODS.md`, Treatment summaries) to describe this module and its assumptions.
-
-**Failure modes:** A feature/condition combination with fewer than `stats.min_replicates_per_condition` (default 3) biological replicates in a condition is silently excluded from that feature's test rather than raising; callers must treat an empty result as "not enough data to test." (2026-09-03 audit fix: `organoid_measurement_workflow.py` now filters `objects` through `complete_unit_objects()` before calling `condition_pairwise_tests`, matching `aggregation.py`'s own exclusion of organoids from partially-failed acquisition units; regression test `test_complete_unit_objects_excludes_incomplete_units` in `test_organoid_measurement_workflow.py`.)
-
-**Small-sample p-value correction (2026-09-03 audit fix):** An independent scientific-software audit found that both branches originally reported Wald p-values against an asymptotic z reference, which is anti-conservative (overstates significance) at the pipeline's own documented minimum of 3 replicates/condition (empirically confirmed against this repository's statsmodels 0.14.6). Fixed: the OLS-fallback branch now fits with `use_t=True`, which statsmodels resolves to a cluster-robust t(G−1) reference (G = number of replicate clusters) — the standard small-cluster correction (Cameron & Miller, 2015, *Journal of Human Resources*, 50(2), 317–372). The LMM branch has no equivalent built-in correction in statsmodels (no Satterthwaite/Kenward-Roger for `MixedLM`), so `_pairwise_contrasts` now manually applies the same t(G−1) reference to its pairwise contrasts. **Residual limitation:** this is a standard but approximate small-cluster correction, not full Satterthwaite/Kenward-Roger; and the LMM branch's *omnibus* Wald test (`omnibus_p` in `stats_results.json`, flagged via the `omnibus_p_small_sample_corrected` field) remains asymptotic/uncorrected — treat it as a rough screening result, not confirmatory. The pairwise, BH-FDR-corrected contrasts in `pairwise_contrasts.csv` are the primary, corrected output.
-
-**Validation:** `PARTIAL — the small-sample p-value correction above is independently derived and verified (regression tests in test_inference.py assert the corrected p-value against a hand-computed t(G-1) reference, and that it is strictly more conservative than the uncorrected z reference); no independent review against an external Satterthwaite/Kenward-Roger reference implementation (e.g. R's lmerTest) has been performed, and the omnibus test remains NOT ASSESSED for small-sample validity.`
-
-**Strength labeling:** established statistical methods (LMM; BH-FDR), combined by an engineering fallback rule (LMM→OLS singular-fit threshold) that is heuristic and not independently validated.
-
-**Effect-size scale and multiplicity family (2026-09-09 audit fix, P2-2):** `pairwise_contrasts.csv`'s `estimate` column is the *model's fitted-scale* difference, which is log10 for `volume_um3` (a `+1` estimate means the second condition's fitted geometric mean is 10x the first's) and raw units for `sphericity`; the column name alone did not previously say so. Fixed by adding: `estimate_scale` (`"log10_difference"` or `"raw_difference"`), `geometric_mean_ratio` (`10 ** estimate`, only for log10-scale features -- `NaN`, not a fabricated ratio, otherwise), `standard_error`/`ci95_low`/`ci95_high` (using the same t(G-1) reference as `p_raw`, not statsmodels' own uncorrected asymptotic-z `conf_int()`), and `multiplicity_family` (a literal string naming the exact scope of the BH-FDR correction actually applied: all pairwise contrasts *within one feature*, never pooled across features -- volume_um3 and sphericity each get their own independent correction). No numerical value already being reported changed; this only makes the existing scale and correction scope explicit and machine-checkable. Regression tests: `test_pairwise_output_is_self_describing_and_scale_correct`, `test_raw_scale_feature_reports_no_geometric_mean_ratio` in `test_inference.py`.
-
-**Code location:** `src/organoid_analysis/statistics/inference.py::condition_pairwise_tests`, `::fit_model`.
-
----
-
-## D12. TIFF axis/spacing readers kept as two implementations, with behavior (not code) unified
-
-**Task:** Two TIFF-reading paths exist -- `microscopy_io/tiff_contract.py` (manifest-driven, multi-role: structure/calcein/pi/probability/labels, for the classical CLI) and `microscopy_io/zstack_reader.py` + `metadata.py` (single uploaded file, for Streamlit). Each independently implements axis canonicalization and OME/ImageJ spacing parsing, which is a real duplication risk: the two had drifted to disagree on two consequential behaviors before this decision.
-
-**Found divergences (2026-09-08 audit):**
-1. `tiff_contract.ome_spacing()` already rejected a nonuniform Z-plane grid (via `PositionZ` values); `metadata.parse_spacing_ome()` (the Streamlit path) did not check this at all, so a Streamlit-uploaded stack with unevenly spaced Z planes would silently get one (wrong) Z spacing value instead of an error.
-2. `tiff_contract.canonical_czyx()` silently squeezed away any unrecognized axis of size 1 (e.g. a stray legacy/filler dimension); `zstack_reader._reorder_to_czyx()` already rejected *any* unrecognized axis regardless of size ("Fully explicit, no guessing").
-
-**Selected:** Fixed both divergences toward the stricter behavior rather than merging the two readers into one implementation:
-- Ported the nonuniform-Z-grid check into `metadata.parse_spacing_ome()` (using `ome_types`' `Pixels.planes`, mirroring `ome_spacing()`'s own ElementTree-based check).
-- Removed `canonical_czyx()`'s size-1 exception so it always rejects an unrecognized axis, matching `_reorder_to_czyx()`.
-- Consolidated the two independent unit-conversion tables and the two independent `SPACING_RTOL`/`SPACING_ATOL_UM` constant definitions into one copy in `metadata.py` (`to_um`), which `tiff_contract.py` now imports rather than redefining -- the table became the union of both (adding the µ/μ codepoint variants and the "micrometer" spelling that only one side previously accepted).
-
-**Rejected (deferred, not abandoned):** A full merge into one canonical reader/one OME-parsing implementation. Investigated switching `tiff_contract.ome_spacing()`'s hand-rolled `xml.etree.ElementTree` parsing to `metadata.py`'s `ome_types`-based parsing, and found `ome_types` performs strict pydantic validation of unit strings that the OME schema's controlled vocabulary does not actually require real-world writers to follow exactly (e.g. `PhysicalSizeZUnit="um"` -- ASCII, not the canonical "µm" -- raises an uncaught `pydantic.ValidationError` under `ome_types`, but parses fine under raw ElementTree). Switching would trade the classical pipeline's current tolerance of such files for the Streamlit path's `ome_types` robustness elsewhere, which is not a clear improvement and was not evaluated against real acquisition files from either code path's actual user base. The manifest-vs-single-file/multi-role-vs-none input shapes also do not collapse into one API without changing either path's public contract. Two implementations are kept, with the specific behaviors above now enforced identically and verified by shared-intent regression tests, rather than forcing a structural merge that would need to pick a winner on an open question (unit-string strictness) with no evidence to decide it.
-
-**Validation:** Both changed behaviors have regression tests: `tests/microscopy_io/test_io.py::test_ambiguous_singleton_axis_is_rejected_not_silently_squeezed` and `tests/visualization/test_3d_preview.py::SpacingMetadataTests::test_nonuniform_z_positions_are_rejected`/`test_uniform_z_positions_are_accepted`. 5 real sample images (identity recorded in `docs/validation_data_manifest.csv`; `data/images/*` itself is gitignored and not repository-reproducible) were re-loaded through `load_zstack()` after the change with no regression (none use ambiguous axes or nonuniform Z metadata, so none were expected to be affected, and none were).
-
-**Code location:** `src/organoid_analysis/microscopy_io/tiff_contract.py::canonical_czyx`, `::ome_spacing`; `src/organoid_analysis/microscopy_io/metadata.py::parse_spacing_ome`, `::to_um`.
-
----
-
-## Rejected overall approaches
-
-- **Replace the existing segmentation model** — preserved by requirement. Segmentation is upstream; this pipeline consumes its output.
-- **Use centroid-based hierarchy** — rejected as less robust than overlap (D1).
-- **Use 2D projections for any quantitative 3D measurement** — rejected by project principle.
-
-## Traceability
-
-| Decision | Code location |
-|---|---|
-| D1 | `src/organoid_analysis/quantification/multilevel_relationships/hierarchy.py` |
-| D2 | `src/organoid_analysis/workflows/multilevel_measurement_workflow.py` (lines ~193-212) |
-| D3 | `src/organoid_analysis/quantification/features.py::geometry`, `::surface_mesh` |
-| D4 | `src/organoid_analysis/quantification/multilevel_relationships/topology.py` |
-| D5 | `src/organoid_analysis/quantification/multilevel_relationships/qc.py::_volume_outliers` |
-| D6 | `src/organoid_analysis/quantification/multilevel_relationships/spatial.py` |
-| D7 | `src/organoid_analysis/quantification/features.py::marker_measurements`, `src/organoid_analysis/phenotyping/viability.py`, `src/organoid_analysis/result_export/report.py` |
-| D8 | `src/organoid_analysis/segmentation/watershed_instances.py::segment`, `::watershed_instances` |
-| D9 | `src/organoid_analysis/validation/segmentation_metrics.py::match_instances` |
-| D10 | `src/organoid_analysis/quantification/cellular_measurements.py::pair_and_filter_cells` |
-| D11 | `src/organoid_analysis/statistics/inference.py::condition_pairwise_tests`, `::fit_model` |
-| D12 | `src/organoid_analysis/microscopy_io/tiff_contract.py::canonical_czyx`, `::ome_spacing`; `src/organoid_analysis/microscopy_io/metadata.py::parse_spacing_ome`, `::to_um` |
+Origin `SOFTWARE_OR_MODEL_DEFAULT` for library behavior and `HEURISTIC` for project model/parameter selection; basis `CONTEXT_DEPENDENT`; evidence `PARTIAL` for execution and `INSUFFICIENT EVIDENCE` for object accuracy. Cached weights are hashed when found, but alternate model-cache roots/custom model objects can make recorded identity incomplete. Remaining hidden defaults are listed in PARAMETERS. Alternative foundation models/classical watershed are candidates, not validated superior/inferior choices. One 3×256×256 MPS smoke crop is not full-volume, annotation-based, CPU/GPU-equivalence, or repeatability validation.

@@ -81,14 +81,13 @@ def _pairwise_contrasts(
     for the OLS-fallback branch (``use_t=True`` in ``fit_model``), but always
     uses an asymptotic z reference for the LMM branch (statsmodels has no
     Satterthwaite/Kenward-Roger correction for ``MixedLM``). Since the
-    ``condition`` fixed effect varies only *between* replicate clusters, a
-    t(G-1) reference (G = number of replicate clusters; the same convention
-    statsmodels' own cluster-robust ``use_t=True`` resolves to, verified
-    empirically) is a standard, defensible small-sample correction for the
-    LMM branch too -- not full Satterthwaite/Kenward-Roger, but no worse than
-    what the OLS-fallback branch already does. See docs/ALGORITHM_DECISIONS.md
-    D11 and docs/PARAMETERS.md for the residual limitation this does not
-    address (the omnibus test, and non-Satterthwaite df for LMM).
+    ``condition`` fixed effect varies only *between* replicate clusters, the
+    project also uses t(G-1) for LMM (G is the replicate-cluster count).
+    That is a project heuristic: sharing the clustered-OLS reference does
+    not establish MixedLM small-sample coverage or type-I-error control.
+    It is not a Satterthwaite/Kenward-Roger correction. See
+    docs/ALGORITHM_DECISIONS.md D11 and docs/PARAMETERS.md for the unassessed
+    inferential validity and asymptotic-omnibus limitations.
     """
     fe_names = list(fit.fe_params.index) if hasattr(fit, "fe_params") else list(fit.params.index)
     is_lmm = hasattr(fit, "cov_re")
@@ -136,7 +135,10 @@ def condition_pairwise_tests(
     empty result as "not enough data to test", not an error.
     """
     eligible = objects[objects.morphology_eligible.astype(bool)].copy()
-    eligible["_replicate_key"] = eligible.condition.astype(str) + "::" + eligible.biological_replicate.astype(str)
+    # Factorize the pair without delimiter collisions (e.g. A::B/C vs A/B::C).
+    eligible["_replicate_key"] = eligible.groupby(
+        ["condition", "biological_replicate"], sort=False, dropna=False
+    ).ngroup()
 
     pairwise_frames = []
     omnibus: dict[str, dict] = {}
@@ -144,6 +146,10 @@ def condition_pairwise_tests(
         if feature not in eligible.columns:
             continue
         d = eligible[[feature, "condition", "_replicate_key"]].dropna().copy()
+        if not np.isfinite(d[feature].to_numpy(dtype=float)).all():
+            raise ValueError(f"{feature} contains nonfinite eligible measurements")
+        if feature in LOG10_FEATURES and (d[feature] <= 0).any():
+            raise ValueError(f"{feature} must be positive for log10 inference; no clipping is permitted")
         replicate_counts = d.groupby("condition")["_replicate_key"].nunique()
         keep_conditions = replicate_counts[replicate_counts >= min_replicates_per_condition].index
         d = d[d.condition.isin(keep_conditions)]
@@ -151,7 +157,7 @@ def condition_pairwise_tests(
         if len(conditions) < 2:
             continue
         if feature in LOG10_FEATURES:
-            d[feature] = np.log10(d[feature].clip(lower=np.finfo(float).tiny))
+            d[feature] = np.log10(d[feature])
         d["condition"] = pd.Categorical(d.condition, categories=conditions)
 
         fit, model_used = fit_model(d, feature, "_replicate_key")

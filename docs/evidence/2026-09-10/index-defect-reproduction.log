@@ -1,0 +1,93 @@
+F.F.FFF                                                                  [100%]
+=================================== FAILURES ===================================
+____________ test_tiff_series_index_must_be_nonnegative_integer[-1] ____________
+
+tmp_path = PosixPath('/private/var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/pytest-of-jlwang/pytest-277/test_tiff_series_index_must_be0')
+index = -1
+
+    @pytest.mark.parametrize('index', [-1, True, 0.5])
+    def test_tiff_series_index_must_be_nonnegative_integer(tmp_path, index):
+        from organoid_analysis.microscopy_io.tiff_contract import read_tiff
+        path = tmp_path / 'series.tif'
+        tifffile.imwrite(path, np.zeros((3, 5, 6), np.uint16), photometric='minisblack', metadata={'axes': 'ZYX'})
+>       with pytest.raises(ValueError, match='series_index'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/microscopy_io/test_metadata_contract_regressions.py:121: Failed
+___________ test_tiff_series_index_must_be_nonnegative_integer[0.5] ____________
+
+tmp_path = PosixPath('/private/var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/pytest-of-jlwang/pytest-277/test_tiff_series_index_must_be2')
+index = 0.5
+
+    @pytest.mark.parametrize('index', [-1, True, 0.5])
+    def test_tiff_series_index_must_be_nonnegative_integer(tmp_path, index):
+        from organoid_analysis.microscopy_io.tiff_contract import read_tiff
+        path = tmp_path / 'series.tif'
+        tifffile.imwrite(path, np.zeros((3, 5, 6), np.uint16), photometric='minisblack', metadata={'axes': 'ZYX'})
+        with pytest.raises(ValueError, match='series_index'):
+>           read_tiff(path, series_index=index)
+
+tests/microscopy_io/test_metadata_contract_regressions.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/private/var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/pytest-of-jlwang/pytest-277/test_tiff_series_index_must_be2/series.tif')
+axes = '', time_index = None, series_index = 0.5
+
+    def read_tiff(path: str | Path, axes: str = "", time_index: int | None = None,
+                  series_index: int = 0) -> tuple[np.ndarray, tuple | None, str]:
+        with tifffile.TiffFile(path) as handle:
+            if series_index >= len(handle.series):
+                raise ValueError("series_index is outside the TIFF series list")
+>           series = handle.series[series_index]
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: list indices must be integers or slices, not float
+
+src/organoid_analysis/microscopy_io/tiff_contract.py:171: TypeError
+____________ test_canonical_time_index_rejects_invalid_scalar[True] ____________
+
+index = True
+
+    @pytest.mark.parametrize('index', [-1, True, 0.5])
+    def test_canonical_time_index_rejects_invalid_scalar(index):
+        from organoid_analysis.microscopy_io.tiff_contract import canonical_czyx
+>       with pytest.raises(ValueError, match='time_index'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/microscopy_io/test_metadata_contract_regressions.py:128: Failed
+____________ test_canonical_time_index_rejects_invalid_scalar[0.5] _____________
+
+index = 0.5
+
+    @pytest.mark.parametrize('index', [-1, True, 0.5])
+    def test_canonical_time_index_rejects_invalid_scalar(index):
+        from organoid_analysis.microscopy_io.tiff_contract import canonical_czyx
+>       with pytest.raises(ValueError, match='time_index'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/microscopy_io/test_metadata_contract_regressions.py:128: Failed
+________________ test_complex_tiff_cannot_become_real_intensity ________________
+
+    def test_complex_tiff_cannot_become_real_intensity():
+        from organoid_analysis.microscopy_io.tiff_contract import canonical_czyx
+>       with pytest.raises(ValueError, match='real numeric'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/microscopy_io/test_metadata_contract_regressions.py:134: Failed
+=============================== warnings summary ===============================
+tests/microscopy_io/test_metadata_contract_regressions.py::test_tiff_series_index_must_be_nonnegative_integer[-1]
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:4656: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = shape
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_tiff_series_index_must_be_nonnegative_integer[-1]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_tiff_series_index_must_be_nonnegative_integer[0.5]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_canonical_time_index_rejects_invalid_scalar[True]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_canonical_time_index_rejects_invalid_scalar[0.5]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_complex_tiff_cannot_become_real_intensity
+5 failed, 2 passed, 31 deselected, 1 warning in 0.39s

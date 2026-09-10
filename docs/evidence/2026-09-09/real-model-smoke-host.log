@@ -1,0 +1,5 @@
+Accelerator: mps
+Smoke-test shape: (3, 256, 256)
+Nuclei masks: 29
+Cell masks: 23
+3D segmentation smoke test passed.

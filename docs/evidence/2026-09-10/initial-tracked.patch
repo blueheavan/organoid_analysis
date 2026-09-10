@@ -1,0 +1,1101 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index f59f137..9959378 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -33,6 +33,9 @@ package-dir = { "" = "src" }
+ where = ["src"]
+ include = ["organoid_analysis*"]
+ 
++[tool.setuptools.package-data]
++"organoid_analysis.visualization.volume_viewer" = ["static/*.js", "static/*.txt"]
++
+ [tool.pytest.ini_options]
+ testpaths = ["tests"]
+ addopts = "-q -m 'not render'"
+diff --git a/src/organoid_analysis/command_line/organoid_commands.py b/src/organoid_analysis/command_line/organoid_commands.py
+index 670029d..625b5d9 100644
+--- a/src/organoid_analysis/command_line/organoid_commands.py
++++ b/src/organoid_analysis/command_line/organoid_commands.py
+@@ -80,10 +80,16 @@ def main(argv=None) -> int:
+ 
+ 
+ def _run_cells(arguments) -> dict:
++    import importlib.metadata
++    import platform
++
+     from organoid_analysis.microscopy_io.tiff_contract import (
+         SPACING_ATOL_UM,
+         SPACING_RTOL,
++        git_commit_hash,
+         read_tiff,
++        sha256,
++        source_code_hashes,
+         write_labels,
+     )
+     from organoid_analysis.quantification.cellular_measurements import analyze_cells
+@@ -121,6 +127,8 @@ def _run_cells(arguments) -> dict:
+         min_nucleus_containment=arguments.min_nucleus_containment,
+         neighbor_radius_um=arguments.neighbor_radius_um,
+     )
++    sentinel = out / "RUN_INCOMPLETE.txt"
++    sentinel.write_text("Export incomplete. Do not interpret partial outputs.\n", encoding="utf-8")
+     write_labels(out / "cell_labels.filtered.ome.tif", result.cell_labels, spacing)
+     write_labels(out / "nucleus_labels.filtered.ome.tif", result.nucleus_labels, spacing)
+     result.features.to_csv(out / "cell_features.csv", index=False, float_format="%.10g")
+@@ -133,8 +141,18 @@ def _run_cells(arguments) -> dict:
+         "nucleus_labels": str(Path(arguments.nucleus_labels).resolve()),
+         "output": str(out),
+         "neighborhood_incomplete_cells": int((~result.features["neighborhood_complete"]).sum()) if len(result.features) else 0,
++        "provenance": {
++            "pipeline_version": __version__, "git_commit": git_commit_hash(),
++            "python": sys.version, "platform": platform.platform(),
++            "source_code_sha256": source_code_hashes(),
++            "input_files": {role: {"path": str(Path(path).resolve()), "sha256": sha256(path)}
++                            for role, path in (("cell", arguments.cell_labels), ("nucleus", arguments.nucleus_labels))},
++            "packages": {name: importlib.metadata.version(name) for name in
++                         ("numpy", "scipy", "scikit-image", "tifffile", "pandas")},
++        },
+     }
+     (out / "cell_analysis_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
++    sentinel.unlink()
+     return summary
+ 
+ 
+@@ -149,6 +167,7 @@ def _run_multilevel(arguments) -> dict:
+         git_commit_hash,
+         read_tiff,
+         sha256,
++        source_code_hashes,
+     )
+     from organoid_analysis.quantification.multilevel_relationships import Multilevel3DConfig
+     from organoid_analysis.result_export.measurement_tables import export_results
+@@ -195,18 +214,16 @@ def _run_multilevel(arguments) -> dict:
+     # Provenance capture belongs at this orchestration layer, not inside
+     # analyze_multilevel_3d (deliberately headless/pure per multilevel3d's
+     # module docstring). Mirrors the classical analyze() pipeline's provenance.
+-    _package_root = Path(__file__).resolve().parent.parent
+-    multilevel3d_dir = _package_root / "quantification" / "multilevel_relationships"
+-    multilevel3d_files = sorted(multilevel3d_dir.glob("*.py")) + [
+-        _package_root / "workflows" / "multilevel_measurement_workflow.py",
+-        _package_root / "result_export" / "measurement_tables.py",
+-    ]
+     result.summary["provenance"] = {
+         "pipeline_version": __version__,
+         "git_commit": git_commit_hash(),
+         "python": sys.version,
+         "platform": platform.platform(),
+-        "source_code_sha256": {p.name: sha256(p) for p in multilevel3d_files},
++        "source_code_sha256": source_code_hashes(),
++        "input_files": {role: {"path": str(Path(path).resolve()), "sha256": sha256(path)}
++                        for role, path in (("organoid", arguments.organoid_labels), ("cell", arguments.cell_labels),
++                                           ("nucleus", arguments.nucleus_labels), ("nucleus_intensity", arguments.nucleus_intensity))
++                        if path},
+         "packages": {package: importlib.metadata.version(package) for package in
+                     ["numpy", "scipy", "scikit-image", "tifffile", "pandas"]},
+     }
+diff --git a/src/organoid_analysis/microscopy_io/metadata.py b/src/organoid_analysis/microscopy_io/metadata.py
+index 3ae59ac..7f72358 100644
+--- a/src/organoid_analysis/microscopy_io/metadata.py
++++ b/src/organoid_analysis/microscopy_io/metadata.py
+@@ -45,6 +45,8 @@ _UNIT_TO_UM: dict[str, float] = {
+     "μm": 1.0,  # U+03BC GREEK SMALL LETTER MU -- visually identical, seen in the wild
+     "um": 1.0,
+     "micrometer": 1.0,
++    "micron": 1.0,
++    "microns": 1.0,
+     "nm": 1.0e-3,
+     "Å": 1.0e-4,
+ }
+@@ -150,10 +152,9 @@ def parse_spacing_ome(ome_metadata: str | None, time_index: int | None = None) -
+         unit = getattr(pixels, f"{attr}_unit")
+         if value is None:
+             continue
+-        try:
+-            um = to_um(float(value), unit.value if unit is not None else "µm")
+-        except ValueError:
+-            continue
++        um = to_um(float(value), unit.value if unit is not None else "µm")
++        if not np.isfinite(um) or um <= 0:
++            raise ValueError("Invalid OME physical spacing")
+         if slot == "x":
+             x = um
+         elif slot == "y":
+@@ -169,25 +170,31 @@ def parse_spacing_ome(ome_metadata: str | None, time_index: int | None = None) -
+     for plane in pixels.planes:
+         if plane.the_t == (time_index or 0) and plane.the_c == 0 and plane.position_z is not None:
+             unit = plane.position_z_unit
+-            # ome_types defaults PositionZUnit to UnitsLength.REFERENCEFRAME
+-            # (OME's own schema default) when the XML omits it entirely, not
+-            # to a physical unit -- treat that the same as "no unit given" ->
+-            # micrometres, matching tiff_contract.ome_spacing()'s equivalent
+-            # `plane.get("PositionZUnit", "µm")` default for the same XML.
+-            unit_str = None if unit is None or unit.value == "reference frame" else unit.value
++            # OME's default is a reference frame, not a physical length.
++            # Without its calibration we cannot compare positions to um.
++            unit_str = "reference frame" if unit is None else unit.value
+             positions[plane.the_z] = to_um(float(plane.position_z), unit_str)
+-    if len(positions) >= 3 and z is not None:
+-        indices = np.array(sorted(positions))
+-        zvalues = np.array([positions[k] for k in indices])
+-        steps = np.abs(np.diff(zvalues) / np.diff(indices))
+-        if not np.allclose(steps, z, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
+-            raise ValueError(
+-                "OME plane positions disagree with a uniformly spaced Z grid; "
+-                "resample before analysis"
+-            )
++    validate_z_positions(positions, z)
+     return Spacing(x, y, z)
+ 
+ 
++def validate_z_positions(positions: dict[int, float], z_um: float | None) -> None:
++    """Require a monotonic uniform grid; a consistently descending Z is valid."""
++    if not positions:
++        return
++    indices = np.array(sorted(positions))
++    values = np.array([positions[k] for k in indices])
++    if not np.isfinite(values).all():
++        raise ValueError("OME plane positions must be finite")
++    if len(positions) < 2:
++        return
++    steps = np.diff(values) / np.diff(indices)
++    magnitude = z_um if z_um is not None else abs(steps[0])
++    expected = np.sign(steps[0]) * magnitude
++    if expected == 0 or not np.allclose(steps, expected, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
++        raise ValueError("OME plane positions disagree with a uniformly spaced Z grid; resample before analysis")
++
++
+ def parse_spacing_imagej(imagej_metadata: dict[str, Any] | None) -> Spacing:
+     """Parse spacing from ImageJ hyperstack metadata.
+ 
+@@ -200,11 +207,11 @@ def parse_spacing_imagej(imagej_metadata: dict[str, Any] | None) -> Spacing:
+     if not imagej_metadata:
+         return Spacing(None, None, z)
+     spacing = imagej_metadata.get("spacing")
+-    if spacing is not None:
+-        try:
+-            z = float(spacing)
+-        except (TypeError, ValueError):
+-            z = None
++    unit = imagej_metadata.get("unit")
++    if spacing is not None and unit and str(unit).strip().lower() not in {"pixel", "pixels"}:
++        z = to_um(float(spacing), str(unit))
++        if not np.isfinite(z) or z <= 0:
++            raise ValueError("Invalid ImageJ physical spacing")
+     return Spacing(None, None, z)
+ 
+ 
+@@ -217,13 +224,13 @@ def _resolution_to_um_per_px(resolution: float | tuple | None, unit: int | None)
+     if resolution is None:
+         return None
+     if isinstance(resolution, (tuple, list)):
+-        if not resolution or not resolution[0]:
+-            return None
++        if len(resolution) != 2 or not resolution[1]:
++            raise ValueError("Invalid TIFF resolution rational")
+         px_per_unit = float(resolution[0]) / float(resolution[1])
+     else:
+         px_per_unit = float(resolution)
+-    if px_per_unit <= 0:
+-        return None
++    if not np.isfinite(px_per_unit) or px_per_unit <= 0:
++        raise ValueError("TIFF resolution must be finite and positive")
+     if unit == 3:  # pixels per centimetre -> µm per pixel
+         return (1.0e4) / px_per_unit
+     if unit == 4:  # pixels per millimetre
+@@ -243,6 +250,7 @@ def resolve_spacing(
+     ome_metadata: str | None,
+     imagej_metadata: dict[str, Any] | None,
+     tiff_tags: dict[str, Any] | None = None,
++    time_index: int | None = None,
+ ) -> Spacing:
+     """Combine the best available spacing sources into a single ``Spacing``.
+ 
+@@ -250,7 +258,7 @@ def resolve_spacing(
+     > unknown. ``tiff_tags`` is a dict with ``XResolution``/``YResolution`` and
+     ``ResolutionUnit`` keys (as read from ``tifffile.TiffPage.tags``).
+     """
+-    spacing = parse_spacing_ome(ome_metadata)
++    spacing = parse_spacing_ome(ome_metadata, time_index)
+     if not spacing.complete:
+         imagej = parse_spacing_imagej(imagej_metadata)
+         tags = tiff_tags or {}
+@@ -260,6 +268,15 @@ def resolve_spacing(
+         # OME wins per-axis; fill gaps from ImageJ/TIFF.
+         sx = spacing.x if spacing.x is not None else _resolution_to_um_per_px(xres, resunit)
+         sy = spacing.y if spacing.y is not None else _resolution_to_um_per_px(yres, resunit)
++        # ImageJ uses its declared unit for TIFF densities when ResolutionUnit
++        # is NONE. It does not make a metadata-free TIFF physically calibrated.
++        ij_unit = (imagej_metadata or {}).get("unit")
++        if resunit in (None, 1) and ij_unit and str(ij_unit).strip().lower() not in {"pixel", "pixels"}:
++            factor = to_um(1.0, str(ij_unit))
++            if sx is None and xres is not None:
++                sx = _resolution_to_um_per_px(xres, 5) * factor
++            if sy is None and yres is not None:
++                sy = _resolution_to_um_per_px(yres, 5) * factor
+         sz = spacing.z if spacing.z is not None else imagej.z
+         spacing = Spacing(sx, sy, sz)
+     return spacing
+diff --git a/src/organoid_analysis/microscopy_io/tiff_contract.py b/src/organoid_analysis/microscopy_io/tiff_contract.py
+index 580ae7d..9473b95 100644
+--- a/src/organoid_analysis/microscopy_io/tiff_contract.py
++++ b/src/organoid_analysis/microscopy_io/tiff_contract.py
+@@ -36,7 +36,7 @@ import numpy as np
+ import pandas as pd
+ import tifffile
+ 
+-from .metadata import SPACING_ATOL_UM, SPACING_RTOL, to_um
++from .metadata import SPACING_ATOL_UM, SPACING_RTOL, to_um, validate_z_positions
+ 
+ REQUIRED = ["sample_id", "condition", "biological_replicate", "image_path"]
+ PATH_FIELDS = ["image_path", "structure_path", "calcein_path", "pi_path", "probability_path", "labels_path", "truth_labels_path"]
+@@ -145,23 +145,21 @@ def ome_spacing(xml: str | None, series_index: int = 0, time_index: int | None =
+     for axis in "ZYX":
+         value = pixel.get(f"PhysicalSize{axis}")
+         if value is None:
+-            return None
+-        values.append(to_um(float(value), pixel.get(f"PhysicalSize{axis}Unit", "µm")))
+-    values = np.asarray(values, float)
+-    if not np.isfinite(values).all() or (values <= 0).any():
+-        raise ValueError("Invalid OME physical spacing")
++            values.append(None)
++        else:
++            converted = to_um(float(value), pixel.get(f"PhysicalSize{axis}Unit", "µm"))
++            if not np.isfinite(converted) or converted <= 0:
++                raise ValueError("Invalid OME physical spacing")
++            values.append(converted)
+     # When plane positions are available, reject a nonuniform Z grid.
+     positions = {}
+     for plane in pixel.findall("{*}Plane"):
+         if int(plane.get("TheT", "0")) == (time_index or 0) and int(plane.get("TheC", "0")) == 0:
+             if plane.get("PositionZ") is not None:
+-                positions[int(plane.get("TheZ", "0"))] = to_um(float(plane.get("PositionZ")), plane.get("PositionZUnit", "µm"))
+-    if len(positions) >= 3:
+-        indices = np.array(sorted(positions))
+-        zvalues = np.array([positions[k] for k in indices])
+-        steps = np.abs(np.diff(zvalues) / np.diff(indices))
+-        if not np.allclose(steps, values[0], rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
+-            raise ValueError("OME plane positions disagree with a uniformly spaced Z grid; resample before analysis")
++                positions[int(plane.get("TheZ", "0"))] = to_um(float(plane.get("PositionZ")), plane.get("PositionZUnit", "reference frame"))
++    validate_z_positions(positions, values[0])
++    if any(value is None for value in values):
++        return None
+     return tuple(values)
+ 
+ 
+@@ -268,7 +266,21 @@ def load_truth_labels(row: dict, expected_shape: tuple[int, int, int], spacing:
+     return truth
+ 
+ 
++def validate_label_export(labels: np.ndarray, spacing: tuple) -> None:
++    """Validate the lossless OME uint32 export contract before any write."""
++    if not isinstance(labels, np.ndarray) or labels.ndim != 3 or not labels.size:
++        raise ValueError("Export requires a nonempty 3D label volume")
++    if not np.issubdtype(labels.dtype, np.integer) or np.any(labels < 0):
++        raise ValueError("Export requires nonnegative integer labels")
++    if int(labels.max()) > np.iinfo(np.uint32).max:
++        raise ValueError("Label IDs exceed the uint32 OME export range; refusing lossy conversion")
++    values = np.asarray(spacing, dtype=float)
++    if values.shape != (3,) or not np.isfinite(values).all() or (values <= 0).any():
++        raise ValueError("Export spacing must contain three positive finite values")
++
++
+ def write_labels(path: Path, labels: np.ndarray, spacing: tuple) -> None:
++    validate_label_export(labels, spacing)
+     tifffile.imwrite(path, labels.astype(np.uint32), ome=True, photometric="minisblack",
+                      compression="zlib", metadata={"axes": "ZYX", "PhysicalSizeZ": spacing[0],
+                      "PhysicalSizeY": spacing[1], "PhysicalSizeX": spacing[2],
+@@ -283,6 +295,12 @@ def sha256(path: str | Path) -> str:
+     return digest.hexdigest()
+ 
+ 
++def source_code_hashes() -> dict[str, str]:
++    """Hash the complete installed package, with collision-free relative paths."""
++    root = Path(__file__).resolve().parent.parent
++    return {str(path.relative_to(root)): sha256(path) for path in sorted(root.rglob("*.py"))}
++
++
+ def git_commit_hash(repo_root: Path | None = None) -> str | None:
+     """Best-effort current git commit hash, with a "-dirty" suffix when the
+     working tree has uncommitted changes. Returns None (never raises) when
+diff --git a/src/organoid_analysis/microscopy_io/zstack_reader.py b/src/organoid_analysis/microscopy_io/zstack_reader.py
+index 8108b9f..2639d26 100644
+--- a/src/organoid_analysis/microscopy_io/zstack_reader.py
++++ b/src/organoid_analysis/microscopy_io/zstack_reader.py
+@@ -8,8 +8,8 @@ layouts:
+ 
+ We never assume "page order == Z". Axis semantics are resolved from the
+ TIFF series ``axes`` string / OME-XML DimensionOrder / ImageJ hyperstack
+-metadata. Time (T>1) is not spliced into the volume; it is carried for the UI
+-to pick a single time point. RGB data (S/Q axes or samples-per-pixel > 1) is
++metadata. Time (T>1) requires an explicit time_index; it is never silently
++discarded. RGB data (S/Q axes or samples-per-pixel > 1) is
+ rejected rather than silently treated as grey.
+ """
+ 
+@@ -51,7 +51,7 @@ def read_axes(path: str | Path) -> str:
+         return tf.series[0].axes
+ 
+ 
+-def load_zstack(path: str | Path) -> ZStack:
++def load_zstack(path: str | Path, time_index: int | None = None) -> ZStack:
+     """Load a Z-stack TIFF and return a normalised :class:`ZStack`.
+ 
+     Raises:
+@@ -86,8 +86,6 @@ def load_zstack(path: str | Path) -> ZStack:
+         else:
+             samples = None
+ 
+-        spacing = resolve_spacing(ome_metadata, imagej_metadata, tiff_tags)
+-
+         if reject_rgb(axes, samples):
+             raise ValueError(
+                 "RGB/RGBA image detected (samples-per-pixel > 1). This is not "
+@@ -112,7 +110,13 @@ def load_zstack(path: str | Path) -> ZStack:
+         # After reorder, dims are (T, C, Z, Y, X) minimal form.
+         frames = int(data.shape[0])
+         channels = int(data.shape[1])
+-        volume = data[0]  # (C, Z, Y, X)
++        if frames > 1 and time_index is None:
++            raise ValueError("Multiple time frames require an explicit time_index; select a single frame before upload.")
++        selected_time = 0 if time_index is None else time_index
++        if isinstance(selected_time, bool) or not isinstance(selected_time, int) or not 0 <= selected_time < frames:
++            raise ValueError("time_index is outside the TIFF time axis")
++        spacing = resolve_spacing(ome_metadata, imagej_metadata, tiff_tags, selected_time)
++        volume = data[selected_time]  # (C, Z, Y, X)
+ 
+         is_multichannel = channels > 1
+         if not is_multichannel:
+@@ -123,6 +127,7 @@ def load_zstack(path: str | Path) -> ZStack:
+         "imagej_metadata": imagej_metadata,
+         "tiff_tags": tiff_tags,
+         "source": str(path),
++        "time_index": selected_time,
+     }
+     return ZStack(
+         volume=volume,
+diff --git a/src/organoid_analysis/quantification/multilevel_relationships/hierarchy.py b/src/organoid_analysis/quantification/multilevel_relationships/hierarchy.py
+index 4701b57..1645da9 100644
+--- a/src/organoid_analysis/quantification/multilevel_relationships/hierarchy.py
++++ b/src/organoid_analysis/quantification/multilevel_relationships/hierarchy.py
+@@ -19,7 +19,9 @@ def assign_parents_by_overlap(parent_labels: np.ndarray, child_labels: np.ndarra
+     overlap = (parent_labels > 0) & (child_labels > 0)
+     if overlap.any():
+         pairs, counts = np.unique(
+-            np.column_stack((child_labels[overlap], parent_labels[overlap])), axis=0, return_counts=True
++            # Mixed int64/uint64 would promote to float64 and merge IDs >2**53.
++            np.column_stack((child_labels[overlap].astype(np.uint64),
++                             parent_labels[overlap].astype(np.uint64))), axis=0, return_counts=True
+         )
+         for (child_id, parent_id), count in zip(pairs, counts):
+             by_child[int(child_id)].append((int(parent_id), int(count)))
+diff --git a/src/organoid_analysis/quantification/multilevel_relationships/validation.py b/src/organoid_analysis/quantification/multilevel_relationships/validation.py
+index 23845d1..bded684 100644
+--- a/src/organoid_analysis/quantification/multilevel_relationships/validation.py
++++ b/src/organoid_analysis/quantification/multilevel_relationships/validation.py
+@@ -22,6 +22,8 @@ def validate_labels(name: str, labels: np.ndarray, expected_shape: tuple[int, in
+         raise ValueError(f"{name} must contain nonnegative integer instance IDs")
+     if np.issubdtype(labels.dtype, np.signedinteger) and np.any(labels < 0):
+         raise ValueError(f"{name} must contain nonnegative integer instance IDs")
++    if labels.size and int(labels.max()) > np.iinfo(np.int64).max:
++        raise ValueError(f"{name} IDs exceed the signed int64 feature-table range")
+ 
+ 
+ def validate_inputs(
+@@ -40,6 +42,6 @@ def validate_inputs(
+             raise ValueError("nucleus_intensity must be a 3D (Z, Y, X) image")
+         if nucleus_intensity.shape != organoid_labels.shape:
+             raise ValueError("nucleus_intensity must match label-mask shape")
+-        if not np.issubdtype(nucleus_intensity.dtype, np.number) or not np.isfinite(nucleus_intensity).all():
+-            raise ValueError("nucleus_intensity must be finite numeric data")
++        if not (np.issubdtype(nucleus_intensity.dtype, np.integer) or np.issubdtype(nucleus_intensity.dtype, np.floating)) or not np.isfinite(nucleus_intensity).all():
++            raise ValueError("nucleus_intensity must be finite real numeric data")
+     return validate_spacing(spacing_zyx_um)
+diff --git a/src/organoid_analysis/result_export/measurement_tables.py b/src/organoid_analysis/result_export/measurement_tables.py
+index fd057c7..196ffa7 100644
+--- a/src/organoid_analysis/result_export/measurement_tables.py
++++ b/src/organoid_analysis/result_export/measurement_tables.py
+@@ -16,13 +16,30 @@ def _json_default(value):
+ 
+ def export_results(output_directory: str | Path, *, organoids: pd.DataFrame, cells: pd.DataFrame,
+                    nuclei: pd.DataFrame, edges: pd.DataFrame, qc_flags: pd.DataFrame, summary: dict,
+-                   label_masks: dict[str, object] | None = None,
++                   label_masks: dict[str, np.ndarray] | None = None,
+                    spacing_zyx_um: tuple[float, float, float] | None = None) -> dict[str, str]:
+     """Write the stable Result-like hierarchy; output must be new or empty."""
+     output = Path(output_directory).resolve()
+     if output.exists() and any(output.iterdir()):
+         raise FileExistsError(f"Output directory is not empty: {output}")
++    if label_masks is not None:
++        if spacing_zyx_um is None:
++            raise ValueError("spacing_zyx_um is required when exporting label masks")
++        from organoid_analysis.microscopy_io.tiff_contract import (
++            validate_label_export,
++            write_labels,
++        )
++        expected_shape = None
++        for level, labels in label_masks.items():
++            if level not in {"organoid", "cell", "nucleus"}:
++                raise ValueError(f"Unknown label-mask level: {level}")
++            validate_label_export(labels, spacing_zyx_um)
++            if expected_shape is not None and labels.shape != expected_shape:
++                raise ValueError("Export label-mask shapes must match")
++            expected_shape = labels.shape
+     (output / "features").mkdir(parents=True, exist_ok=True)
++    sentinel = output / "RUN_INCOMPLETE.txt"
++    sentinel.write_text("Export incomplete. Do not interpret partial outputs.\n", encoding="utf-8")
+     (output / "qc").mkdir(parents=True, exist_ok=True)
+     (output / "summary").mkdir(parents=True, exist_ok=True)
+     paths = {
+@@ -38,16 +55,13 @@ def export_results(output_directory: str | Path, *, organoids: pd.DataFrame, cel
+     nuclei.to_parquet(paths["nucleus_features"], index=False)
+     edges.to_parquet(paths["cell_topology_edges"], index=False)
+     qc_flags.to_parquet(paths["qc_flags"], index=False)
+-    paths["analysis_summary"].write_text(json.dumps(summary, indent=2, default=_json_default), encoding="utf-8")
+     if label_masks is not None:
+-        if spacing_zyx_um is None:
+-            raise ValueError("spacing_zyx_um is required when exporting label masks")
+-        from organoid_analysis.microscopy_io.tiff_contract import write_labels
+         for level, labels in label_masks.items():
+-            if level not in {"organoid", "cell", "nucleus"}:
+-                raise ValueError(f"Unknown label-mask level: {level}")
+             path = output / "masks" / f"{level}_labels.ome.tif"
+             path.parent.mkdir(parents=True, exist_ok=True)
+             write_labels(path, labels, spacing_zyx_um)
+             paths[f"{level}_labels"] = path
++    # Publish completion only after every table and mask has been written.
++    paths["analysis_summary"].write_text(json.dumps(summary, indent=2, default=_json_default), encoding="utf-8")
++    sentinel.unlink()
+     return {key: str(value) for key, value in paths.items()}
+diff --git a/src/organoid_analysis/segmentation/cellpose_inference.py b/src/organoid_analysis/segmentation/cellpose_inference.py
+index dace9e4..0e200c8 100644
+--- a/src/organoid_analysis/segmentation/cellpose_inference.py
++++ b/src/organoid_analysis/segmentation/cellpose_inference.py
+@@ -15,8 +15,14 @@ import numpy as np
+ import tifffile
+ 
+ from organoid_analysis import __version__
+-from organoid_analysis.microscopy_io import Spacing, ZStack, load_zstack, read_axes
+-from organoid_analysis.microscopy_io.tiff_contract import git_commit_hash
++from organoid_analysis.microscopy_io import (
++    Spacing,
++    ZStack,
++    load_zstack,
++    read_axes,
++    validate_voxel_spacing_xyz,
++)
++from organoid_analysis.microscopy_io.tiff_contract import git_commit_hash, source_code_hashes
+ from organoid_analysis.microscopy_io.tiff_contract import sha256 as _hash_file
+ from organoid_analysis.segmentation.paths import SEGMENTATION_OUTPUT_DIR, detect_torch_acceleration
+ 
+@@ -103,7 +109,7 @@ def read_stack(path: str | Path) -> np.ndarray:
+     return stack
+ 
+ 
+-def read_stack_multichannel(path: str | Path) -> ZStack:
++def read_stack_multichannel(path: str | Path, time_index: int | None = None) -> ZStack:
+     """Axis-aware TIFF load: resolves OME/ImageJ metadata instead of assuming
+     a plain 3D array. Returns a :class:`ZStack` whose ``volume`` is ``(Z,Y,X)``
+     for single-channel input or ``(C,Z,Y,X)`` when ``is_multichannel`` is set,
+@@ -116,13 +122,14 @@ def read_stack_multichannel(path: str | Path) -> ZStack:
+     should keep working exactly as they did before this function existed.
+     """
+     try:
+-        zstack = load_zstack(path)
++        zstack = load_zstack(path, time_index=time_index)
+     except ValueError:
+         # Legacy plain multipage grayscale TIFFs are commonly reported as QYX
+         # or IYX. Only those explicitly metadata-free layouts may use the old
+         # reader; never reinterpret rejected CYX/RGB/ambiguous metadata as ZYX.
+         with tifffile.TiffFile(path) as handle:
+             if (read_axes(path).upper() not in {"QYX", "IYX"}
++                    or time_index not in (None, 0)
+                     or handle.ome_metadata is not None
+                     or getattr(handle, "imagej_metadata", None) is not None):
+                 raise
+@@ -194,6 +201,28 @@ def segment_stacks(
+     ``on_progress`` fraction, so the UI percentage climbs continuously instead of
+     staying pinned until the pass finishes.
+     """
++    if config.model_type not in _3D_CAPABLE:
++        raise ValueError("Unsupported 3D model_type")
++    for name in ("nuclei_diameter", "cell_diameter", "anisotropy", "xy_spacing_um", "xy_downsample"):
++        value = getattr(config, name)
++        if isinstance(value, bool) or not np.isfinite(value) or value <= 0:
++            raise ValueError(f"{name} must be finite and positive")
++    for name in ("nuclei_flow_threshold", "cell_flow_threshold", "flow3d_smooth"):
++        value = getattr(config, name)
++        if not np.isfinite(value) or value < 0:
++            raise ValueError(f"{name} must be finite and nonnegative")
++    for name in ("nuclei_cellprob_threshold", "cell_cellprob_threshold"):
++        if not np.isfinite(getattr(config, name)):
++            raise ValueError(f"{name} must be finite")
++    if isinstance(config.batch_size, bool) or not isinstance(config.batch_size, int) or config.batch_size < 1:
++        raise ValueError("batch_size must be a positive integer")
++    for name, volume in (("nuclei", nuclei), ("cells", cells)):
++        if volume is None and name == "cells":
++            continue
++        if not isinstance(volume, np.ndarray) or volume.ndim != 3 or min(volume.shape) < 2:
++            raise ValueError(f"{name} must be a 3D stack with at least two voxels per axis")
++        if not (np.issubdtype(volume.dtype, np.integer) or np.issubdtype(volume.dtype, np.floating)) or not np.isfinite(volume).all():
++            raise ValueError(f"{name} must contain finite real numeric intensities")
+     if cells is not None:
+         validate_stacks(nuclei, cells)
+     if on_progress:
+@@ -202,6 +231,8 @@ def segment_stacks(
+     downsample = config.xy_downsample
+     if not 0 < downsample <= 1.0:
+         raise ValueError("xy_downsample must be in (0, 1], with 1.0 meaning full resolution.")
++    if any(round(size * downsample) < 2 for size in nuclei.shape[1:]):
++        raise ValueError("xy_downsample would leave fewer than two XY pixels")
+     work_nuclei = nuclei
+     work_cells = cells
+     if downsample < 1.0:
+@@ -234,7 +265,7 @@ def segment_stacks(
+             nuclei_masks = _validated_mask(
+                 model.eval(
+                     work_nuclei,
+-                    diameter=config.nuclei_diameter,
++                    diameter=config.nuclei_diameter * downsample,
+                     flow_threshold=config.nuclei_flow_threshold,
+                     cellprob_threshold=config.nuclei_cellprob_threshold,
+                     **common,
+@@ -254,7 +285,7 @@ def segment_stacks(
+                     model.eval(
+                         cell_input,
+                         channel_axis=-1,
+-                        diameter=config.cell_diameter,
++                        diameter=config.cell_diameter * downsample,
+                         flow_threshold=config.cell_flow_threshold,
+                         cellprob_threshold=config.cell_cellprob_threshold,
+                         **common,
+@@ -281,7 +312,7 @@ def segment_stacks(
+ def _validated_mask(mask: np.ndarray, expected_shape: tuple[int, ...], name: str) -> np.ndarray:
+     """Validate model output before it reaches persistence or measurements."""
+     result = np.asarray(mask)
+-    if result.shape != expected_shape:
++    if result.ndim != 3 or result.shape != expected_shape:
+         raise RuntimeError(f"Cellpose returned {name} mask shape {result.shape}; expected {expected_shape}")
+     if not np.issubdtype(result.dtype, np.integer) or np.any(result < 0):
+         raise RuntimeError(f"Cellpose returned invalid {name} instance labels")
+@@ -423,6 +454,7 @@ def build_provenance(
+     return {
+         "pipeline_version": __version__,
+         "git_commit": git_commit_hash(),
++        "source_code_sha256": source_code_hashes(),
+         "timestamp_utc": datetime.now(UTC).isoformat(),
+         "python": sys.version,
+         "platform": platform.platform(),
+@@ -458,20 +490,24 @@ def save_result(
+     cell_channel: int | None = None,
+     cell_dtype: str | None = None,
+ ) -> SegmentationResult:
++    nuclei_masks = _validated_mask(nuclei_masks, nuclei_masks.shape, "nuclei")
++    if cell_masks is not None:
++        cell_masks = _validated_mask(cell_masks, nuclei_masks.shape, "cell")
++    validate_voxel_spacing_xyz(config_spacing(config))
+     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+     run_directory = output_directory / f"run-{timestamp}"
+     run_directory.mkdir(parents=True, exist_ok=False)
++    sentinel = run_directory / "RUN_INCOMPLETE.txt"
++    sentinel.write_text("Saving incomplete. Do not interpret partial outputs.\n", encoding="utf-8")
+ 
+     nuclei_mask_path = run_directory / "nuclei_masks_3d.tif"
+     summary_path = run_directory / "summary.json"
+     provenance_path = run_directory / "provenance.json"
+     archive_path = run_directory / "segmentation_results.zip"
+-    nuclei_masks = _validated_mask(nuclei_masks, nuclei_masks.shape, "nuclei")
+     paths = [nuclei_mask_path]
+     tifffile.imwrite(nuclei_mask_path, nuclei_masks, compression="zlib")
+     cell_count = 0
+     if cell_masks is not None:
+-        cell_masks = _validated_mask(cell_masks, nuclei_masks.shape, "cell")
+         cell_mask_path = run_directory / "cell_masks_3d.tif"
+         tifffile.imwrite(cell_mask_path, cell_masks, compression="zlib")
+         cell_count = _instance_count(cell_masks)
+@@ -506,6 +542,7 @@ def save_result(
+         for path in paths:
+             compression = zipfile.ZIP_DEFLATED if path in (summary_path, provenance_path) else zipfile.ZIP_STORED
+             archive.write(path, path.name, compress_type=compression)
++    sentinel.unlink()
+ 
+     return SegmentationResult(
+         run_directory=run_directory,
+@@ -524,6 +561,8 @@ def list_saved_results(output_directory: Path = SEGMENTATION_OUTPUT_DIR) -> list
+         return []
+     results = []
+     for run_directory in output_directory.glob("run-*"):
++        if (run_directory / "RUN_INCOMPLETE.txt").exists():
++            continue
+         summary_path = run_directory / "summary.json"
+         nuclei_path = run_directory / "nuclei_masks_3d.tif"
+         if not summary_path.is_file() or not nuclei_path.is_file():
+diff --git a/src/organoid_analysis/statistics/exploration.py b/src/organoid_analysis/statistics/exploration.py
+index 19a7a46..f97f572 100644
+--- a/src/organoid_analysis/statistics/exploration.py
++++ b/src/organoid_analysis/statistics/exploration.py
+@@ -334,11 +334,19 @@ def prepare_binary_data(
+     binary = df[df[group_col].isin([well1, well2])].copy()
+     binary["Label"] = (binary[group_col] == well1).astype(int)
+     label_map = {1: well1, 0: well2}
+-    X = binary[feature_cols].fillna(binary[feature_cols].mean()).values
++    # Preserve missing values until after splitting: a full-data mean leaks
++    # holdout information into training observations.
++    X = binary[feature_cols].to_numpy(dtype=float)
+     y = binary["Label"].values
+     return X, y, label_map
+ 
+ 
++def _check_training_features(X: np.ndarray) -> None:
++    """A training mean cannot be estimated for an entirely missing feature."""
++    if np.isnan(X).all(axis=0).any():
++        raise ValueError("Training data contain an entirely missing feature; mean imputation is undefined")
++
++
+ def train_binary_classifiers(
+     X: np.ndarray,
+     y: np.ndarray,
+@@ -356,19 +364,22 @@ def train_binary_classifiers(
+     Exploratory tutorial workflow output, not a validated classifier.
+     """
+     from sklearn.ensemble import RandomForestClassifier
++    from sklearn.impute import SimpleImputer
+     from sklearn.linear_model import LogisticRegression
+     from sklearn.metrics import accuracy_score, roc_auc_score
+     from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
++    from sklearn.pipeline import make_pipeline
+     from sklearn.preprocessing import StandardScaler
+ 
+     X_train, X_test, y_train, y_test = train_test_split(
+         X, y, test_size=0.3, random_state=42, stratify=y
+     )
+-    scaler = StandardScaler()
++    _check_training_features(X_train)
++    scaler = make_pipeline(SimpleImputer(keep_empty_features=True), StandardScaler())
+     X_train_s = scaler.fit_transform(X_train)
+     X_test_s = scaler.transform(X_test)
+ 
+-    ratio = (y == 0).sum() / max((y == 1).sum(), 1)
++    ratio = (y_train == 0).sum() / max((y_train == 1).sum(), 1)
+     models = {
+         "Logistic Regression": LogisticRegression(
+             max_iter=1000, random_state=42, class_weight="balanced"
+@@ -393,14 +404,22 @@ def train_binary_classifiers(
+         logging.getLogger(__name__).warning(
+             "XGBoost unavailable (%s); continuing without it.", error
+         )
+-    cv = StratifiedKFold(n_splits=min(5, np.bincount(y).min()), shuffle=True, random_state=42)
++    n_splits = min(5, int(np.bincount(y_train).min()))
++    if n_splits < 2:
++        raise ValueError("At least two training observations per class are required for cross-validation")
++    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
++    for train_indices, _ in cv.split(X_train, y_train):
++        _check_training_features(X_train[train_indices])
+ 
+     summary_rows = []
+     fitted = {}
+     predictions = {}
+     for name, model in models.items():
+         model.fit(X_train_s, y_train)
+-        cv_scores = cross_val_score(model, X_train_s, y_train, cv=cv, scoring="accuracy")
++        cv_scores = cross_val_score(
++            make_pipeline(SimpleImputer(keep_empty_features=True), StandardScaler(), model),
++            X_train, y_train, cv=cv, scoring="accuracy", error_score="raise",
++        )
+         y_pred = model.predict(X_test_s)
+         acc = accuracy_score(y_test, y_pred)
+         y_prob = model.predict_proba(X_test_s)[:, -1]
+@@ -419,8 +438,10 @@ def train_binary_classifiers(
+ 
+     summary = pd.DataFrame(summary_rows)
+     if not summary.empty:
+-        best = summary.loc[summary["Test_ROC_AUC"].idxmax(), "Model"]
++        best = summary.loc[summary["CV_Accuracy"].idxmax(), "Model"]
+         summary.attrs["best_model"] = best
++        summary.attrs["selection_metric"] = "training CV accuracy"
++        summary.attrs["evaluation_scope"] = "object split; biological generalization NOT ASSESSED"
+     return summary, fitted, scaler, predictions, label_map
+ 
+ 
+@@ -457,17 +478,20 @@ def train_multiclass_classifier(
+     docs/PARAMETERS.md ("Exploratory statistics/ML parameters").
+     """
+     from sklearn.ensemble import RandomForestClassifier
++    from sklearn.impute import SimpleImputer
+     from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+     from sklearn.model_selection import train_test_split
++    from sklearn.pipeline import make_pipeline
+     from sklearn.preprocessing import LabelEncoder, StandardScaler
+ 
+     le = LabelEncoder()
+     y = le.fit_transform(df[label_col].astype(str).values)
+-    X = df[feature_cols].fillna(df[feature_cols].mean()).values
++    X = df[feature_cols].to_numpy(dtype=float)
+     X_train, X_test, y_train, y_test = train_test_split(
+         X, y, test_size=0.3, random_state=42, stratify=y
+     )
+-    scaler = StandardScaler()
++    _check_training_features(X_train)
++    scaler = make_pipeline(SimpleImputer(keep_empty_features=True), StandardScaler())
+     X_train_s = scaler.fit_transform(X_train)
+     X_test_s = scaler.transform(X_test)
+ 
+@@ -610,16 +634,20 @@ def cluster_feature_importance(df: pd.DataFrame, feature_cols: list[str]) -> pd.
+     docs/PARAMETERS.md ("Exploratory statistics/ML parameters").
+     """
+     from sklearn.ensemble import RandomForestClassifier
++    from sklearn.impute import SimpleImputer
+     from sklearn.model_selection import train_test_split
++    from sklearn.pipeline import make_pipeline
+     from sklearn.preprocessing import StandardScaler
+ 
+-    X = df[feature_cols].fillna(df[feature_cols].mean()).values
++    X = df[feature_cols].to_numpy(dtype=float)
+     y = df["Cluster"].values
+-    scaler = StandardScaler()
+-    X_s = scaler.fit_transform(X)
+     X_train, X_test, y_train, y_test = train_test_split(
+-        X_s, y, test_size=0.3, random_state=42, stratify=y
++        X, y, test_size=0.3, random_state=42, stratify=y
+     )
++    _check_training_features(X_train)
++    scaler = make_pipeline(SimpleImputer(keep_empty_features=True), StandardScaler())
++    X_train = scaler.fit_transform(X_train)
++    X_test = scaler.transform(X_test)
+     rf = RandomForestClassifier(n_estimators=200, max_depth=15, random_state=42, n_jobs=-1)
+     rf.fit(X_train, y_train)
+     importance = pd.DataFrame(
+diff --git a/src/organoid_analysis/statistics/inference.py b/src/organoid_analysis/statistics/inference.py
+index 42eafda..4f50830 100644
+--- a/src/organoid_analysis/statistics/inference.py
++++ b/src/organoid_analysis/statistics/inference.py
+@@ -136,7 +136,10 @@ def condition_pairwise_tests(
+     empty result as "not enough data to test", not an error.
+     """
+     eligible = objects[objects.morphology_eligible.astype(bool)].copy()
+-    eligible["_replicate_key"] = eligible.condition.astype(str) + "::" + eligible.biological_replicate.astype(str)
++    # Factorize the pair without delimiter collisions (e.g. A::B/C vs A/B::C).
++    eligible["_replicate_key"] = eligible.groupby(
++        ["condition", "biological_replicate"], sort=False, dropna=False
++    ).ngroup()
+ 
+     pairwise_frames = []
+     omnibus: dict[str, dict] = {}
+@@ -144,6 +147,10 @@ def condition_pairwise_tests(
+         if feature not in eligible.columns:
+             continue
+         d = eligible[[feature, "condition", "_replicate_key"]].dropna().copy()
++        if not np.isfinite(d[feature].to_numpy(dtype=float)).all():
++            raise ValueError(f"{feature} contains nonfinite eligible measurements")
++        if feature in LOG10_FEATURES and (d[feature] <= 0).any():
++            raise ValueError(f"{feature} must be positive for log10 inference; no clipping is permitted")
+         replicate_counts = d.groupby("condition")["_replicate_key"].nunique()
+         keep_conditions = replicate_counts[replicate_counts >= min_replicates_per_condition].index
+         d = d[d.condition.isin(keep_conditions)]
+@@ -151,7 +158,7 @@ def condition_pairwise_tests(
+         if len(conditions) < 2:
+             continue
+         if feature in LOG10_FEATURES:
+-            d[feature] = np.log10(d[feature].clip(lower=np.finfo(float).tiny))
++            d[feature] = np.log10(d[feature])
+         d["condition"] = pd.Categorical(d.condition, categories=conditions)
+ 
+         fit, model_used = fit_model(d, feature, "_replicate_key")
+diff --git a/src/organoid_analysis/visualization/surface_rendering.py b/src/organoid_analysis/visualization/surface_rendering.py
+index 37da92a..f1a6030 100644
+--- a/src/organoid_analysis/visualization/surface_rendering.py
++++ b/src/organoid_analysis/visualization/surface_rendering.py
+@@ -37,7 +37,7 @@ def _poly_repr(pd: pv.PolyData) -> dict:
+         "bounds": list(float(v) for v in pd.bounds),
+         "has_scalars": bool("label" in pd.array_names),
+         "scalars": (
+-            np.asarray(pd["label"]).astype(np.uint8).tolist()
++            np.asarray(pd["label"]).astype(np.uint32).tolist()
+             if "label" in pd.array_names
+             else None
+         ),
+@@ -64,7 +64,7 @@ def build_surface(
+     z, y, x = volume.shape
+     grid = pv.ImageData(dimensions=(x, y, z), spacing=(dx, dy, dz))
+     grid.point_data["scalar"] = np.ascontiguousarray(
+-        volume.ravel(order="F"), dtype=volume.dtype
++        volume.ravel(order="C"), dtype=volume.dtype
+     )
+ 
+     surfaces: list[Surface] = []
+@@ -74,13 +74,13 @@ def build_surface(
+             mask = np.asarray(volume == label, dtype=volume.dtype)
+             lab_grid = pv.ImageData(dimensions=(x, y, z), spacing=(dx, dy, dz))
+             lab_grid.point_data["scalar"] = np.ascontiguousarray(
+-                mask.ravel(order="F"), dtype=volume.dtype
++                mask.ravel(order="C"), dtype=volume.dtype
+             )
+             try:
+                 mesh = lab_grid.contour([0.5], scalars="scalar")
+             except Exception:
+                 continue
+-            mesh["label"] = np.full(mesh.n_points, label, dtype=np.uint8)
++            mesh["label"] = np.full(mesh.n_points, label, dtype=np.uint32)
+             surfaces.append(
+                 Surface(mesh, int(label), colors[i % len(colors)], opacity=0.85)
+             )
+diff --git a/src/organoid_analysis/web_interface/analysis_ui.py b/src/organoid_analysis/web_interface/analysis_ui.py
+index 244b751..23ccd58 100644
+--- a/src/organoid_analysis/web_interface/analysis_ui.py
++++ b/src/organoid_analysis/web_interface/analysis_ui.py
+@@ -345,7 +345,7 @@ def _render_ml(available: dict[str, Path]) -> None:
+                 df, feature_cols, group_col, g1, g2
+             )
+             summary, fitted, _, _, _ = analysis.train_binary_classifiers(X, y, label_map)
+-            st.success(f"Best model: {summary.attrs.get('best_model')}")
++            st.success(f"Model selected by training CV accuracy: {summary.attrs.get('best_model')}")
+             st.dataframe(summary)
+             importance = analysis.feature_importance(fitted, feature_cols)
+             st.markdown("**Feature importance (consensus across models)**")
+diff --git a/src/organoid_analysis/web_interface/multilevel_results.py b/src/organoid_analysis/web_interface/multilevel_results.py
+index a563f70..4e9df14 100644
+--- a/src/organoid_analysis/web_interface/multilevel_results.py
++++ b/src/organoid_analysis/web_interface/multilevel_results.py
+@@ -17,6 +17,24 @@ RESULT_TABLES = {
+ }
+ 
+ 
++def read_registered_organoid_labels(path: str | Path, expected_shape: tuple[int, ...],
++                                   spacing_zyx_um: tuple[float, float, float]) -> np.ndarray:
++    """Check uploaded mask axes and physical grid before joining hierarchies."""
++    from organoid_analysis.microscopy_io.tiff_contract import (
++        SPACING_ATOL_UM,
++        SPACING_RTOL,
++        read_tiff,
++    )
++    stack, spacing, _ = read_tiff(path)
++    if stack.shape[0] != 1 or stack.shape[1:] != expected_shape:
++        raise ValueError("Organoid mask must be a single channel on the cell/nucleus ZYX grid")
++    if spacing is None:
++        raise ValueError("Organoid mask spacing is missing; use a calibrated OME-TIFF or the analyze-3d CLI with explicit spacing")
++    if not np.allclose(spacing, spacing_zyx_um, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
++        raise ValueError("Organoid mask spacing conflicts with the saved cell/nucleus grid")
++    return stack[0]
++
++
+ def _session_spacing_zyx() -> tuple[float, float, float] | None:
+     """Return saved Cellpose spacing when its current-session masks exist."""
+     import streamlit as st
+@@ -90,8 +108,8 @@ def _render_current_session_runner() -> None:
+             st.error("Saved voxel spacing is unavailable; use the analyze-3d CLI with explicit spacing instead.")
+             return
+         try:
++            from organoid_analysis.microscopy_io.tiff_contract import sha256, source_code_hashes
+             from organoid_analysis.result_export.measurement_tables import export_results
+-            from organoid_analysis.segmentation.cellpose_inference import read_stack
+             from organoid_analysis.workflows.multilevel_measurement_workflow import (
+                 analyze_multilevel_3d,
+             )
+@@ -99,10 +117,19 @@ def _render_current_session_runner() -> None:
+             with tempfile.NamedTemporaryFile(suffix=".tif") as handle:
+                 handle.write(organoid_upload.getbuffer())
+                 handle.flush()
+-                organoid_labels = read_stack(handle.name)
++                organoid_labels = read_registered_organoid_labels(handle.name, cell_labels.shape, spacing)
++                organoid_sha256 = sha256(handle.name)
+             metadata = {"sample_id": sample_id, "well_id": well_id, "field_id": field_id}
+             with st.spinner("Measuring hierarchy, morphology, topology, spatial features, and QC…"):
+                 result = analyze_multilevel_3d(organoid_labels, cell_labels, nucleus_labels, spacing, metadata=metadata)
++                import hashlib
++                result.summary["provenance"] = {
++                    "source_code_sha256": source_code_hashes(),
++                    "organoid_tiff_sha256": organoid_sha256,
++                    "session_masks": {name: {"sha256": hashlib.sha256(np.ascontiguousarray(mask).tobytes()).hexdigest(),
++                                               "shape": list(mask.shape), "dtype": str(mask.dtype), "order": "C"}
++                                      for name, mask in (("cell", cell_labels), ("nucleus", nucleus_labels))},
++                }
+                 export_results(output, organoids=result.organoid_features, cells=result.cell_features,
+                                nuclei=result.nucleus_features, edges=result.cell_topology_edges,
+                                qc_flags=result.qc_flags, summary=result.summary,
+@@ -117,6 +144,8 @@ def _render_current_session_runner() -> None:
+ def load_multilevel_result_tables(result_directory: str | Path) -> tuple[dict, dict[str, pd.DataFrame]]:
+     """Load a completed `analyze-3d` result directory without recomputation."""
+     root = Path(result_directory).expanduser().resolve()
++    if (root / "RUN_INCOMPLETE.txt").exists():
++        raise ValueError("This result export is incomplete; do not interpret partial outputs")
+     summary_path = root / "summary" / "analysis_summary.json"
+     if not summary_path.is_file():
+         raise FileNotFoundError("Select a Result directory containing summary/analysis_summary.json")
+diff --git a/src/organoid_analysis/web_interface/segmentation_workspace.py b/src/organoid_analysis/web_interface/segmentation_workspace.py
+index 1d2541d..1f5c3e6 100644
+--- a/src/organoid_analysis/web_interface/segmentation_workspace.py
++++ b/src/organoid_analysis/web_interface/segmentation_workspace.py
+@@ -774,8 +774,8 @@ def render_sidebar() -> SegmentationConfig:
+             xy_spacing_um=xy_spacing_um,
+             xy_spacing_source=xy_spacing_source,
+             metadata_xy_spacing_um=metadata_xy_spacing_um,
+-            nuclei_flow_threshold=st.slider("Nuclei flow threshold", 0.0, 1.0, backend_defaults.nuclei_flow_threshold),
+-            cell_flow_threshold=st.slider("Cell flow threshold", 0.0, 1.0, backend_defaults.cell_flow_threshold),
++            nuclei_flow_threshold=st.slider("Nuclei flow threshold (unused in 3D)", 0.0, 1.0, backend_defaults.nuclei_flow_threshold, disabled=True),
++            cell_flow_threshold=st.slider("Cell flow threshold (unused in 3D)", 0.0, 1.0, backend_defaults.cell_flow_threshold, disabled=True),
+             nuclei_cellprob_threshold=st.slider(
+                 "Nuclei cellprob threshold", -6.0, 6.0, backend_defaults.nuclei_cellprob_threshold
+             ),
+diff --git a/src/organoid_analysis/workflows/multilevel_measurement_workflow.py b/src/organoid_analysis/workflows/multilevel_measurement_workflow.py
+index 654879e..edc9818 100644
+--- a/src/organoid_analysis/workflows/multilevel_measurement_workflow.py
++++ b/src/organoid_analysis/workflows/multilevel_measurement_workflow.py
+@@ -59,13 +59,13 @@ def _add_nuclear_intensity(nuclei: pd.DataFrame, nucleus_labels: np.ndarray,
+     values = intensity[foreground].astype(float, copy=False)
+     counts = np.bincount(label_indices, minlength=len(ids)).astype(float)
+     sums = np.bincount(label_indices, weights=values, minlength=len(ids))
+-    sum_squares = np.bincount(label_indices, weights=values * values, minlength=len(ids))
+     minima = np.full(len(ids), np.inf)
+     maxima = np.full(len(ids), -np.inf)
+     np.minimum.at(minima, label_indices, values)
+     np.maximum.at(maxima, label_indices, values)
+     means = sums / counts
+-    variances = np.maximum(0.0, sum_squares / counts - means * means)
++    residuals = values - means[label_indices]
++    variances = np.bincount(label_indices, weights=residuals * residuals, minlength=len(ids)) / counts
+     stds = np.sqrt(variances)
+     measurements = pd.DataFrame({
+         "nucleus_id": ids,
+@@ -103,30 +103,30 @@ def _cell_nucleus_features(cells: pd.DataFrame, nuclei: pd.DataFrame) -> pd.Data
+         return result
+ 
+     nuclear = nuclei.loc[nuclei.cell_id > 0].copy()
+-    voxel_weights = nuclear["voxel_count"].astype(float)
+-    nuclear["_intensity_sum_squares"] = voxel_weights * (
+-        nuclear["std_nuclear_intensity"] ** 2 + nuclear["mean_nuclear_intensity"] ** 2
+-    )
+     intensity = nuclear.groupby("cell_id", sort=False).agg(
+         _nuclear_intensity_voxels=("voxel_count", "sum"),
+         integrated_nuclear_intensity=("integrated_nuclear_intensity", "sum"),
+         min_nuclear_intensity=("min_nuclear_intensity", "min"),
+         max_nuclear_intensity=("max_nuclear_intensity", "max"),
+-        _intensity_sum_squares=("_intensity_sum_squares", "sum"),
+     )
+     intensity["mean_nuclear_intensity"] = (
+         intensity["integrated_nuclear_intensity"] / intensity["_nuclear_intensity_voxels"]
+     )
+-    intensity["std_nuclear_intensity"] = np.sqrt(np.maximum(
+-        0.0,
+-        intensity["_intensity_sum_squares"] / intensity["_nuclear_intensity_voxels"]
+-        - intensity["mean_nuclear_intensity"] ** 2,
+-    ))
++    # Pool population variance using within- and between-nucleus residuals,
++    # avoiding cancellation of two nearly equal squared intensities.
++    cell_means = nuclear.cell_id.map(intensity["mean_nuclear_intensity"])
++    nuclear["_residual_sum_squares"] = nuclear.voxel_count.astype(float) * (
++        nuclear.std_nuclear_intensity ** 2 + (nuclear.mean_nuclear_intensity - cell_means) ** 2
++    )
++    intensity["std_nuclear_intensity"] = np.sqrt(
++        nuclear.groupby("cell_id")["_residual_sum_squares"].sum()
++        / intensity["_nuclear_intensity_voxels"]
++    )
+     intensity["CV_chromatin"] = np.divide(
+         intensity["std_nuclear_intensity"], intensity["mean_nuclear_intensity"],
+         out=np.full(len(intensity), np.nan), where=intensity["mean_nuclear_intensity"].to_numpy() != 0,
+     )
+-    intensity = intensity.drop(columns=["_nuclear_intensity_voxels", "_intensity_sum_squares"])
++    intensity = intensity.drop(columns=["_nuclear_intensity_voxels"])
+     return result.merge(intensity, on="cell_id", how="left", validate="one_to_one")
+ 
+ 
+diff --git a/src/organoid_analysis/workflows/organoid_measurement_workflow.py b/src/organoid_analysis/workflows/organoid_measurement_workflow.py
+index 719468e..3ae343c 100644
+--- a/src/organoid_analysis/workflows/organoid_measurement_workflow.py
++++ b/src/organoid_analysis/workflows/organoid_measurement_workflow.py
+@@ -23,6 +23,7 @@ from organoid_analysis.microscopy_io.tiff_contract import (
+     load_truth_labels,
+     read_manifest,
+     sha256,
++    source_code_hashes,
+     write_labels,
+ )
+ from organoid_analysis.phenotyping.viability import calibrate, classify
+@@ -47,26 +48,6 @@ from organoid_analysis.statistics.aggregation import make_summaries
+ from organoid_analysis.statistics.inference import condition_pairwise_tests
+ from organoid_analysis.validation.segmentation_metrics import match_instances
+ 
+-_PACKAGE_ROOT = Path(__file__).resolve().parent.parent
+-# Modules that implement the classical pipeline, now spread across the
+-# microscopy_io/segmentation/quantification/validation/phenotyping/statistics/
+-# result_export subpackages rather than living alongside this file; hashed
+-# together for the run's provenance record.
+-_CLASSIC_SOURCE_FILES = sorted([
+-    _PACKAGE_ROOT / "config.py",
+-    _PACKAGE_ROOT / "microscopy_io" / "tiff_contract.py",
+-    _PACKAGE_ROOT / "segmentation" / "watershed_instances.py",
+-    _PACKAGE_ROOT / "quantification" / "labels.py",
+-    _PACKAGE_ROOT / "quantification" / "cellular_measurements.py",
+-    _PACKAGE_ROOT / "quantification" / "features.py",
+-    _PACKAGE_ROOT / "validation" / "segmentation_metrics.py",
+-    _PACKAGE_ROOT / "statistics" / "inference.py",
+-    _PACKAGE_ROOT / "statistics" / "aggregation.py",
+-    _PACKAGE_ROOT / "phenotyping" / "viability.py",
+-    _PACKAGE_ROOT / "result_export" / "report.py",
+-    Path(__file__),
+-])
+-
+ 
+ def _is_substantive(path: Path) -> bool:
+     """True for entries that represent real content (exclude macOS/OS junk)."""
+@@ -153,7 +134,7 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
+                   "data_origin": origin, "python": sys.version, "platform": platform.platform(),
+                   "manifest": str(manifest_path), "manifest_sha256": sha256(manifest_path),
+                   "configuration": cfg, "status": "incomplete",
+-                  "source_code_sha256": {p.name: sha256(p) for p in _CLASSIC_SOURCE_FILES},
++                  "source_code_sha256": source_code_hashes(),
+                   "packages": {package: importlib.metadata.version(package) for package in ["numpy", "scipy", "scikit-image", "tifffile", "pandas", "matplotlib", "PyYAML"]},
+                   "input_files": [], "sample_metadata": {}}
+     paths = sorted({row[field] for row in design.to_dict("records") for field in PATH_FIELDS if row[field]})
+diff --git a/tests/microscopy_io/test_io.py b/tests/microscopy_io/test_io.py
+index 9822431..45c8646 100644
+--- a/tests/microscopy_io/test_io.py
++++ b/tests/microscopy_io/test_io.py
+@@ -60,7 +60,7 @@ def test_ome_units_convert_to_micrometres():
+ 
+ 
+ def test_nonuniform_z_positions_are_rejected():
+-    xml='<OME><Image><Pixels PhysicalSizeZ="2" PhysicalSizeY="1" PhysicalSizeX="1"><Plane TheZ="0" PositionZ="0"/><Plane TheZ="1" PositionZ="2"/><Plane TheZ="2" PositionZ="7"/></Pixels></Image></OME>'
++    xml='<OME><Image><Pixels PhysicalSizeZ="2" PhysicalSizeY="1" PhysicalSizeX="1"><Plane TheZ="0" PositionZUnit="µm" PositionZ="0"/><Plane TheZ="1" PositionZUnit="µm" PositionZ="2"/><Plane TheZ="2" PositionZUnit="µm" PositionZ="7"/></Pixels></Image></OME>'
+     with pytest.raises(ValueError,match='uniformly'):
+         ome_spacing(xml)
+ 
+diff --git a/tests/visualization/test_3d_preview.py b/tests/visualization/test_3d_preview.py
+index 2ebdcea..9ea3458 100644
+--- a/tests/visualization/test_3d_preview.py
++++ b/tests/visualization/test_3d_preview.py
+@@ -112,9 +112,9 @@ class SpacingMetadataTests(unittest.TestCase):
+             '<Image ID="Image:0"><Pixels ID="Pixels:0" DimensionOrder="XYZCT" '
+             'Type="uint16" SizeX="4" SizeY="3" SizeZ="3" SizeC="1" SizeT="1" '
+             'PhysicalSizeX="1" PhysicalSizeY="1" PhysicalSizeZ="2">'
+-            '<Plane TheZ="0" TheC="0" TheT="0" PositionZ="0"/>'
+-            '<Plane TheZ="1" TheC="0" TheT="0" PositionZ="2"/>'
+-            '<Plane TheZ="2" TheC="0" TheT="0" PositionZ="7"/>'
++            '<Plane TheZ="0" TheC="0" TheT="0" PositionZUnit="µm" PositionZ="0"/>'
++            '<Plane TheZ="1" TheC="0" TheT="0" PositionZUnit="µm" PositionZ="2"/>'
++            '<Plane TheZ="2" TheC="0" TheT="0" PositionZUnit="µm" PositionZ="7"/>'
+             '</Pixels></Image></OME>'
+         )
+         with self.assertRaisesRegex(ValueError, "uniformly"):
+@@ -127,9 +127,9 @@ class SpacingMetadataTests(unittest.TestCase):
+             '<Image ID="Image:0"><Pixels ID="Pixels:0" DimensionOrder="XYZCT" '
+             'Type="uint16" SizeX="4" SizeY="3" SizeZ="3" SizeC="1" SizeT="1" '
+             'PhysicalSizeX="1" PhysicalSizeY="1" PhysicalSizeZ="2">'
+-            '<Plane TheZ="0" TheC="0" TheT="0" PositionZ="0"/>'
+-            '<Plane TheZ="1" TheC="0" TheT="0" PositionZ="2"/>'
+-            '<Plane TheZ="2" TheC="0" TheT="0" PositionZ="4"/>'
++            '<Plane TheZ="0" TheC="0" TheT="0" PositionZUnit="µm" PositionZ="0"/>'
++            '<Plane TheZ="1" TheC="0" TheT="0" PositionZUnit="µm" PositionZ="2"/>'
++            '<Plane TheZ="2" TheC="0" TheT="0" PositionZUnit="µm" PositionZ="4"/>'
+             '</Pixels></Image></OME>'
+         )
+         s = parse_spacing_ome(xml)
+@@ -194,7 +194,9 @@ class ZStackReaderTests(unittest.TestCase):
+         p = self._tmp("t.ome.tif")
+         vol = np.arange(2 * 3 * 4 * 5 * 6).reshape(2, 3, 4, 5, 6).astype(np.uint16)
+         tifffile.imwrite(p, vol, metadata={"axes": "TZCYX"}, ome=True)
+-        zs = load_zstack(p)
++        with self.assertRaisesRegex(ValueError, "time_index"):
++            load_zstack(p)
++        zs = load_zstack(p, time_index=0)
+         self.assertEqual(zs.frames, 2)
+         self.assertTrue(zs.is_multichannel)
+         self.assertEqual(zs.volume.shape, (4, 3, 5, 6))  # (C,Z,Y,X) of frame 0

@@ -774,8 +774,8 @@ def render_sidebar() -> SegmentationConfig:
             xy_spacing_um=xy_spacing_um,
             xy_spacing_source=xy_spacing_source,
             metadata_xy_spacing_um=metadata_xy_spacing_um,
-            nuclei_flow_threshold=st.slider("Nuclei flow threshold", 0.0, 1.0, backend_defaults.nuclei_flow_threshold),
-            cell_flow_threshold=st.slider("Cell flow threshold", 0.0, 1.0, backend_defaults.cell_flow_threshold),
+            nuclei_flow_threshold=st.slider("Nuclei flow threshold (unused in 3D)", 0.0, 1.0, backend_defaults.nuclei_flow_threshold, disabled=True),
+            cell_flow_threshold=st.slider("Cell flow threshold (unused in 3D)", 0.0, 1.0, backend_defaults.cell_flow_threshold, disabled=True),
             nuclei_cellprob_threshold=st.slider(
                 "Nuclei cellprob threshold", -6.0, 6.0, backend_defaults.nuclei_cellprob_threshold
             ),

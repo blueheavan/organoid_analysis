@@ -1,0 +1,26 @@
+ M pyproject.toml
+ M src/organoid_analysis/command_line/organoid_commands.py
+ M src/organoid_analysis/microscopy_io/metadata.py
+ M src/organoid_analysis/microscopy_io/tiff_contract.py
+ M src/organoid_analysis/microscopy_io/zstack_reader.py
+ M src/organoid_analysis/quantification/multilevel_relationships/hierarchy.py
+ M src/organoid_analysis/quantification/multilevel_relationships/validation.py
+ M src/organoid_analysis/result_export/measurement_tables.py
+ M src/organoid_analysis/segmentation/cellpose_inference.py
+ M src/organoid_analysis/statistics/exploration.py
+ M src/organoid_analysis/statistics/inference.py
+ M src/organoid_analysis/visualization/surface_rendering.py
+ M src/organoid_analysis/web_interface/analysis_ui.py
+ M src/organoid_analysis/web_interface/multilevel_results.py
+ M src/organoid_analysis/web_interface/segmentation_workspace.py
+ M src/organoid_analysis/workflows/multilevel_measurement_workflow.py
+ M src/organoid_analysis/workflows/organoid_measurement_workflow.py
+ M tests/microscopy_io/test_io.py
+ M tests/visualization/test_3d_preview.py
+?? docs/evidence/
+?? tests/microscopy_io/test_metadata_contract_regressions.py
+?? tests/segmentation/test_inference_contract_regressions.py
+?? tests/statistics/test_statistical_contract_regressions.py
+?? tests/visualization/test_surface_coordinates.py
+?? tests/workflows/test_export_contract_regressions.py
+?? tests/workflows/test_multilevel_numerical_regressions.py

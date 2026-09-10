@@ -1,0 +1,6 @@
+Using Python 3.12.14 environment at: .pixi/envs/default
+Checked 199 packages in 3ms
+Found 1 incompatibility
+The package `vtk` has multiple installed distributions: 
+  - /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/vtk-9.6.2.dist-info
+  - /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/vtk-9.6.2.egg-info

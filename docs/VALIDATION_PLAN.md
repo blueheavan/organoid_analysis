@@ -4,6 +4,8 @@ Version: 1.0.0
 Date: 2026-09-02
 Scope: Scientific V&V plan for the `analyze-3d` multilevel 3D organoid analysis (hierarchy, morphology, topology, spatial, QC). The classical morphology/viability validation is documented in `docs/VALIDATION.md`.
 
+Historical scope: numerical multilevel checks only. Its recorded PASS labels are not evidence for the current repository; fresh results are in VALIDATION_REPORT.md.
+
 This plan predeclares, for each critical requirement, the reference standard, evaluation unit, dataset, independence level, minimum N, metric, and acceptance criteria. Status is filled in during execution; see `docs/VALIDATION_REPORT.md`.
 
 ---
@@ -142,3 +144,22 @@ Audit separation for this pass: Tier D (same agent and context as implementation
 - Plan mapping to code: see `docs/ALGORITHM_DECISIONS.md` traceability table.
 - Tests: `tests/workflows/test_multilevel_measurement_workflow.py`.
 - Result outputs: `export_results` → Parquet/JSON hierarchy described in README.
+
+
+## 2026-09-10 full-workflow audit acceptance contract
+
+The [frozen plan](evidence/2026-09-10/PLAN.md) was written before new remediation/final QA and preserves the input-worktree audit criteria. It extends the earlier multilevel scope across actual I/O, preview, segmentation, quantification, statistics and export. New defect probes exercise the same mathematical/domain invariants, not tuned biological thresholds.
+
+The §VR-4 instruction to document bias does **not** waive SCIENTIFIC_SPEC §9's <5% area requirement. Both are evaluated and the conflict reported; no acceptance criterion was relaxed. Likewise test_geometry.py's 15% surface tolerance is a regression criterion, not release accuracy acceptance.
+
+| Requirement | Oracle / evaluation unit / independence | Dataset and necessary conditions | Acceptance / uncertainty / failure |
+|---|---|---|---|
+| A1–A2 Input identity/calibration | Unit conversion and distinct-valued arrays; deterministic per series/time/channel, not biological N | Metadata fixtures, invalid units, nonuniform/reversed Z, selected time/series, mixed IDs | Exact identity; stated 1e-12 conversion tolerance; unsupported semantic coercion rejects. |
+| A3 Segmentation adapter | Captured model inputs and installed implementation semantics; mock is not accuracy oracle | Full/half/quarter resolution, invalid model/input/config, model output masks | Valid call scale and shape; invalid inputs reject. Rounded resampling equivalence and actual segmentation accuracy require further evidence. |
+| A4 Export and recovery | Independent TIFF/Parquet reread and fault injection | Large uint32 IDs, overflow, RGB-prone shapes, singleton-Z saved-run compatibility, partial writes | Exact supported label/spacing recovery; no complete output on failed save/export. |
+| A5–A6 Statistics | Definitional domain (positive logs, finite values, nonzero variance); training-fold provenance | Zero/nonfinite measurements, missing feature/fold, too few samples, constant groups | No invented effects/p-values; no train/test preprocessing leakage. This does not establish inferential calibration or independence. |
+| A7–A8 Engineering | Actual distribution install and runtime; native/browser tests separate | Locked Pixi environment, wheel, CLI, unit/integration suite, lint, mypy, formatter, notebook discovery, GUI startup | Every command status recorded; skips and static failures cannot become PASS. |
+| A9 Geometry/topology | Analytic voxel counts/moments; continuous sphere; deterministic invariants | Sphere, ellipsoid, anisotropic box, hollow/border masks, mixed label types, stable intensity moments | Existing exact arithmetic/scale criteria; §9 volume <1%, surface <5%. A failed surface criterion blocks the broad quantitative claim. |
+| A10 Real research validity | Expert/orthogonal assay reference independent of development; independent biological unit | Representative normal/low-signal/saturated/aniso/dense/hollow acquisitions; actual donor/well/batch design; qualified labels/assay | Required minimum N and precision are NOT ASSESSED because intended experiment/reference uncertainty is unavailable. Do not declare PASS from object count or one crop. |
+
+Sample size for deterministic mathematical fixtures is the number of explicitly exercised cases, not an estimate of population accuracy; statistical confidence intervals are inapplicable to exact arithmetic. For real biological performance the missing N/precision/reference qualification leads to INSUFFICIENT EVIDENCE. Any future calibration or acceptance change must be predeclared and evaluated on held-out independent units.

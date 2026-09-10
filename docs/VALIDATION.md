@@ -1,3 +1,5 @@
+> Historical validation record. For current repository evidence and the governing release verdict, see [VALIDATION_REPORT.md](VALIDATION_REPORT.md), dated 2026-09-10. Earlier PASS statements are not current evidence.
+
 # Validation record — 2026-08-31
 
 This record distinguishes software verification from biological validation. No real microscopy accuracy, patient-derived viability performance, clinical response prediction, or macOS installation performance has been established.

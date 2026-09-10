@@ -1,0 +1,44 @@
+..................................                                       [100%]
+=============================== warnings summary ===============================
+tests/workflows/test_export_contract_regressions.py: 6 warnings
+tests/workflows/test_multilevel_measurement_workflow.py: 48 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:23116: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    out.shape = shape
+
+tests/workflows/test_export_contract_regressions.py: 6 warnings
+tests/workflows/test_multilevel_measurement_workflow.py: 48 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:9371: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = keyframe.shaped
+
+tests/workflows/test_export_contract_regressions.py: 6 warnings
+tests/workflows/test_multilevel_measurement_workflow.py: 48 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:9375: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = keyframe.shape
+
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_multilevel_measurement_workflow.py::test_parquet_export_summary_and_cli_round_trip
+tests/workflows/test_multilevel_measurement_workflow.py::test_parquet_export_summary_and_cli_round_trip
+tests/workflows/test_multilevel_measurement_workflow.py::test_parquet_export_summary_and_cli_round_trip
+tests/workflows/test_multilevel_numerical_regressions.py::test_web_organoid_grid_mismatch_is_rejected
+tests/workflows/test_multilevel_numerical_regressions.py::test_web_organoid_grid_mismatch_is_rejected
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:4656: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = shape
+
+tests/workflows/test_multilevel_measurement_workflow.py: 48 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/skimage/measure/_marching_cubes_lewiner.py:237: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    ar.shape = shape
+
+tests/workflows/test_multilevel_measurement_workflow.py: 104 warnings
+tests/workflows/test_multilevel_numerical_regressions.py: 8 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/skimage/measure/_marching_cubes_lewiner.py:213: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    faces.shape = -1, 3
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+34 passed, 329 warnings in 2.10s

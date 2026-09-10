@@ -1,0 +1,12 @@
+Installed wheel matches every package Python and static resource file
+Traceback (most recent call last):
+  File "<stdin>", line 15, in <module>
+  File "/tmp/organoid-audit-installed-20260910/organoid_analysis/visualization/volume_viewer/viewer_payload.py", line 295, in build_viewer_payload
+    interleaved, chans, raw = pack_channel_stack(
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/tmp/organoid-audit-installed-20260910/organoid_analysis/visualization/volume_viewer/viewer_payload.py", line 160, in pack_channel_stack
+    stack = _channel_stack(volumes)
+            ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/organoid-audit-installed-20260910/organoid_analysis/visualization/volume_viewer/viewer_payload.py", line 120, in _channel_stack
+    raise ValueError(
+ValueError: channel 0: dtype int64 not supported; use uint8/uint16/float32

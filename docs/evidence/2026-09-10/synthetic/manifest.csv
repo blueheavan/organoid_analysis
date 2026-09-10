@@ -1,0 +1,16 @@
+sample_id,condition,biological_replicate,unit_id,batch_id,control,image_path,axes,spacing_z_um,spacing_y_um,spacing_x_um
+SYN_Vehicle_R1,Vehicle,Synthetic_R1,SYN_Vehicle_R1,synthetic_batch_1,sample,images/SYN_Vehicle_R1.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Treatment_A_R1,Treatment_A,Synthetic_R1,SYN_Treatment_A_R1,synthetic_batch_1,sample,images/SYN_Treatment_A_R1.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Treatment_B_R1,Treatment_B,Synthetic_R1,SYN_Treatment_B_R1,synthetic_batch_1,sample,images/SYN_Treatment_B_R1.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Live_control_R1,Live_control,Synthetic_R1,SYN_Live_control_R1,synthetic_batch_1,live,images/SYN_Live_control_R1.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Dead_control_R1,Dead_control,Synthetic_R1,SYN_Dead_control_R1,synthetic_batch_1,dead,images/SYN_Dead_control_R1.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Vehicle_R2,Vehicle,Synthetic_R2,SYN_Vehicle_R2,synthetic_batch_1,sample,images/SYN_Vehicle_R2.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Treatment_A_R2,Treatment_A,Synthetic_R2,SYN_Treatment_A_R2,synthetic_batch_1,sample,images/SYN_Treatment_A_R2.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Treatment_B_R2,Treatment_B,Synthetic_R2,SYN_Treatment_B_R2,synthetic_batch_1,sample,images/SYN_Treatment_B_R2.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Live_control_R2,Live_control,Synthetic_R2,SYN_Live_control_R2,synthetic_batch_1,live,images/SYN_Live_control_R2.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Dead_control_R2,Dead_control,Synthetic_R2,SYN_Dead_control_R2,synthetic_batch_1,dead,images/SYN_Dead_control_R2.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Vehicle_R3,Vehicle,Synthetic_R3,SYN_Vehicle_R3,synthetic_batch_1,sample,images/SYN_Vehicle_R3.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Treatment_A_R3,Treatment_A,Synthetic_R3,SYN_Treatment_A_R3,synthetic_batch_1,sample,images/SYN_Treatment_A_R3.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Treatment_B_R3,Treatment_B,Synthetic_R3,SYN_Treatment_B_R3,synthetic_batch_1,sample,images/SYN_Treatment_B_R3.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Live_control_R3,Live_control,Synthetic_R3,SYN_Live_control_R3,synthetic_batch_1,live,images/SYN_Live_control_R3.ome.tif,CZYX,3.0,1.0,1.0
+SYN_Dead_control_R3,Dead_control,Synthetic_R3,SYN_Dead_control_R3,synthetic_batch_1,dead,images/SYN_Dead_control_R3.ome.tif,CZYX,3.0,1.0,1.0

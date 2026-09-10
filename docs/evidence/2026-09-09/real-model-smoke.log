@@ -1,0 +1,6 @@
+✨ Pixi task (smoke): python scripts/smoke_segmentation.py
+/Users/jlwang/.matplotlib is not a writable directory
+Matplotlib created a temporary cache directory at /var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/matplotlib-nnpuiguz because there was an issue with the default path ({configdir}); it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
+Matplotlib is building the font cache; this may take a moment.
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/multiprocessing/resource_tracker.py:279: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

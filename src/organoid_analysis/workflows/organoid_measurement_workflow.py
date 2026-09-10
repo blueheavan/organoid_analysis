@@ -23,6 +23,7 @@ from organoid_analysis.microscopy_io.tiff_contract import (
     load_truth_labels,
     read_manifest,
     sha256,
+    source_code_hashes,
     write_labels,
 )
 from organoid_analysis.phenotyping.viability import calibrate, classify
@@ -46,26 +47,6 @@ from organoid_analysis.segmentation.watershed_instances import (
 from organoid_analysis.statistics.aggregation import make_summaries
 from organoid_analysis.statistics.inference import condition_pairwise_tests
 from organoid_analysis.validation.segmentation_metrics import match_instances
-
-_PACKAGE_ROOT = Path(__file__).resolve().parent.parent
-# Modules that implement the classical pipeline, now spread across the
-# microscopy_io/segmentation/quantification/validation/phenotyping/statistics/
-# result_export subpackages rather than living alongside this file; hashed
-# together for the run's provenance record.
-_CLASSIC_SOURCE_FILES = sorted([
-    _PACKAGE_ROOT / "config.py",
-    _PACKAGE_ROOT / "microscopy_io" / "tiff_contract.py",
-    _PACKAGE_ROOT / "segmentation" / "watershed_instances.py",
-    _PACKAGE_ROOT / "quantification" / "labels.py",
-    _PACKAGE_ROOT / "quantification" / "cellular_measurements.py",
-    _PACKAGE_ROOT / "quantification" / "features.py",
-    _PACKAGE_ROOT / "validation" / "segmentation_metrics.py",
-    _PACKAGE_ROOT / "statistics" / "inference.py",
-    _PACKAGE_ROOT / "statistics" / "aggregation.py",
-    _PACKAGE_ROOT / "phenotyping" / "viability.py",
-    _PACKAGE_ROOT / "result_export" / "report.py",
-    Path(__file__),
-])
 
 
 def _is_substantive(path: Path) -> bool:
@@ -153,7 +134,7 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
                   "data_origin": origin, "python": sys.version, "platform": platform.platform(),
                   "manifest": str(manifest_path), "manifest_sha256": sha256(manifest_path),
                   "configuration": cfg, "status": "incomplete",
-                  "source_code_sha256": {p.name: sha256(p) for p in _CLASSIC_SOURCE_FILES},
+                  "source_code_sha256": source_code_hashes(),
                   "packages": {package: importlib.metadata.version(package) for package in ["numpy", "scipy", "scikit-image", "tifffile", "pandas", "matplotlib", "PyYAML"]},
                   "input_files": [], "sample_metadata": {}}
     paths = sorted({row[field] for row in design.to_dict("records") for field in PATH_FIELDS if row[field]})

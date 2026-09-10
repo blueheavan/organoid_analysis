@@ -160,8 +160,9 @@ def pair_and_filter_cells(
     overlapping = (cell_masks > 0) & (nuclei_masks > 0)
     if overlapping.any():
         pairs, counts = np.unique(
-            np.column_stack((cell_masks[overlapping], nuclei_masks[overlapping])),
-            axis=0,
+            # A structured pair preserves each integer dtype. Stacking int64
+            # and uint64 promotes to float64 and merges IDs above 2**53.
+            np.rec.fromarrays((cell_masks[overlapping], nuclei_masks[overlapping])),
             return_counts=True,
         )
         overlap_voxels = {

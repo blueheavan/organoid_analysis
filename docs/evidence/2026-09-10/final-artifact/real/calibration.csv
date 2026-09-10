@@ -1,0 +1,2 @@
+batch_id,status,reason,live_control_replicates,dead_control_replicates,live_control_units,dead_control_units,calcein_low,calcein_high,pi_low,pi_high,calcein_separation_snr,pi_separation_snr,data_origin
+batch1,unavailable,viability_mode_uncalibrated,0,0,0,0,,,,,,,user_images_unvalidated

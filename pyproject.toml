@@ -33,6 +33,9 @@ package-dir = { "" = "src" }
 where = ["src"]
 include = ["organoid_analysis*"]
 
+[tool.setuptools.package-data]
+"organoid_analysis.visualization.volume_viewer" = ["static/*.js", "static/*.txt"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q -m 'not render'"

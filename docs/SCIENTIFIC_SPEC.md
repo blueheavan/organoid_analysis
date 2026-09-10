@@ -213,3 +213,32 @@ Classification: S3 (Inferential) for the pipeline as a whole, because `src/organ
 1. scikit-image measurement API: https://scikit-image.org/docs/stable/api/skimage.measure.html
 2. Cellpose: https://cellpose.readthedocs.io/
 3. Thermo Fisher viability dyes: https://www.thermofisher.com/uk/en/home/life-science/cell-analysis/cell-viability-and-regulation/cell-viability.html
+
+## 13. Current implementation audit — 2026-09-10 (governing qualification)
+
+The preceding intended research use is retained, **not validated by its presence in this document**. Species/platform, ≤1 µm XY, ≤2 µm Z, minimum five slices, shape and size recommendations above lack project calibration/held-out evidence; treat them as claimed operating assumptions with INSUFFICIENT EVIDENCE, not established acquisition specifications. The numerical requirements in §9 (<1% volume, <5% area) are retained. Surface accuracy currently fails that requirement; see [current validation report](VALIDATION_REPORT.md). Neither defaults nor previous PASS labels establish suitability.
+
+### Reconstructed end-to-end paths and scientific impact
+
+| Stage / scientific impact | Actual implementation and contract | Required validation |
+|---|---|---|
+| Read (S1–S2: identity and units) | `microscopy_io/tiff_contract.py` reads manifest-driven CZYX with ≥3 planes, OME or explicit calibration. `zstack_reader.py` reads first series into ZYX/CZYX with ImageJ/TIFF/OME calibration; time selection explicit in API, multi-time upload rejected by Web. Cellpose legacy QYX/IYX fallback assumes a grayscale Z-stack and leaves spacing unknown. | Exact identity/units/time/channel tests; acquisition grid qualification; corrupted/unknown metadata rejection. |
+| Inspect (S2 if it guides selection) | Web preview uses a separate display payload with percentile contrast and possible uint8/downsampling. Native VTK, browser vtk.js and 2D orthogonal views are distinct rendering paths. | Axis/spacing and raw-data preservation tests; actual renderer checks; browser upload and visual performance assessed separately. |
+| Segment (S2) | Classical structural watershed/probability/imported labels and Web Cellpose cell/nucleus masks are separate routes. Cellpose alone does not produce a qualified organoid envelope. | Qualified independent 3D annotations, object-level detection/overlap and acquisition strata; parameter calibration and held-out sensitivity. |
+| Quantify (S2) | Classical geometry measures filled organoid envelopes and eligibility-filtered summaries. Web object features measure filled size/axes but raw centroid/solidity and no classical eligibility exclusion. `analyze-3d` accepts registered organoid/cell/nucleus labels and measures raw voxels, with review flags but no automatic aggregate exclusion. | Analytic volumes/moments/contact; surface accuracy; raw/envelope semantics; intensity/registration/saturation qualification. |
+| Infer/explore (S3) | `statistics/inference.py` fits object-level LMM or clustered OLS; `aggregation.py` reports equal-well replicate summaries; `exploration.py` supplies row-level tests/classifiers/clustering. | Correct independent units/design, residual assumptions, type-I error/CI coverage, multiplicity family, group-aware validation. |
+| Export (S1–S2) | CLI CSV/JSON/OME; multilevel Parquet/JSON/OME; Cellpose ZIP/OME/summary/provenance. Missing data are not evidence of zero effects or successful tests. | ID/unit round trips, complete/incomplete outputs, source/config/model/input traceability. |
+
+### Study-unit and output qualification
+
+An organoid is the **measurement unit**, not necessarily the independent experimental unit. Wells are not inherently technical or biological replicates: their independence depends on randomization, donor/preparation and treatment assignment, which must be documented outside these data tables. For the shipped classical inference, `biological_replicate` identifies the same replicate across batches within a condition; the code treats conditions as independent groups. Paired donor experiments, cross-condition repeated measures, nested well effects and temporal inference are unsupported without a justified design. This audit did not replace that method or invent study metadata.
+
+Coordinates are array-local voxel-center coordinates in micrometres, not microscope stage/world coordinates. Equal shape and spacing are necessary but insufficient to prove registration or matching origins/directions. Descending monotonic Z acquisition is accepted for shape measurements; anatomical orientation is not preserved as a world-coordinate transform. EDT depth is distance to a background voxel center at the rounded child centroid, not a continuous-surface distance.
+
+The earlier list of supported stains does not establish that a nuclear channel outlines whole organoids. Whole-organoid segmentation needs a qualified structural boundary signal or imported annotated/model masks. Without that evidence, a successful pipeline may count substructures instead of organoids. Local images have no independent organoid/cell/nucleus annotation set, documented experimental design or orthogonal viability assay. No biological accuracy, live-cell percentage, calibrated classifier or confirmatory treatment effect is supported by the current validation.
+
+### Reference standard and uncertainty qualification
+
+Analytical voxel solids and hand-counted label relationships qualify numerical arithmetic only. The demo generator is project-owned and shares signal assumptions with viability classification; it is not independent assay validation. The local real files are identified by hashes, but acquisition provenance, stain identity, annotator protocol, blinding, adjudication, inter-annotator agreement and biological sample independence are unavailable. The model smoke test measures executability on one crop, not accuracy.
+
+For biological segmentation/viability/statistical claims, required N, precision target and operating strata must come from the actual experiment and qualified reference uncertainty. No defensible universal N or error target can be inferred here; status is INSUFFICIENT EVIDENCE. Clinical/decision-critical intended use is absent; S4 decision-risk and regulatory conformity assessment are NOT APPLICABLE to this audit.

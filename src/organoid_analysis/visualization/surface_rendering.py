@@ -37,7 +37,7 @@ def _poly_repr(pd: pv.PolyData) -> dict:
         "bounds": list(float(v) for v in pd.bounds),
         "has_scalars": bool("label" in pd.array_names),
         "scalars": (
-            np.asarray(pd["label"]).astype(np.uint8).tolist()
+            np.asarray(pd["label"]).astype(np.uint32).tolist()
             if "label" in pd.array_names
             else None
         ),
@@ -64,7 +64,7 @@ def build_surface(
     z, y, x = volume.shape
     grid = pv.ImageData(dimensions=(x, y, z), spacing=(dx, dy, dz))
     grid.point_data["scalar"] = np.ascontiguousarray(
-        volume.ravel(order="F"), dtype=volume.dtype
+        volume.ravel(order="C"), dtype=volume.dtype
     )
 
     surfaces: list[Surface] = []
@@ -74,13 +74,13 @@ def build_surface(
             mask = np.asarray(volume == label, dtype=volume.dtype)
             lab_grid = pv.ImageData(dimensions=(x, y, z), spacing=(dx, dy, dz))
             lab_grid.point_data["scalar"] = np.ascontiguousarray(
-                mask.ravel(order="F"), dtype=volume.dtype
+                mask.ravel(order="C"), dtype=volume.dtype
             )
             try:
                 mesh = lab_grid.contour([0.5], scalars="scalar")
             except Exception:
                 continue
-            mesh["label"] = np.full(mesh.n_points, label, dtype=np.uint8)
+            mesh["label"] = np.full(mesh.n_points, label, dtype=np.uint32)
             surfaces.append(
                 Surface(mesh, int(label), colors[i % len(colors)], opacity=0.85)
             )

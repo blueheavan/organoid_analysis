@@ -1,0 +1,187 @@
+{
+  "pipeline_version": "1.0.0",
+  "git_commit": null,
+  "started_utc": "2026-09-10T00:45:32.210133+00:00",
+  "data_origin": "user_images_unvalidated",
+  "python": "3.12.14 | packaged by conda-forge | (main, Aug 21 2026, 22:39:36) [Clang 19.1.7 ]",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "manifest": "/private/tmp/organoid-audit-real-20260910/manifest.csv",
+  "manifest_sha256": "82169b3d6f632077b1f12b133d4a8215c636408eea3c9113cca1c35a066357b5",
+  "configuration": {
+    "channels": {
+      "structure": 0,
+      "calcein": null,
+      "pi": null
+    },
+    "segmentation": {
+      "method": "watershed",
+      "polarity": "bright",
+      "gaussian_sigma_um": 1.0,
+      "background_sigma_um": 0.0,
+      "threshold": "otsu",
+      "probability_threshold": 0.5,
+      "closing_radius_um": 1.0,
+      "fill_enclosed_holes": true,
+      "min_volume_um3": 2000.0,
+      "seed_h_um": 2.0,
+      "seed_min_distance_um": 15.0,
+      "split_touching": true,
+      "max_foreground_fraction": 0.7,
+      "qc_reference_method": "none",
+      "qc_count_difference_threshold": 0.4,
+      "qc_min_z_extent_ratio": 0.65
+    },
+    "quality": {
+      "exclude_border": true,
+      "min_z_slices": 5,
+      "max_volume_um3": null,
+      "background_inner_um": 2.0,
+      "background_outer_um": 7.0,
+      "min_background_voxels": 100,
+      "max_saturated_fraction": 0.01,
+      "calcein_saturation_value": null,
+      "pi_saturation_value": null
+    },
+    "viability": {
+      "mode": "uncalibrated",
+      "min_control_replicates": 2,
+      "min_control_separation_snr": 3.0,
+      "high_gate": 0.6,
+      "low_gate": 0.3
+    },
+    "report": {
+      "bootstrap_iterations": 2000,
+      "seed": 20260831,
+      "save_meshes": true,
+      "max_meshes_in_preview": 20
+    },
+    "stats": {
+      "enabled": true,
+      "features": [
+        "volume_um3",
+        "sphericity"
+      ],
+      "min_replicates_per_condition": 3
+    }
+  },
+  "status": "complete",
+  "source_code_sha256": {
+    "__init__.py": "ac732a6ee95256e7a4178f53ce00b3f04e6975de64a410675b533daf794d5bd5",
+    "__main__.py": "4ea1325e2959033e0bb46a0e118347aff284128deb173e28f5ab1b169e13c112",
+    "command_line/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "command_line/organoid_commands.py": "47e62958081ff6725232e8d6af271b32aa288ea69eb2eafed34c600e75dd54ec",
+    "config.py": "1e0a449438515edd6cf0c7e7cba72cbfbe4d35688efbac9e340c59541953fdf2",
+    "microscopy_io/__init__.py": "787212203c9d63739eec4d1ff84a54dc65fbdf15325036b89a066e8e90288c72",
+    "microscopy_io/metadata.py": "5db1fe2fa37c51561391b67be43260ca6117f22c2e921cf8fe445736a834982c",
+    "microscopy_io/tiff_contract.py": "13f3d0c85bb019867fa6b8e16c2cf7f97115ff98f8c6b56e4911c52c1aaddd8e",
+    "microscopy_io/voxel_spacing.py": "893e757cd69dcf4aa08d7e1f9bb5519cb8405e70bdf4c0eed2f516a8ce4382b0",
+    "microscopy_io/zstack_reader.py": "88ddfad2bced8edb24c3a65db320e2903423c59e7f571dc150a6b9711777c6b0",
+    "phenotyping/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "phenotyping/viability.py": "f7687fc94d4660f5926ab41f4b10a01d0107bd9be105959103bea60d11d1022c",
+    "quantification/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "quantification/cellular_measurements.py": "8d3e7d556593c9a27e1f0edc2e8a09896c142168270493c542f66414d580732e",
+    "quantification/features.py": "98acbb3a982a570b16c8adce2673d684ef8b4b20c4d3d7d8cbff8b848cfac027",
+    "quantification/labels.py": "8877549b58096d667d071e01a10e52f521add50d6bc105f48b872af9bdfa0ff6",
+    "quantification/mask_features.py": "4dbf81ef84144141b556b4959e8d88b80ef16b3ce40e203942f00bb48ef1469d",
+    "quantification/multilevel_relationships/__init__.py": "61c9f9d4e228b8fb0aae08a225fefa8d5060e26d591ab47f56a4af70f7c0b65e",
+    "quantification/multilevel_relationships/config.py": "7907df8e30c84062bfeb672ef96a26033e8ab0e726646c4b297774e3b0242ab4",
+    "quantification/multilevel_relationships/hierarchy.py": "aeb109d4b31488c123acaabdeb77019679d7158a770d1ec7617851e0623c7c1d",
+    "quantification/multilevel_relationships/morphology.py": "afe49f45515e5ef42c3928984c7b7e26ed2e54e500d95cbaf75d289a6a01b620",
+    "quantification/multilevel_relationships/qc.py": "1a3c9971ebafdf39183d03bc40156f76120449f566e14ac02e17c27f3b326414",
+    "quantification/multilevel_relationships/spatial.py": "6c2af48e15a4260e8afcc1149de8cdbc46117b4eb604c859bb62f636d179b4ba",
+    "quantification/multilevel_relationships/topology.py": "4b5aaf6203d3282c5c0eaafaa5840b41b394d3c8650f28ff832c223cefd6b7d3",
+    "quantification/multilevel_relationships/validation.py": "b04074dbb619745e1e7db219e23bbd5b1858459f8a69ea79a10b757b89b60e90",
+    "result_export/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "result_export/measurement_tables.py": "e2b7fdb9a59c8067364bde9790c2df639911a8466319147cc49a8fd97cff144b",
+    "result_export/report.py": "a1996fbf63d7d07c1bb86d0c22dd66525a911d797224c03ed660cb3f35078f28",
+    "segmentation/__init__.py": "3d61bf6e16d67bcde4a49bbb23372d247bb22cec36621d1653948649a5af02db",
+    "segmentation/cellpose_inference.py": "26cb2ba49d7fcb51ce232ce93ba06da938a21bdb309fd7125072ec2cb368f2af",
+    "segmentation/parameter_estimation.py": "6e075c4aa90f9321d41096a2261a1e55dac9724ed3e578d18c2faeef4260b79c",
+    "segmentation/paths.py": "2ae0e60aa18bb25a584a96ce4c476c30e43388aaf88fe9bf6957a7dd64cf1092",
+    "segmentation/watershed_instances.py": "783c51a1e3e9cd0da212eb608a3fc28943a565bb577a511519ef023993edb086",
+    "statistics/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "statistics/aggregation.py": "ea5ba0dd30461bbe99927e70b45d357206c4ad19f7db861e35082b318129f1f8",
+    "statistics/exploration.py": "44cfe16f08b4fae6a52fd13bf43643e50ab36b57f15e62cd7f9f86db2c45227f",
+    "statistics/inference.py": "8d880d0b0fe28310f23bf5885b2718202489e009507e47021a080ccbf0b49b23",
+    "validation/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "validation/segmentation_metrics.py": "5fed50cd577bb76933825da2ec03279b43f42d9a4ae5b73001ea1f8ae1c0390b",
+    "visualization/__init__.py": "18c8531944ceef99c8580eca1a4553c804e6d05a3a9ca46f649ca28511b5e350",
+    "visualization/_stpv.py": "b358fa4cbcf12b1635a3d04a19f5e1fc38121288e74eab77d07a627d28e69356",
+    "visualization/capabilities.py": "f00176f9aa2afdfcc1889c4ca0c3a27df6b1ef7b4084458875e0d12289c85516",
+    "visualization/projection_rendering.py": "29d885b505527bebc02bca01785f955f6a61fbeaaef02bb5379af7f9288ef2b7",
+    "visualization/surface_rendering.py": "7eda2a6b90f84509656c5d7c2b68964237ebb69603cc5ec94081b7d97f4d806b",
+    "visualization/volume_viewer/__init__.py": "cde5500e9959e91eef6f92fd92ea4e48f14cab5e1a9f087e08530d04cf00f508",
+    "visualization/volume_viewer/rendering_presets.py": "3dd42164ed54463aa2df3dee84f1ff3565fe743005a7fd2f7e5de5eed0c85fae",
+    "visualization/volume_viewer/viewer_payload.py": "38a506df4bd1bcf2b84f7b81a218c089752bddd504b69b8596089ff4a98c676c",
+    "web_interface/__init__.py": "263e3bfc8df1ad75e08d07ad38314eaf5e0b3aa54a8c24b31bcf615966216513",
+    "web_interface/analysis_ui.py": "ea97dadd5f597b4e49bf36fff18d9a453e04a4d5394a62ac00db59b2f72f49ea",
+    "web_interface/demo_app.py": "45be53987ee5529dea1b61851b773641c3f3493137c6686976c3e521dce0d425",
+    "web_interface/multilevel_results.py": "e0f912af3fa92d22b0f1894a62761d1c13fcbbf5b75cf319e183d5914ee0dfd8",
+    "web_interface/organoid_workspace.py": "672bf2bb69ea145b0029098c371ed958719bc570875556bc66791821526b8e34",
+    "web_interface/preview_2d.py": "548a4520407d3f7f32b3f22497e23236a5e7c1d3dbfd8fd693474b1e90eb0207",
+    "web_interface/segmentation_workspace.py": "2512725e5cbaf7d4e5d8f8ae29473489fd29a273e8ef2717d32b08b3e788eab3",
+    "workflows/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "workflows/demo_workflow.py": "e8d2116cb374d9577d43dd7d434777da2348e10b887ff6644741881c5606a90a",
+    "workflows/multilevel_measurement_workflow.py": "405be0222b7daf51e38c12603eddaafccedc29bdd2528a6052777cb6ead97587",
+    "workflows/organoid_measurement_workflow.py": "8008226fe992a7ffd05c7f160ef13683d3d50398ea1f9e8fce869362ecdd7a69"
+  },
+  "packages": {
+    "numpy": "2.5.2",
+    "scipy": "1.17.1",
+    "scikit-image": "0.26.0",
+    "tifffile": "2026.3.3",
+    "pandas": "2.3.3",
+    "matplotlib": "3.11.1",
+    "PyYAML": "6.0.3"
+  },
+  "input_files": [
+    {
+      "path": "/Users/jlwang/Desktop/organoid_analysis/data/images/Human-Colon-Organoids-C1.tif",
+      "sha256": "6eb44c9da1ae69f165bbca3c2d100138d1d733f5ce5642d1ebe36ee54cfd7970",
+      "size_bytes": 8394407
+    },
+    {
+      "path": "/Users/jlwang/Desktop/organoid_analysis/data/images/ZeroG-Breast-Cancer-Spheroid-C1.tif",
+      "sha256": "6aaa22d6c0f0e80a7791f2efef9aa7a84855ea0028d8587cff75efe876e79471",
+      "size_bytes": 29441195
+    }
+  ],
+  "sample_metadata": {
+    "local_1": {
+      "input_axes": "ZYX",
+      "shape_zyx": [
+        16,
+        512,
+        512
+      ],
+      "spacing_source": "manifest",
+      "spacing_zyx_um": [
+        2.0,
+        0.24420000566544012,
+        0.24420000566544012
+      ]
+    },
+    "local_4": {
+      "input_axes": "ZYX",
+      "shape_zyx": [
+        56,
+        512,
+        512
+      ],
+      "spacing_source": "manifest",
+      "spacing_zyx_um": [
+        1.5,
+        0.41432040474131704,
+        0.41432040474131704
+      ]
+    }
+  },
+  "failures": [],
+  "completed_utc": "2026-09-10T00:45:42.586014+00:00",
+  "elapsed_seconds": 10.402509375009686,
+  "n_detected_organoids": 11,
+  "n_geometry_eligible_organoids": 5,
+  "n_samples": 2,
+  "n_failed_samples": 0,
+  "n_samples_with_segmentation_truth": 0
+}

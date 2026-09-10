@@ -112,9 +112,9 @@ class SpacingMetadataTests(unittest.TestCase):
             '<Image ID="Image:0"><Pixels ID="Pixels:0" DimensionOrder="XYZCT" '
             'Type="uint16" SizeX="4" SizeY="3" SizeZ="3" SizeC="1" SizeT="1" '
             'PhysicalSizeX="1" PhysicalSizeY="1" PhysicalSizeZ="2">'
-            '<Plane TheZ="0" TheC="0" TheT="0" PositionZ="0"/>'
-            '<Plane TheZ="1" TheC="0" TheT="0" PositionZ="2"/>'
-            '<Plane TheZ="2" TheC="0" TheT="0" PositionZ="7"/>'
+            '<Plane TheZ="0" TheC="0" TheT="0" PositionZUnit="µm" PositionZ="0"/>'
+            '<Plane TheZ="1" TheC="0" TheT="0" PositionZUnit="µm" PositionZ="2"/>'
+            '<Plane TheZ="2" TheC="0" TheT="0" PositionZUnit="µm" PositionZ="7"/>'
             '</Pixels></Image></OME>'
         )
         with self.assertRaisesRegex(ValueError, "uniformly"):
@@ -127,9 +127,9 @@ class SpacingMetadataTests(unittest.TestCase):
             '<Image ID="Image:0"><Pixels ID="Pixels:0" DimensionOrder="XYZCT" '
             'Type="uint16" SizeX="4" SizeY="3" SizeZ="3" SizeC="1" SizeT="1" '
             'PhysicalSizeX="1" PhysicalSizeY="1" PhysicalSizeZ="2">'
-            '<Plane TheZ="0" TheC="0" TheT="0" PositionZ="0"/>'
-            '<Plane TheZ="1" TheC="0" TheT="0" PositionZ="2"/>'
-            '<Plane TheZ="2" TheC="0" TheT="0" PositionZ="4"/>'
+            '<Plane TheZ="0" TheC="0" TheT="0" PositionZUnit="µm" PositionZ="0"/>'
+            '<Plane TheZ="1" TheC="0" TheT="0" PositionZUnit="µm" PositionZ="2"/>'
+            '<Plane TheZ="2" TheC="0" TheT="0" PositionZUnit="µm" PositionZ="4"/>'
             '</Pixels></Image></OME>'
         )
         s = parse_spacing_ome(xml)
@@ -194,7 +194,9 @@ class ZStackReaderTests(unittest.TestCase):
         p = self._tmp("t.ome.tif")
         vol = np.arange(2 * 3 * 4 * 5 * 6).reshape(2, 3, 4, 5, 6).astype(np.uint16)
         tifffile.imwrite(p, vol, metadata={"axes": "TZCYX"}, ome=True)
-        zs = load_zstack(p)
+        with self.assertRaisesRegex(ValueError, "time_index"):
+            load_zstack(p)
+        zs = load_zstack(p, time_index=0)
         self.assertEqual(zs.frames, 2)
         self.assertTrue(zs.is_multichannel)
         self.assertEqual(zs.volume.shape, (4, 3, 5, 6))  # (C,Z,Y,X) of frame 0

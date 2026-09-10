@@ -45,6 +45,8 @@ _UNIT_TO_UM: dict[str, float] = {
     "μm": 1.0,  # U+03BC GREEK SMALL LETTER MU -- visually identical, seen in the wild
     "um": 1.0,
     "micrometer": 1.0,
+    "micron": 1.0,
+    "microns": 1.0,
     "nm": 1.0e-3,
     "Å": 1.0e-4,
 }
@@ -150,10 +152,9 @@ def parse_spacing_ome(ome_metadata: str | None, time_index: int | None = None) -
         unit = getattr(pixels, f"{attr}_unit")
         if value is None:
             continue
-        try:
-            um = to_um(float(value), unit.value if unit is not None else "µm")
-        except ValueError:
-            continue
+        um = to_um(float(value), unit.value if unit is not None else "µm")
+        if not np.isfinite(um) or um <= 0:
+            raise ValueError("Invalid OME physical spacing")
         if slot == "x":
             x = um
         elif slot == "y":
@@ -169,23 +170,29 @@ def parse_spacing_ome(ome_metadata: str | None, time_index: int | None = None) -
     for plane in pixels.planes:
         if plane.the_t == (time_index or 0) and plane.the_c == 0 and plane.position_z is not None:
             unit = plane.position_z_unit
-            # ome_types defaults PositionZUnit to UnitsLength.REFERENCEFRAME
-            # (OME's own schema default) when the XML omits it entirely, not
-            # to a physical unit -- treat that the same as "no unit given" ->
-            # micrometres, matching tiff_contract.ome_spacing()'s equivalent
-            # `plane.get("PositionZUnit", "µm")` default for the same XML.
-            unit_str = None if unit is None or unit.value == "reference frame" else unit.value
+            # OME's default is a reference frame, not a physical length.
+            # Without its calibration we cannot compare positions to um.
+            unit_str = "reference frame" if unit is None else unit.value
             positions[plane.the_z] = to_um(float(plane.position_z), unit_str)
-    if len(positions) >= 3 and z is not None:
-        indices = np.array(sorted(positions))
-        zvalues = np.array([positions[k] for k in indices])
-        steps = np.abs(np.diff(zvalues) / np.diff(indices))
-        if not np.allclose(steps, z, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
-            raise ValueError(
-                "OME plane positions disagree with a uniformly spaced Z grid; "
-                "resample before analysis"
-            )
+    validate_z_positions(positions, z)
     return Spacing(x, y, z)
+
+
+def validate_z_positions(positions: dict[int, float], z_um: float | None) -> None:
+    """Require a monotonic uniform grid; a consistently descending Z is valid."""
+    if not positions:
+        return
+    indices = np.array(sorted(positions))
+    values = np.array([positions[k] for k in indices])
+    if not np.isfinite(values).all():
+        raise ValueError("OME plane positions must be finite")
+    if len(positions) < 2:
+        return
+    steps = np.diff(values) / np.diff(indices)
+    magnitude = z_um if z_um is not None else abs(steps[0])
+    expected = np.sign(steps[0]) * magnitude
+    if expected == 0 or not np.allclose(steps, expected, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
+        raise ValueError("OME plane positions disagree with a uniformly spaced Z grid; resample before analysis")
 
 
 def parse_spacing_imagej(imagej_metadata: dict[str, Any] | None) -> Spacing:
@@ -200,11 +207,11 @@ def parse_spacing_imagej(imagej_metadata: dict[str, Any] | None) -> Spacing:
     if not imagej_metadata:
         return Spacing(None, None, z)
     spacing = imagej_metadata.get("spacing")
-    if spacing is not None:
-        try:
-            z = float(spacing)
-        except (TypeError, ValueError):
-            z = None
+    unit = imagej_metadata.get("unit")
+    if spacing is not None and unit and str(unit).strip().lower() not in {"pixel", "pixels"}:
+        z = to_um(float(spacing), str(unit))
+        if not np.isfinite(z) or z <= 0:
+            raise ValueError("Invalid ImageJ physical spacing")
     return Spacing(None, None, z)
 
 
@@ -217,13 +224,13 @@ def _resolution_to_um_per_px(resolution: float | tuple | None, unit: int | None)
     if resolution is None:
         return None
     if isinstance(resolution, (tuple, list)):
-        if not resolution or not resolution[0]:
-            return None
+        if len(resolution) != 2 or not resolution[1]:
+            raise ValueError("Invalid TIFF resolution rational")
         px_per_unit = float(resolution[0]) / float(resolution[1])
     else:
         px_per_unit = float(resolution)
-    if px_per_unit <= 0:
-        return None
+    if not np.isfinite(px_per_unit) or px_per_unit <= 0:
+        raise ValueError("TIFF resolution must be finite and positive")
     if unit == 3:  # pixels per centimetre -> µm per pixel
         return (1.0e4) / px_per_unit
     if unit == 4:  # pixels per millimetre
@@ -243,6 +250,7 @@ def resolve_spacing(
     ome_metadata: str | None,
     imagej_metadata: dict[str, Any] | None,
     tiff_tags: dict[str, Any] | None = None,
+    time_index: int | None = None,
 ) -> Spacing:
     """Combine the best available spacing sources into a single ``Spacing``.
 
@@ -250,7 +258,7 @@ def resolve_spacing(
     > unknown. ``tiff_tags`` is a dict with ``XResolution``/``YResolution`` and
     ``ResolutionUnit`` keys (as read from ``tifffile.TiffPage.tags``).
     """
-    spacing = parse_spacing_ome(ome_metadata)
+    spacing = parse_spacing_ome(ome_metadata, time_index)
     if not spacing.complete:
         imagej = parse_spacing_imagej(imagej_metadata)
         tags = tiff_tags or {}
@@ -260,6 +268,17 @@ def resolve_spacing(
         # OME wins per-axis; fill gaps from ImageJ/TIFF.
         sx = spacing.x if spacing.x is not None else _resolution_to_um_per_px(xres, resunit)
         sy = spacing.y if spacing.y is not None else _resolution_to_um_per_px(yres, resunit)
+        # ImageJ uses its declared unit for TIFF densities when ResolutionUnit
+        # is NONE. It does not make a metadata-free TIFF physically calibrated.
+        ij_unit = (imagej_metadata or {}).get("unit")
+        if resunit in (None, 1) and ij_unit and str(ij_unit).strip().lower() not in {"pixel", "pixels"}:
+            factor = to_um(1.0, str(ij_unit))
+            if sx is None and xres is not None:
+                pixel_size = _resolution_to_um_per_px(xres, 5)
+                sx = pixel_size * factor if pixel_size is not None else None
+            if sy is None and yres is not None:
+                pixel_size = _resolution_to_um_per_px(yres, 5)
+                sy = pixel_size * factor if pixel_size is not None else None
         sz = spacing.z if spacing.z is not None else imagej.z
         spacing = Spacing(sx, sy, sz)
     return spacing

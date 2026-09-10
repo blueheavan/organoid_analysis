@@ -1,5 +1,7 @@
 # Organoid Pipeline — 3D 类器官分析
 
+> **Current local release assessment (2026-09-10): NOT READY FOR THE SPECIFIED RESEARCH USE.** The full audit found a failed surface-accuracy specification and missing project-specific segmentation, threshold and inferential validation. Engineering and controlled-test results are bounded separately in [the validation report](docs/VALIDATION_REPORT.md).
+
 用于 3D 显微镜 Z-stack 的本地类器官分析工具，提供 Cellpose 3D 分割、可审计的多层级测量、结果浏览与表格统计。项目面向 macOS Apple Silicon，使用 Pixi 管理运行环境。
 
 ```text

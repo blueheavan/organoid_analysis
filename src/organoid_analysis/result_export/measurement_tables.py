@@ -16,13 +16,30 @@ def _json_default(value):
 
 def export_results(output_directory: str | Path, *, organoids: pd.DataFrame, cells: pd.DataFrame,
                    nuclei: pd.DataFrame, edges: pd.DataFrame, qc_flags: pd.DataFrame, summary: dict,
-                   label_masks: dict[str, object] | None = None,
+                   label_masks: dict[str, np.ndarray] | None = None,
                    spacing_zyx_um: tuple[float, float, float] | None = None) -> dict[str, str]:
     """Write the stable Result-like hierarchy; output must be new or empty."""
     output = Path(output_directory).resolve()
     if output.exists() and any(output.iterdir()):
         raise FileExistsError(f"Output directory is not empty: {output}")
+    if label_masks is not None:
+        if spacing_zyx_um is None:
+            raise ValueError("spacing_zyx_um is required when exporting label masks")
+        from organoid_analysis.microscopy_io.tiff_contract import (
+            validate_label_export,
+            write_labels,
+        )
+        expected_shape = None
+        for level, labels in label_masks.items():
+            if level not in {"organoid", "cell", "nucleus"}:
+                raise ValueError(f"Unknown label-mask level: {level}")
+            validate_label_export(labels, spacing_zyx_um)
+            if expected_shape is not None and labels.shape != expected_shape:
+                raise ValueError("Export label-mask shapes must match")
+            expected_shape = labels.shape
     (output / "features").mkdir(parents=True, exist_ok=True)
+    sentinel = output / "RUN_INCOMPLETE.txt"
+    sentinel.write_text("Export incomplete. Do not interpret partial outputs.\n", encoding="utf-8")
     (output / "qc").mkdir(parents=True, exist_ok=True)
     (output / "summary").mkdir(parents=True, exist_ok=True)
     paths = {
@@ -38,16 +55,14 @@ def export_results(output_directory: str | Path, *, organoids: pd.DataFrame, cel
     nuclei.to_parquet(paths["nucleus_features"], index=False)
     edges.to_parquet(paths["cell_topology_edges"], index=False)
     qc_flags.to_parquet(paths["qc_flags"], index=False)
-    paths["analysis_summary"].write_text(json.dumps(summary, indent=2, default=_json_default), encoding="utf-8")
     if label_masks is not None:
-        if spacing_zyx_um is None:
-            raise ValueError("spacing_zyx_um is required when exporting label masks")
-        from organoid_analysis.microscopy_io.tiff_contract import write_labels
+        assert spacing_zyx_um is not None  # validated before creating output
         for level, labels in label_masks.items():
-            if level not in {"organoid", "cell", "nucleus"}:
-                raise ValueError(f"Unknown label-mask level: {level}")
             path = output / "masks" / f"{level}_labels.ome.tif"
             path.parent.mkdir(parents=True, exist_ok=True)
             write_labels(path, labels, spacing_zyx_um)
             paths[f"{level}_labels"] = path
+    # Publish completion only after every table and mask has been written.
+    paths["analysis_summary"].write_text(json.dumps(summary, indent=2, default=_json_default), encoding="utf-8")
+    sentinel.unlink()
     return {key: str(value) for key, value in paths.items()}

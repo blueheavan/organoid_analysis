@@ -1,0 +1,66 @@
+✨ Pixi task (smoke): python scripts/smoke_segmentation.py
+/Users/jlwang/.matplotlib is not a writable directory
+Matplotlib created a temporary cache directory at /var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/matplotlib-gdl0r08r because there was an issue with the default path ({configdir}); it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
+Matplotlib is building the font cache; this may take a moment.
+[?25hAccelerator: cpu
+Smoke-test shape: (3, 256, 256)
+Traceback (most recent call last):
+  File "/Users/jlwang/Desktop/organoid_analysis/scripts/smoke_segmentation.py", line 70, in <module>
+    main()
+  File "/Users/jlwang/Desktop/organoid_analysis/scripts/smoke_segmentation.py", line 55, in main
+    masks = segment_stacks(
+            ^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/src/organoid_analysis/segmentation/cellpose_inference.py", line 266, in segment_stacks
+    model.eval(
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/cellpose/models.py", line 295, in eval
+    dP, cellprob, styles = self._run_net(x, resample=resample, rescale=rescale,
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/cellpose/models.py", line 350, in _run_net
+    yf, styles = run_3D(self.net, x, batch_size=batch_size, augment=augment,  
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/src/organoid_analysis/segmentation/cellpose_inference.py", line 370, in wrapped
+    return original(net, imgs, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/cellpose/core.py", line 295, in run_3D
+    y, style = run_net(net, xsl, batch_size=batch_size, augment=augment, 
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/cellpose/core.py", line 230, in run_net
+    ya0, stylea0 = _forward(net, IMGa[bslc])
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/cellpose/core.py", line 158, in _forward
+    y, style = net(X)[:2]
+               ^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/cellpose/vit.py", line 217, in forward
+    x = blk(x, rope_sincos)
+        ^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/dinov3/layers/block.py", line 205, in forward
+    return self._forward_list([x_or_x_list], rope_list=[rope_or_rope_list])[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/dinov3/layers/block.py", line 193, in _forward_list
+    x_attn = x + self.ls1(self.attn(self.norm1(x), rope=rope))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/dinov3/layers/attention.py", line 89, in forward
+    attn_v = self.compute_attention(qkv=qkv, attn_bias=attn_bias, rope=rope)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/dinov3/layers/attention.py", line 116, in compute_attention
+    x = torch.nn.functional.scaled_dot_product_attention(q, k, v)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

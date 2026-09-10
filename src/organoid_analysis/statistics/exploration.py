@@ -165,8 +165,8 @@ def _safe_shapiro(data: pd.Series, sample_size: int = 5000) -> float:
     values = data.dropna()
     if len(values) > sample_size:
         values = values.sample(sample_size, random_state=42)
-    if len(values) < 3:
-        return 1.0
+    if len(values) < 3 or not np.isfinite(values).all() or values.nunique() < 2:
+        return np.nan
     return float(stats.shapiro(values).pvalue)
 
 
@@ -183,7 +183,7 @@ def check_normality(
                     "Feature": simplify_feature_name(col),
                     "Condition": condition,
                     "P_value": p,
-                    "Is_Normal": p > 0.05,
+                    "Is_Normal": p > 0.05 if np.isfinite(p) else pd.NA,
                 }
             )
     return pd.DataFrame(rows)
@@ -200,14 +200,14 @@ def check_equal_variance(
     for col in feature_cols:
         groups = [df.loc[df[condition_col] == c, col].dropna() for c in conditions]
         if any(len(g) < 2 for g in groups):
-            p_value = 1.0
+            p_value = np.nan
         else:
             _, p_value = stats.levene(*groups)
         rows.append(
             {
                 "Feature": simplify_feature_name(col),
                 "P_value": float(p_value),
-                "Equal_Variance": p_value > 0.05,
+                "Equal_Variance": p_value > 0.05 if np.isfinite(p_value) else pd.NA,
             }
         )
     return pd.DataFrame(rows)
@@ -219,16 +219,18 @@ def cohens_d(group1: pd.Series, group2: pd.Series) -> float:
     g2 = group2.dropna()
     n1, n2 = len(g1), len(g2)
     if n1 < 2 or n2 < 2:
-        return 0.0
+        return np.nan
     var1, var2 = g1.var(ddof=1), g2.var(ddof=1)
     pooled = np.sqrt(((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2))
     if pooled == 0:
-        return 0.0
+        return np.nan
     return float((g1.mean() - g2.mean()) / pooled)
 
 
 def effect_size_label(d: float) -> str:
     """Classify Cohen's d magnitude into a labelled band."""
+    if not np.isfinite(d):
+        return "Not estimable"
     magnitude = abs(d)
     if magnitude < 0.2:
         return "Negligible"
@@ -254,6 +256,8 @@ def compare_two_groups(
     if len(conditions) < 2:
         raise ValueError("At least two groups are required.")
     group1, group2 = (group_order if group_order is not None else tuple(conditions))[:2]
+    if group1 == group2:
+        raise ValueError("Select two distinct groups")
     if group1 not in df[group_col].values or group2 not in df[group_col].values:
         raise ValueError(f"Groups {group1!r} / {group2!r} not found in data.")
 
@@ -261,15 +265,23 @@ def compare_two_groups(
     for col in feature_cols:
         g1 = df.loc[df[group_col] == group1, col].dropna()
         g2 = df.loc[df[group_col] == group2, col].dropna()
+        if not np.isfinite(g1).all() or not np.isfinite(g2).all():
+            raise ValueError(f"{col} contains nonfinite measurements")
         p_norm1 = _safe_shapiro(g1)
         p_norm2 = _safe_shapiro(g2)
         p_var = (
             float(stats.levene(g1, g2).pvalue)
             if len(g1) >= 2 and len(g2) >= 2
-            else 1.0
+            else np.nan
         )
         assumptions_met = p_norm1 > 0.05 and p_norm2 > 0.05 and p_var > 0.05
-        if assumptions_met:
+        if len(g1) < 3 or len(g2) < 3:
+            # The existing selection rule requires Shapiro-Wilk, which has
+            # no result below three observations. Do not fabricate p=1 or
+            # silently select an alternative statistical procedure.
+            p_value = np.nan
+            test_used = "NOT ASSESSED"
+        elif assumptions_met:
             _, p_value = stats.ttest_ind(g1, g2, equal_var=True)
             test_used = "t-test"
         else:
@@ -295,7 +307,8 @@ def compare_two_groups(
 
     result = pd.DataFrame(rows)
     threshold = 0.05 / len(feature_cols) if feature_cols else 1.0
-    result["Significant_Bonferroni"] = result["P_value"] < threshold
+    result["Significant_Bonferroni"] = (result["P_value"] < threshold).astype("boolean")
+    result.loc[~np.isfinite(result["P_value"]), "Significant_Bonferroni"] = pd.NA
     return result
 
 
@@ -314,7 +327,7 @@ def field_coefficient_of_variation(
                 {
                     "Feature": simplify_feature_name(col),
                     "Condition": condition,
-                    "Field_CV_%": round((std / mean) * 100, 2) if mean != 0 else 0.0,
+                    "Field_CV_%": round((std / mean) * 100, 2) if mean != 0 else np.nan,
                     "Field_Mean": round(float(mean), 4),
                     "Field_SD": round(float(std), 4),
                 }
@@ -334,9 +347,17 @@ def prepare_binary_data(
     binary = df[df[group_col].isin([well1, well2])].copy()
     binary["Label"] = (binary[group_col] == well1).astype(int)
     label_map = {1: well1, 0: well2}
-    X = binary[feature_cols].fillna(binary[feature_cols].mean()).values
+    # Preserve missing values until after splitting: a full-data mean leaks
+    # holdout information into training observations.
+    X = binary[feature_cols].to_numpy(dtype=float)
     y = binary["Label"].values
     return X, y, label_map
+
+
+def _check_training_features(X: np.ndarray) -> None:
+    """A training mean cannot be estimated for an entirely missing feature."""
+    if np.isnan(X).all(axis=0).any():
+        raise ValueError("Training data contain an entirely missing feature; mean imputation is undefined")
 
 
 def train_binary_classifiers(
@@ -356,19 +377,22 @@ def train_binary_classifiers(
     Exploratory tutorial workflow output, not a validated classifier.
     """
     from sklearn.ensemble import RandomForestClassifier
+    from sklearn.impute import SimpleImputer
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import accuracy_score, roc_auc_score
     from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
+    from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import StandardScaler
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, random_state=42, stratify=y
     )
-    scaler = StandardScaler()
+    _check_training_features(X_train)
+    scaler = make_pipeline(SimpleImputer(keep_empty_features=True), StandardScaler())
     X_train_s = scaler.fit_transform(X_train)
     X_test_s = scaler.transform(X_test)
 
-    ratio = (y == 0).sum() / max((y == 1).sum(), 1)
+    ratio = (y_train == 0).sum() / max((y_train == 1).sum(), 1)
     models = {
         "Logistic Regression": LogisticRegression(
             max_iter=1000, random_state=42, class_weight="balanced"
@@ -393,14 +417,22 @@ def train_binary_classifiers(
         logging.getLogger(__name__).warning(
             "XGBoost unavailable (%s); continuing without it.", error
         )
-    cv = StratifiedKFold(n_splits=min(5, np.bincount(y).min()), shuffle=True, random_state=42)
+    n_splits = min(5, int(np.bincount(y_train).min()))
+    if n_splits < 2:
+        raise ValueError("At least two training observations per class are required for cross-validation")
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+    for train_indices, _ in cv.split(X_train, y_train):
+        _check_training_features(X_train[train_indices])
 
     summary_rows = []
     fitted = {}
     predictions = {}
     for name, model in models.items():
         model.fit(X_train_s, y_train)
-        cv_scores = cross_val_score(model, X_train_s, y_train, cv=cv, scoring="accuracy")
+        cv_scores = cross_val_score(
+            make_pipeline(SimpleImputer(keep_empty_features=True), StandardScaler(), model),
+            X_train, y_train, cv=cv, scoring="accuracy", error_score="raise",
+        )
         y_pred = model.predict(X_test_s)
         acc = accuracy_score(y_test, y_pred)
         y_prob = model.predict_proba(X_test_s)[:, -1]
@@ -419,8 +451,10 @@ def train_binary_classifiers(
 
     summary = pd.DataFrame(summary_rows)
     if not summary.empty:
-        best = summary.loc[summary["Test_ROC_AUC"].idxmax(), "Model"]
+        best = summary.loc[summary["CV_Accuracy"].idxmax(), "Model"]
         summary.attrs["best_model"] = best
+        summary.attrs["selection_metric"] = "training CV accuracy"
+        summary.attrs["evaluation_scope"] = "object split; biological generalization NOT ASSESSED"
     return summary, fitted, scaler, predictions, label_map
 
 
@@ -457,17 +491,20 @@ def train_multiclass_classifier(
     docs/PARAMETERS.md ("Exploratory statistics/ML parameters").
     """
     from sklearn.ensemble import RandomForestClassifier
+    from sklearn.impute import SimpleImputer
     from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
     from sklearn.model_selection import train_test_split
+    from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import LabelEncoder, StandardScaler
 
     le = LabelEncoder()
     y = le.fit_transform(df[label_col].astype(str).values)
-    X = df[feature_cols].fillna(df[feature_cols].mean()).values
+    X = df[feature_cols].to_numpy(dtype=float)
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, random_state=42, stratify=y
     )
-    scaler = StandardScaler()
+    _check_training_features(X_train)
+    scaler = make_pipeline(SimpleImputer(keep_empty_features=True), StandardScaler())
     X_train_s = scaler.fit_transform(X_train)
     X_test_s = scaler.transform(X_test)
 
@@ -588,9 +625,9 @@ def cluster_characterization(
             f_stat, p_value = stats.f_oneway(*groups)
             ss_between = sum(len(g) * (np.mean(g) - np.mean(data)) ** 2 for g in groups)
             ss_total = np.sum((data - np.mean(data)) ** 2)
-            eta = ss_between / ss_total if ss_total > 0 else 0.0
+            eta = ss_between / ss_total if ss_total > 0 else np.nan
         else:
-            f_stat, p_value, eta = 0.0, 1.0, 0.0
+            f_stat, p_value, eta = np.nan, np.nan, np.nan
         rows.append(
             {
                 "Feature": simplify_feature_name(feature),
@@ -610,16 +647,20 @@ def cluster_feature_importance(df: pd.DataFrame, feature_cols: list[str]) -> pd.
     docs/PARAMETERS.md ("Exploratory statistics/ML parameters").
     """
     from sklearn.ensemble import RandomForestClassifier
+    from sklearn.impute import SimpleImputer
     from sklearn.model_selection import train_test_split
+    from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import StandardScaler
 
-    X = df[feature_cols].fillna(df[feature_cols].mean()).values
+    X = df[feature_cols].to_numpy(dtype=float)
     y = df["Cluster"].values
-    scaler = StandardScaler()
-    X_s = scaler.fit_transform(X)
     X_train, X_test, y_train, y_test = train_test_split(
-        X_s, y, test_size=0.3, random_state=42, stratify=y
+        X, y, test_size=0.3, random_state=42, stratify=y
     )
+    _check_training_features(X_train)
+    scaler = make_pipeline(SimpleImputer(keep_empty_features=True), StandardScaler())
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
     rf = RandomForestClassifier(n_estimators=200, max_depth=15, random_state=42, n_jobs=-1)
     rf.fit(X_train, y_train)
     importance = pd.DataFrame(

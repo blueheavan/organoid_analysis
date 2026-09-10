@@ -1,201 +1,137 @@
-# Parameters Catalog — Organoid Pipeline
+# Scientific parameter registry — 2026-09-10
 
-Version: 1.1.0
-Date: 2026-09-03
+Values below are recovered from current code, not justified by prior reports. The machine-readable [registry](evidence/2026-09-10/parameters.json) contains every row's calibration, data role, independence, held-out validation, sensitivity and uncertainty fields. Shared defaults for those fields: **no project calibration artifact; calibration role, independent unit, held-out support, scientifically justified sensitivity range and uncertainty are NOT ASSESSED**. This is a limitation, not evidence of adequacy. Numerical regression tests verify behavior, not suitability of a default.
 
-This catalog records the provenance of every scientifically consequential parameter, threshold, and default in the pipeline. Properties follow the rigor protocol (section 6). Engineering-only parameters that cannot affect scientific results (e.g. output verbosity, file naming) are not catalogued.
+Origin, basis strength and evidence status are separate. `HEURISTIC` denotes a project rule with no calibration record; historical attribution of an exact value to a paper/manufacturer is not invented. Model-library defaults have `SOFTWARE_OR_MODEL_DEFAULT` origin and likewise lack project validation. User configuration does not establish scientific validity. `NOT APPLICABLE` applies only to inactive 3D flow thresholds and display/persistence/seed settings as scientific cutoffs; stochastic reproducibility remains separately assessed.
 
-Legend for status: `Validated` / `Partially validated` / `Not validated`; sensitivity column: `Tested` / `Not tested` / `N/A`.
+All scientific values/defaults are unchanged. Input-domain validation now rejects invalid numeric QC values and undefined statistics abstain. Sensitivity probes, when present in the report, are descriptive perturbations only and do not establish a scientifically plausible range.
 
----
-
-## Multilevel 3D analysis parameters
-
-Source of truth: `src/organoid_analysis/quantification/multilevel_relationships/config.py` (dataclass) and CLI flags in `src/organoid_analysis/command_line/organoid_commands.py`.
-
-| Parameter | Value | Unit | Origin | Rationale | Scientific impact | Calibration artifact | Status | Sensitivity | User configurable |
-|---|---|---|---|---|---|---|---|---|---|
-| `minimum_voxels` | 5 | voxel | heuristic (engineer-defined) | Objects with <5 voxels are too small to be reliably measured / non-degenerate | Flags too-small objects as `too_small` QC; affects QC only, not measurement set | N/A (validation only) | Partially validated | Not tested | Yes (`--minimum-voxels`) |
-| `low_parent_overlap_fraction` | 0.5 | fraction (of child voxels) | heuristic | <50% of a child's voxels overlapping its assigned parent suggests a weak/ambiguous assignment | Flags `low_parent_overlap` QC | N/A | Partially validated | Not tested | Yes |
-| `mad_z_threshold` | 3.5 | robust z-units | heuristic | ~3.5 σ beyond median/MAD identifies extremes without catastrophic masking | Flags `volume_outlier` QC | N/A | Partially validated | Not tested | Yes |
-| `core_max_normalized_radial_position` | 0.5 | dimensionless | heuristic | Equivalent-radius ≤0.5 = core | Defines `core_cell_fraction` | N/A | Not validated (operational definition) | Not tested | Yes |
-| `peripheral_min_normalized_radial_position` | 0.8 | dimensionless | heuristic | Equivalent-radius ≥0.8 = periphery | Defines `peripheral_cell_fraction` | N/A | Not validated (operational definition) | Not tested | Yes |
-
----
-
-## Principal-axis method (fixed definition, not user-configurable)
-
-Source: `src/organoid_analysis/quantification/features.py:72–73` (function `geometry`).
-
-| Item | Value | Unit | Origin | Rationale |
-|---|---|---|---|---|
-| Intrinsic voxel second-moment term | `spacing²/12` | µm² | exact (uniform density in a cubic voxel) | Accounts for each voxel's internal inertia; shifts point-cloud covariance to solid-object covariance. |
-| Axis length conversion | `2√(5λ)` | µm | established morphometric formula (moment-equivalent ellipsoid) | For a uniform ellipsoid with semi-axes a,b,c: I_xx = M/5(b²+c²); eigenvalues λ of covariance/5 = (a²+b²)/20 etc.; major axis a = 2√(5λ_max). |
-
----
-
-## Classical analysis config defaults
-
-Source of truth: `src/organoid_analysis/config.py` (module `DEFAULTS`), validated by `validate_config`.
-
-### Segmentation
-
-| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity |
+| Parameter | Current value/rule | Unit | Origin / basis | Rationale and scientific consequence | Configurable | Evidence status |
 |---|---|---|---|---|---|---|
-| `method` | `watershed` | – | established (skimage watershed) | Classical threshold+watershed split | Validated (algorithm documented) | N/A |
-| `polarity` | `bright` | – | heuristic | Dark-polarity is an exploratory brightfield baseline | Partially validated | N/A |
-| `gaussian_sigma_um` | 1.0 | µm | heuristic | Pre-smoothing scale; smooths then segments | Not validated on real data | Not tested |
-| `threshold` | `otsu` | – | established (Otsu) | Global automatic threshold | Validated (established statistic) | N/A |
-| `probability_threshold` | 0.5 | probability | conventional | Foreground-probability decision boundary | Partially validated | Not tested |
-| `closing_radius_um` | 1.0 | µm | heuristic | Binary closing scale | Not validated | Not tested |
-| `fill_enclosed_holes` | `true` | – | heuristic | Envelope fills internal lumens (documented trade-off) | Partially validated | N/A |
-| `min_volume_um3` | 2000.0 | µm³ | heuristic | Minimum object volume to retain | Not validated on real data | Not tested |
-| `seed_h_um` | 2.0 | µm | heuristic | H-maxima seed height | Not validated | Not tested |
-| `seed_min_distance_um` | 15.0 | µm | heuristic | Physical seed suppression distance | Not validated | Not tested |
-| `split_touching` | `true` | – | heuristic | Enable watershed splitting | Partially validated | N/A |
-| `max_foreground_fraction` | 0.70 | fraction | heuristic | Dense foreground ⇒ QC review flag | Partially validated | N/A |
-| `qc_reference_method` | `none` | – | heuristic | Separate watershed as agreement check; `none` disables | Partially validated | N/A |
-| `qc_count_difference_threshold` | 0.40 | fraction | heuristic | Count disagreement triggers review | Partially validated | N/A |
-| `qc_min_z_extent_ratio` | 0.65 | fraction | heuristic | Z-extent disagreement threshold | Partially validated | N/A |
-| `_HIGH_ANISOTROPY_RATIO` (segmentation.py, not YAML-configurable) | 5 | ratio (max/min voxel spacing) | heuristic | Raises `high_voxel_anisotropy` QC flag; relates to docs/SCIENTIFIC_SPEC.md's "Isotropic voxels" limitation | Not validated | Not tested |
+| `channels.structure` | `0` | zero-based channel index | HEURISTIC / HEURISTIC | Acquisition channel identity; biological stain identity must be supplied, never inferred from index. | Yes | INSUFFICIENT EVIDENCE |
+| `channels.calcein` | `null` | zero-based channel index | HEURISTIC / HEURISTIC | Acquisition channel identity; biological stain identity must be supplied, never inferred from index. | Yes | INSUFFICIENT EVIDENCE |
+| `channels.pi` | `null` | zero-based channel index | HEURISTIC / HEURISTIC | Acquisition channel identity; biological stain identity must be supplied, never inferred from index. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.method` | `"watershed"` | dimensionless | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.polarity` | `"bright"` | dimensionless | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.gaussian_sigma_um` | `1.0` | um | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.background_sigma_um` | `0.0` | um | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.threshold` | `"otsu"` | algorithm or corrected raw intensity | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.probability_threshold` | `0.5` | dimensionless | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.closing_radius_um` | `1.0` | um | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.fill_enclosed_holes` | `true` | dimensionless | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.min_volume_um3` | `2000.0` | um^3 | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.seed_h_um` | `2.0` | um | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.seed_min_distance_um` | `15.0` | um | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.split_touching` | `true` | dimensionless | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.max_foreground_fraction` | `0.7` | dimensionless | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.qc_reference_method` | `"none"` | dimensionless | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.qc_count_difference_threshold` | `0.4` | dimensionless | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `segmentation.qc_min_z_extent_ratio` | `0.65` | dimensionless | HEURISTIC / HEURISTIC | Changes foreground, splitting, retention, or segmentation review. No project calibration supports the numerical default. | Yes | INSUFFICIENT EVIDENCE |
+| `quality.exclude_border` | `true` | dimensionless | HEURISTIC / HEURISTIC | Changes eligibility or marker background/saturation measurements; acquisition-specific support is missing. | Yes | INSUFFICIENT EVIDENCE |
+| `quality.min_z_slices` | `5` | Z slices | HEURISTIC / HEURISTIC | Changes eligibility or marker background/saturation measurements; acquisition-specific support is missing. | Yes | INSUFFICIENT EVIDENCE |
+| `quality.max_volume_um3` | `null` | um^3 | HEURISTIC / HEURISTIC | Changes eligibility or marker background/saturation measurements; acquisition-specific support is missing. | Yes | INSUFFICIENT EVIDENCE |
+| `quality.background_inner_um` | `2.0` | um | HEURISTIC / HEURISTIC | Changes eligibility or marker background/saturation measurements; acquisition-specific support is missing. | Yes | INSUFFICIENT EVIDENCE |
+| `quality.background_outer_um` | `7.0` | um | HEURISTIC / HEURISTIC | Changes eligibility or marker background/saturation measurements; acquisition-specific support is missing. | Yes | INSUFFICIENT EVIDENCE |
+| `quality.min_background_voxels` | `100` | voxels | HEURISTIC / HEURISTIC | Changes eligibility or marker background/saturation measurements; acquisition-specific support is missing. | Yes | INSUFFICIENT EVIDENCE |
+| `quality.max_saturated_fraction` | `0.01` | dimensionless | HEURISTIC / HEURISTIC | Changes eligibility or marker background/saturation measurements; acquisition-specific support is missing. | Yes | INSUFFICIENT EVIDENCE |
+| `quality.calcein_saturation_value` | `null` | raw detector intensity | HEURISTIC / HEURISTIC | Changes eligibility or marker background/saturation measurements; acquisition-specific support is missing. | Yes | INSUFFICIENT EVIDENCE |
+| `quality.pi_saturation_value` | `null` | raw detector intensity | HEURISTIC / HEURISTIC | Changes eligibility or marker background/saturation measurements; acquisition-specific support is missing. | Yes | INSUFFICIENT EVIDENCE |
+| `viability.mode` | `"uncalibrated"` | dimensionless | HEURISTIC / HEURISTIC | Changes calibration availability or signal-state calls; no independent assay validates this default. | Yes | INSUFFICIENT EVIDENCE |
+| `viability.min_control_replicates` | `2` | biological replicates | HEURISTIC / HEURISTIC | Changes calibration availability or signal-state calls; no independent assay validates this default. | Yes | INSUFFICIENT EVIDENCE |
+| `viability.min_control_separation_snr` | `3.0` | dimensionless | HEURISTIC / HEURISTIC | Changes calibration availability or signal-state calls; no independent assay validates this default. | Yes | INSUFFICIENT EVIDENCE |
+| `viability.high_gate` | `0.6` | dimensionless | HEURISTIC / HEURISTIC | Changes calibration availability or signal-state calls; no independent assay validates this default. | Yes | INSUFFICIENT EVIDENCE |
+| `viability.low_gate` | `0.3` | dimensionless | HEURISTIC / HEURISTIC | Changes calibration availability or signal-state calls; no independent assay validates this default. | Yes | INSUFFICIENT EVIDENCE |
+| `report.bootstrap_iterations` | `2000` | resamples | HEURISTIC / HEURISTIC | Changes resampling precision/reproducibility or display/export scope. | Yes | INSUFFICIENT EVIDENCE |
+| `report.seed` | `20260831` | dimensionless | ARBITRARY_OR_UNKNOWN / HEURISTIC | Changes resampling precision/reproducibility or display/export scope. | Yes | NOT APPLICABLE |
+| `report.save_meshes` | `true` | dimensionless | ARBITRARY_OR_UNKNOWN / HEURISTIC | Changes resampling precision/reproducibility or display/export scope. | Yes | NOT APPLICABLE |
+| `report.max_meshes_in_preview` | `20` | dimensionless | ARBITRARY_OR_UNKNOWN / HEURISTIC | Changes resampling precision/reproducibility or display/export scope. | Yes | NOT APPLICABLE |
+| `stats.enabled` | `true` | dimensionless | HEURISTIC / HEURISTIC | Changes inferential inclusion, outcomes or whether inference runs; no predeclared study design validates this default. | Yes | INSUFFICIENT EVIDENCE |
+| `stats.features` | `["volume_um3", "sphericity"]` | dimensionless | HEURISTIC / HEURISTIC | Changes inferential inclusion, outcomes or whether inference runs; no predeclared study design validates this default. | Yes | INSUFFICIENT EVIDENCE |
+| `stats.min_replicates_per_condition` | `3` | biological replicates | HEURISTIC / HEURISTIC | Changes inferential inclusion, outcomes or whether inference runs; no predeclared study design validates this default. | Yes | INSUFFICIENT EVIDENCE |
+| `multilevel.minimum_voxels` | `5` | voxels | HEURISTIC / HEURISTIC | QC review or core/periphery fraction; no validated biological decision boundary. | Yes | INSUFFICIENT EVIDENCE |
+| `multilevel.low_parent_overlap_fraction` | `0.5` | dimensionless | HEURISTIC / HEURISTIC | QC review or core/periphery fraction; no validated biological decision boundary. | Yes | INSUFFICIENT EVIDENCE |
+| `multilevel.mad_z_threshold` | `3.5` | dimensionless | HEURISTIC / HEURISTIC | QC review or core/periphery fraction; no validated biological decision boundary. | Yes | INSUFFICIENT EVIDENCE |
+| `multilevel.core_max_normalized_radial_position` | `0.5` | dimensionless | HEURISTIC / HEURISTIC | QC review or core/periphery fraction; no validated biological decision boundary. | Yes | INSUFFICIENT EVIDENCE |
+| `multilevel.peripheral_min_normalized_radial_position` | `0.8` | dimensionless | HEURISTIC / HEURISTIC | QC review or core/periphery fraction; no validated biological decision boundary. | Yes | INSUFFICIENT EVIDENCE |
+| `cellpose.model_type` | `"cpdino-vitb"` | dimensionless | HEURISTIC / HEURISTIC | Alters model scale, foreground or sampling; project calibration missing. | Yes | INSUFFICIENT EVIDENCE |
+| `cellpose.nuclei_diameter` | `30.0` | full-resolution XY pixels | HEURISTIC / HEURISTIC | Alters model scale, foreground or sampling; project calibration missing. | Yes | INSUFFICIENT EVIDENCE |
+| `cellpose.cell_diameter` | `50.0` | full-resolution XY pixels | HEURISTIC / HEURISTIC | Alters model scale, foreground or sampling; project calibration missing. | Yes | INSUFFICIENT EVIDENCE |
+| `cellpose.anisotropy` | `2.9` | dimensionless | HEURISTIC / HEURISTIC | Fallback Z/XY calibration 2.9; changes segmentation and downstream Z spacing. | Yes | INSUFFICIENT EVIDENCE |
+| `cellpose.xy_spacing_um` | `0.414` | um/pixel | HEURISTIC / HEURISTIC | Fallback physical calibration, not measured metadata; scales lengths/areas/volumes. No acquisition evidence supports applying 0.414 universally. | Yes | INSUFFICIENT EVIDENCE |
+| `cellpose.nuclei_flow_threshold` | `0.4` | dimensionless | HEURISTIC / HEURISTIC | Ignored by do_3D in installed Cellpose; disabled in UI. | Yes | NOT APPLICABLE |
+| `cellpose.cell_flow_threshold` | `0.6` | dimensionless | HEURISTIC / HEURISTIC | Ignored by do_3D in installed Cellpose; disabled in UI. | Yes | NOT APPLICABLE |
+| `cellpose.nuclei_cellprob_threshold` | `0.0` | dimensionless | HEURISTIC / HEURISTIC | Alters model scale, foreground or sampling; project calibration missing. | Yes | INSUFFICIENT EVIDENCE |
+| `cellpose.cell_cellprob_threshold` | `0.0` | dimensionless | HEURISTIC / HEURISTIC | Alters model scale, foreground or sampling; project calibration missing. | Yes | INSUFFICIENT EVIDENCE |
+| `cellpose.flow3d_smooth` | `1.0` | working-grid pixels (Gaussian sigma) | HEURISTIC / HEURISTIC | Alters model scale, foreground or sampling; project calibration missing. | Yes | INSUFFICIENT EVIDENCE |
+| `cellpose.batch_size` | `8` | dimensionless | HEURISTIC / HEURISTIC | Throughput/backend batch choice; numerical equivalence across batch sizes NOT ASSESSED. | Yes | INSUFFICIENT EVIDENCE |
+| `cellpose.xy_downsample` | `1.0` | dimensionless | HEURISTIC / HEURISTIC | Alters model scale, foreground or sampling; project calibration missing. | Yes | INSUFFICIENT EVIDENCE |
+| `cellpose.eval.normalize` | `"True; whole-stack 1st/99th percentiles"` | percentile | SOFTWARE_OR_MODEL_DEFAULT / CONTEXT_DEPENDENT | Network-only normalization; raw intensities retained | No (wrapper uses library default) | INSUFFICIENT EVIDENCE |
+| `cellpose.eval.min_size` | `15` | working voxels | SOFTWARE_OR_MODEL_DEFAULT / CONTEXT_DEPENDENT | Small-mask removal | No (wrapper uses library default) | INSUFFICIENT EVIDENCE |
+| `cellpose.eval.max_size_fraction` | `0.4` | volume fraction | SOFTWARE_OR_MODEL_DEFAULT / CONTEXT_DEPENDENT | Large-mask removal | No (wrapper uses library default) | INSUFFICIENT EVIDENCE |
+| `cellpose.eval.niter` | `"int(200 / (30 / working_diameter))"` | iterations | SOFTWARE_OR_MODEL_DEFAULT / CONTEXT_DEPENDENT | Dynamics convergence/runtime | No (wrapper uses library default) | INSUFFICIENT EVIDENCE |
+| `cellpose.eval.resample` | `true` | boolean | SOFTWARE_OR_MODEL_DEFAULT / CONTEXT_DEPENDENT | Flows resampled before mask formation | No (wrapper uses library default) | INSUFFICIENT EVIDENCE |
+| `cellpose.eval.augment` | `false` | boolean | SOFTWARE_OR_MODEL_DEFAULT / CONTEXT_DEPENDENT | No tile augmentation | No (wrapper uses library default) | INSUFFICIENT EVIDENCE |
+| `cellpose.eval.tile_overlap` | `0.1` | fraction | SOFTWARE_OR_MODEL_DEFAULT / CONTEXT_DEPENDENT | Tile overlap changes seam behavior | No (wrapper uses library default) | INSUFFICIENT EVIDENCE |
+| `cellpose.eval.bsize` | `"384 for DINO; 256 for SAM"` | pixels | SOFTWARE_OR_MODEL_DEFAULT / CONTEXT_DEPENDENT | Network tile size | No (wrapper uses library default) | INSUFFICIENT EVIDENCE |
+| `cellpose.eval.stitch_threshold` | `0.0` | IoU | SOFTWARE_OR_MODEL_DEFAULT / CONTEXT_DEPENDENT | 2D stitching inactive in this 3D route | No (wrapper uses library default) | INSUFFICIENT EVIDENCE |
+| `diameter_estimate.max_slices` | `6` | slices | HEURISTIC / HEURISTIC | Coarse model-derived size suggestion can affect final chosen scale. Not an independent size measurement. | API for slices/downsample; otherwise No | INSUFFICIENT EVIDENCE |
+| `diameter_estimate.downsample` | `0.5` | XY fraction | HEURISTIC / HEURISTIC | Coarse model-derived size suggestion can affect final chosen scale. Not an independent size measurement. | API for slices/downsample; otherwise No | INSUFFICIENT EVIDENCE |
+| `diameter_estimate.quantile` | `0.5` | quantile | HEURISTIC / HEURISTIC | Coarse model-derived size suggestion can affect final chosen scale. Not an independent size measurement. | API for slices/downsample; otherwise No | INSUFFICIENT EVIDENCE |
+| `diameter_estimate.accepted_range` | `[5.0, 250.0]` | full-resolution pixels | HEURISTIC / HEURISTIC | Coarse model-derived size suggestion can affect final chosen scale. Not an independent size measurement. | API for slices/downsample; otherwise No | INSUFFICIENT EVIDENCE |
+| `diameter_estimate.flow_threshold` | `0.0` | flow error | HEURISTIC / HEURISTIC | Coarse model-derived size suggestion can affect final chosen scale. Not an independent size measurement. | API for slices/downsample; otherwise No | INSUFFICIENT EVIDENCE |
+| `diameter_estimate.cellprob_threshold` | `0.0` | network score | HEURISTIC / HEURISTIC | Coarse model-derived size suggestion can affect final chosen scale. Not an independent size measurement. | API for slices/downsample; otherwise No | INSUFFICIENT EVIDENCE |
+| `diameter_estimate.min_size` | `5` | pixels | HEURISTIC / HEURISTIC | Coarse model-derived size suggestion can affect final chosen scale. Not an independent size measurement. | API for slices/downsample; otherwise No | INSUFFICIENT EVIDENCE |
+| `diameter_estimate.batch_size` | `8` | images | HEURISTIC / HEURISTIC | Coarse model-derived size suggestion can affect final chosen scale. Not an independent size measurement. | API for slices/downsample; otherwise No | INSUFFICIENT EVIDENCE |
+| `cells.min_cell_volume_um3` | `200.0` | um^3 | HEURISTIC / HEURISTIC | Changes selected cells/nuclei, pairing, or spatial density; one-to-one biological assumption unvalidated. | Yes | INSUFFICIENT EVIDENCE |
+| `cells.min_nucleus_volume_um3` | `25.0` | um^3 | HEURISTIC / HEURISTIC | Changes selected cells/nuclei, pairing, or spatial density; one-to-one biological assumption unvalidated. | Yes | INSUFFICIENT EVIDENCE |
+| `cells.require_nucleus` | `true` | boolean | HEURISTIC / HEURISTIC | Changes selected cells/nuclei, pairing, or spatial density; one-to-one biological assumption unvalidated. | Yes | INSUFFICIENT EVIDENCE |
+| `cells.max_nc_ratio` | `1.0` | volume ratio | HEURISTIC / HEURISTIC | Changes selected cells/nuclei, pairing, or spatial density; one-to-one biological assumption unvalidated. | Yes | INSUFFICIENT EVIDENCE |
+| `cells.min_nucleus_containment` | `0.5` | overlap fraction | HEURISTIC / HEURISTIC | Changes selected cells/nuclei, pairing, or spatial density; one-to-one biological assumption unvalidated. | Yes | INSUFFICIENT EVIDENCE |
+| `cells.neighbor_radius_um` | `25.0` | um | HEURISTIC / HEURISTIC | Changes selected cells/nuclei, pairing, or spatial density; one-to-one biological assumption unvalidated. | Yes | INSUFFICIENT EVIDENCE |
+| `spacing_agreement.rtol` | `0.01` | relative | HEURISTIC / HEURISTIC | Acceptance of grid differences; instrument tolerance not calibrated | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `spacing_agreement.atol` | `1e-05` | um | HEURISTIC / HEURISTIC | Acceptance of grid differences | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `square_xy.rtol_atol` | `[1e-06, 1e-09]` | relative; um | HEURISTIC / HEURISTIC | Reject unsupported rectangular XY for Cellpose | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `high_anisotropy_ratio` | `5` | max/min spacing | HEURISTIC / HEURISTIC | Review flag, not a demonstrated reliability boundary | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `sphericity_review` | `1.05` | dimensionless | HEURISTIC / HEURISTIC | Classical geometry exclusion; not present as a multilevel QC rule | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `MAD_consistency` | `[1.4826, 0.67448975]` | normal scale | HEURISTIC / HEURISTIC | Gaussian scaling identity; does not justify biological cutoff | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `MAD_zero` | `"finite values not isclose to median; NumPy default rtol=1e-5, atol=1e-8"` | volume units | HEURISTIC / HEURISTIC | Uncalibrated fallback outlier flags | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `viability.noise_floor` | `1e-09` | intensity | HEURISTIC / HEURISTIC | Can make SNR arbitrarily large on constant controls; not instrument noise qualification | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `bootstrap.minimum_N` | `3` | replicates | HEURISTIC / HEURISTIC | Availability of percentile intervals, not precision assurance | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `bootstrap.quantiles` | `[0.025, 0.975]` | quantile | HEURISTIC / HEURISTIC | Nominal 95% interval; coverage NOT ASSESSED | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `inference.log10_features` | `["volume_um3"]` | feature | HEURISTIC / HEURISTIC | Changes estimand to log10 volume | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `inference.random_variance_ratio` | `1e-06` | ratio to residual variance | HEURISTIC / HEURISTIC | Switches LMM to clustered OLS | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `inference.reml_optimizers` | `"True; lbfgs then cg"` | rule | HEURISTIC / HEURISTIC | Conditional fit/fallback policy | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `inference.contrast_df` | `"G-1"` | replicate clusters | HEURISTIC / HEURISTIC | Heuristic MixedLM small-sample reference; not Satterthwaite/Kenward-Roger | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `inference.alpha_family` | `"0.05; BH per feature; omnibus unadjusted"` | p value | HEURISTIC / HEURISTIC | Does not control multiplicity across all features/omnibus tests | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `validation.iou_threshold` | `0.5` | IoU | HEURISTIC / HEURISTIC | Determines matches; not calibrated to biological error cost | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `validation.split_merge_overlap` | `0.1` | object fraction | HEURISTIC / HEURISTIC | Hints only, not a validated split/merge accuracy measure | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `exploration.shapiro_cap_seed` | `[5000, 42]` | observations; seed | HEURISTIC / HEURISTIC | Deterministic subsampling; does not cure normality-selection bias | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `exploration.test_selection` | `"Shapiro + Levene p>0.05: pooled t; otherwise Mann-Whitney; N<3 abstains"` | rule | HEURISTIC / HEURISTIC | Data-driven method selection remains exploratory | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `exploration.cohen_bands` | `[0.2, 0.5, 0.8]` | standard deviations | HEURISTIC / HEURISTIC | Conventional descriptive bands, no assay-specific meaning | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `exploration.iqr_multiplier` | `1.5` | IQR | HEURISTIC / HEURISTIC | Descriptive outlier flag | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `exploration.split` | `"test_size=0.3; stratify=y; random_state=42"` | objects | HEURISTIC / HEURISTIC | No donor/well grouping; biological leakage remains | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `exploration.CV` | `"min(5, smallest training-class count); shuffle=True; seed=42"` | folds | HEURISTIC / HEURISTIC | Train-fold preprocessing; object-level accuracy chooses model | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `exploration.LogisticRegression` | `"max_iter=1000; class_weight=balanced; seed=42"` | rule | HEURISTIC / HEURISTIC | Untuned classification | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `exploration.RandomForest_binary` | `"100 trees; max_depth=10; balanced; seed=42"` | rule | HEURISTIC / HEURISTIC | Untuned classification | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `exploration.XGBoost` | `"100 trees; max_depth=5; learning_rate=0.1; scale_pos_weight=training negative/positive; seed=42"` | rule | HEURISTIC / HEURISTIC | Untuned classification; optional backend may be unavailable | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `exploration.RandomForest_multi_cluster` | `"200 trees; max_depth=15; seed=42; multiclass balanced"` | rule | HEURISTIC / HEURISTIC | Predicts object/cluster labels, not biological validity | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `exploration.KMeans` | `"n_init=10; seed=42; k from silhouette max in 2..8 by helper"` | rule | HEURISTIC / HEURISTIC | Data-derived clustering; circular ANOVA not independent inference | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `exploration.shape_quantiles` | `[25, 75]` | percentiles | HEURISTIC / HEURISTIC | Dataset-relative Rod/Disk/Sphere labels; not calibrated morphotypes | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `mask_features.rounding` | `4` | decimal places | HEURISTIC / HEURISTIC | Rounds exported quantitative values, so not bit-identical to canonical geometry | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `surface.level_padding_step` | `[0.5, 1, 1]` | level; voxel; step | HEURISTIC / HEURISTIC | Defines discrete surface; existing <5% specification fails | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `preview.mesh_step` | `2` | voxels | HEURISTIC / HEURISTIC | Display only; measurement step remains 1 | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `label_export.max_id` | `4294967295` | ID | HEURISTIC / HEURISTIC | OME uint32 export range; overflow rejects | No unless API/config exposed | INSUFFICIENT EVIDENCE |
 
-### Quality
+## Scientific constants and derived values
 
-| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity |
-|---|---|---|---|---|---|---|
-| `exclude_border` | `true` | – | established | Border-truncated objects unreliable | Partially validated | N/A |
-| `min_z_slices` | 5 | slice | heuristic | Too few Z ⇒ insufficient 3D sampling | Partially validated | Not tested |
-| `max_volume_um3` | `null` | µm³ | – | Optional upper exclusions | N/A | N/A |
-| `background_inner_um` | 2.0 | µm | heuristic | Background shell inner radius | Not validated | Not tested |
-| `background_outer_um` | 7.0 | µm | heuristic | Background shell outer radius | Not validated | Not tested |
-| `min_background_voxels` | 100 | voxel | heuristic | Minimum local background to trust background stats | Not validated | Not tested |
-| `max_saturated_fraction` | 0.01 | fraction | heuristic | Saturation >1% ⇒ invalidate marker | Partially validated | Not tested |
+Unit conversions (m→um 10^6, cm→um 10^4, mm→um 10^3, nm→um 10^-3, angstrom→um 10^-4, inch→um 25400) are exact definitions. Voxel volume is sz*sy*sx; voxel intrinsic covariance is diag(s²/12); ellipsoid full axes are 2*sqrt(5λ); sphericity is π^(1/3)*(6V)^(2/3)/A. Basis ESTABLISHED by dimensional/analytical derivation; controlled arithmetic PASS. The formulas do not validate the input calibration or segmentation boundary.
 
-### Viability
+Runtime control endpoints are CONTROL_DERIVED, using within-batch eligible control-well/replicate medians. Their artifact is `calibration.csv`, role is calibration, and independence is whatever the supplied biological_replicate IDs actually represent. Held-out assay validation and uncertainty are NOT ASSESSED. Image metadata/explicit spacing is acquisition calibration only if independently qualified; defaults 0.414/2.9 are not such evidence. Model-based diameter suggestions are calibration proposals derived from that image and model, never held-out validation.
 
-| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity |
-|---|---|---|---|---|---|---|
-| `mode` | `uncalibrated` | – | heuristic | No controls ⇒ uncalibrated states | Partially validated | N/A |
-| `min_control_replicates` | 2 | replicate | statistical (min for separation) | Minimum independent control replicates | Partially validated | N/A |
-| `min_control_separation_snr` | 3.0 | – | heuristic | Endpoint separation relative to noise | Partially validated | Not tested |
-| `high_gate` | 0.60 | scaled index | heuristic | Start gate for viable-like | Not validated as assay criterion | Not tested |
-| `low_gate` | 0.30 | scaled index | heuristic | Start gate for compromised-like | Not validated as assay criterion | Not tested |
+## Presets, display and omitted dependency settings
 
-### Report / stats
+`configs/structural_fluorescence.yaml` selects channels 0/1/2 and controls mode; `brightfield_exploratory.yaml` chooses dark polarity; `brightfield_probability.yaml` uses 0.5 probability threshold/controls; `imported_instances.yaml` uses labels and a watershed agreement check. Their remaining values inherit `config.py`; none is independently calibrated. The demo changes smoothing to 0.6 um, closing to 0, minimum volume to 1000 um^3 and seed distance to 12 um, with generator seed 1729. It is not a validation of production defaults or biological gates.
 
-| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity |
-|---|---|---|---|---|---|---|
-| `bootstrap_iterations` | 2000 | iteration | conventional | Bootstrap CI resamples | Partially validated | N/A |
-| `seed` | 20260831 | int | fixed | Determinism of bootstrap | Partially validated | N/A |
-| `save_meshes` | `true` | – | engineering | Persist PLY meshes | N/A | N/A |
-| `max_meshes_in_preview` | 20 | count | engineering | Preview mesh cap | N/A | N/A |
-| `stats.enabled` | `true` | – | engineering | Enable stats section | Partially validated | N/A |
-| `stats.features` | `[volume_um3, sphericity]` | – | heuristic | Which features are summarized/compared | Partially validated | N/A |
-| `stats.min_replicates_per_condition` | 3 | replicate | statistical | Minimum biological replicates per condition for `stats.py`'s LMM/OLS-fallback hypothesis test (docs/ALGORITHM_DECISIONS.md D11); a condition below this is silently excluded from that feature's test. Distinct from the bootstrap-CI threshold below (was previously mislabeled as gating the CI here). | Partially validated | N/A |
-| `_MIN_REPLICATES_FOR_BOOTSTRAP_CI` (summary.py, not YAML-configurable) | 3 | replicate | statistical/heuristic | Minimum biological replicates with size data before `condition_summary.csv`'s bootstrap 95% CI is computed at all; coincidentally equal to, but a separate literal from, `stats.min_replicates_per_condition` above | Partially validated | N/A |
+Display percentiles (typically 1/99), uint8 packing, stride limits and renderer opacity/LUT settings affect inspection but not the raw arrays measured by the core pipeline. Display downsampling must not be confused with the scientifically consequential `cellpose.xy_downsample`. Additional estimator/library constructor defaults are version-bound by `pixi.lock`; their complete estimator parameter dictionaries are captured in the dependency-default evidence. No claim is made that those implicit defaults are scientifically calibrated.
 
----
-
-## Cellpose 3D segmentation parameters
-
-Source of truth: `src/organoid_analysis/segmentation/cellpose_inference.py::SegmentationConfig` and `src/organoid_analysis/segmentation/parameter_estimation.py`. Exposed as UI controls in `src/organoid_analysis/web_interface/segmentation_workspace.py`. This route is independent of the classical `src/organoid_analysis/segmentation/watershed_instances.py` route catalogued above and was not previously catalogued here.
-
-| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
-|---|---|---|---|---|---|---|---|
-| `model_type` | `cpdino-vitb` | – | heuristic (engineer-defined default) | Selects which Cellpose v4 foundation model runs; alternatives `cpsam_v2`, `cpdino`, `cpsam` trade accuracy for speed. Not independently benchmarked for this pipeline's organoid images. | Not validated | Not tested | Yes (UI dropdown) |
-| `nuclei_diameter` | 30.0 | px (full resolution) | heuristic (engineer-defined default); can be auto-estimated per-image by `parameter_estimation.estimate_diameter_from_stack` on the nuclei stack | Directly sets the scale Cellpose expects objects at; a wrong diameter is a common cause of over/under-segmentation. | Not validated on real data | Not tested | Yes (UI slider 5-200) |
-| `cell_diameter` | 50.0 | px (full resolution) | heuristic (engineer-defined default); can be auto-estimated by `parameter_estimation.estimate_diameter_from_stack` run independently on the cell/cytoplasm stack when one is uploaded (P2-5 fix: previously copied the nucleus estimate, which has no scientific basis -- a cell's diameter is not derivable from a nucleus stack alone). With no cell/cytoplasm stack, no data-derived value is offered and this stays manual/default. | Not validated on real data | Not tested | Yes (UI slider 5-300) |
-| `anisotropy` | 2.9 | dimensionless (Z step / XY pixel size) | heuristic fallback; preferentially read from OME/ImageJ TIFF metadata via `parameter_estimation.auto_anisotropy` when available, never guessed from pixel content | Rescales the Z axis so Cellpose's 3D network sees near-isotropic voxels; a wrong value distorts 3D shape. | N/A — should be sourced from acquisition metadata for real data | Not tested | Yes |
-| `xy_spacing_um` | 0.414 | µm/pixel | heuristic (default matching one specific microscope/objective configuration used during development) | Directly affects physical quantitative measurements downstream of segmentation: `quantification.mask_features.extract_mask_features` uses it (via `config_spacing`) to compute `volume_um3`, `surface_area_um2`, principal axes, physical centroids, and distances. It does **not** affect the segmentation network itself, which operates at pixel scale -- segmentation-scale behavior (diameter/anisotropy matching the network's expected object size) and downstream physical-measurement scale (this parameter) are two distinct effects that must not be conflated. A wrong value here silently rescales every reported physical quantity without changing which pixels were segmented. | Not validated | N/A | Yes |
-| `nuclei_flow_threshold` | 0.4 | dimensionless (Cellpose flow-error threshold) | conventional (Cellpose's own suggested operating range) | Higher values reject more flow-inconsistent masks (fewer, more confident objects). | Not validated on real data | Not tested | Yes (UI slider) |
-| `cell_flow_threshold` | 0.6 | dimensionless | conventional | Same role for the cell pass. | Not validated on real data | Not tested | Yes (UI slider) |
-| `nuclei_cellprob_threshold` | 0.0 | dimensionless (Cellpose logit threshold) | conventional (Cellpose default) | Foreground/background decision boundary in logit space. | Not validated | Not tested | Yes (UI slider -6..6) |
-| `cell_cellprob_threshold` | 0.0 | dimensionless | conventional (Cellpose default) | Same role for the cell pass. | Not validated | Not tested | Yes |
-| `flow3d_smooth` | 1.0 | dimensionless (Gaussian smoothing passed to Cellpose `flow3D_smooth`) | heuristic (engineer-defined default) | Smooths the estimated 3D flow field before instance construction; affects splitting of touching objects. | Not validated | Not tested | Yes (UI slider 0-5) |
-| `xy_downsample` | 1.0 | fraction (0,1] | engineering (performance/memory trade-off, not scientific) | `1.0` = full resolution; lower values speed up inference at the cost of XY precision, then upsample masks with nearest-neighbor. | N/A (engineering) | N/A | Yes |
-| `batch_size` | 8 | images/batch | engineering (GPU/MPS memory trade-off) | Does not change segmentation results, only throughput. | N/A (engineering) | N/A | Yes |
-| `_ESTIMATE_SLICES` (parameter_estimation.py) | 6 | Z-slices | heuristic | Number of Z-slices sampled for the fast diameter pre-estimate; more slices cost more time for marginal stability gain. | Not validated | Not tested | No (internal constant) |
-| `_ESTIMATE_DOWNSAMPLE` (parameter_estimation.py) | 0.5 | fraction | heuristic | Downsample factor for the fast 2D pre-segmentation pass used only to estimate diameter, not to segment. | Not validated | Not tested | No |
-| `_DIAMETER_QUANTILE` (parameter_estimation.py) | 0.5 (median) | quantile | heuristic | Which quantile of detected pre-segmentation object diameters is reported as "the" diameter estimate; median chosen for robustness to background-noise blobs. | Not validated | Not tested | No |
-| `_PLAUSIBLE_DIAMETER_PX_RANGE` (parameter_estimation.py) | [5.0, 250.0] | px (downsample-corrected) | heuristic | Diameter pre-estimates outside this range are discarded as noise before taking the quantile. | Not validated | Not tested | No |
-| quick pre-segmentation call constants (parameter_estimation.py: `_PRESEGMENTATION_FLOW_THRESHOLD`, `_PRESEGMENTATION_CELLPROB_THRESHOLD`, `_PRESEGMENTATION_MIN_SIZE_PX`, `_PRESEGMENTATION_BATCH_SIZE`) | `flow_threshold=0.0, cellprob_threshold=0.0, min_size=5, batch_size=8` | mixed | heuristic (Cellpose defaults chosen for the diameter pre-estimate only, not the final segmentation) | Only affects the diameter *estimate* fed as a suggestion; does not affect the final segmentation parameters, which the user can override. | N/A (estimate only) | N/A | No |
-
-**Model weight provenance:** `create_model` (`src/organoid_analysis/segmentation/cellpose_inference.py:136`) loads Cellpose's pretrained weights for `model_type` by name via the `cellpose` package; the specific weight file/version is whatever the installed `cellpose==4.2.1.1` package resolves (pinned in `pixi.lock`), not independently hashed or pinned by this repository. See `pyproject.toml` for the pinned `cellpose` package version.
-
----
-
-## Cell–nucleus pairing parameters (`analysis cells` route)
-
-Source of truth: `src/organoid_analysis/quantification/cellular_measurements.py`, exposed via the `cells` CLI subcommand in `src/organoid_analysis/command_line/organoid_commands.py`. This route is independent of `analyze-3d` (which uses maximum-overlap assignment, D1) and was not previously catalogued here. See `docs/ALGORITHM_DECISIONS.md` D10 for the bipartite-matching algorithm decision.
-
-| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
-|---|---|---|---|---|---|---|---|
-| `min_cell_volume_um3` | 200.0 | µm³ | heuristic | Cells smaller than this are dropped before pairing (`too_small_cell`). | Not validated on real data | Not tested | Yes (`--min-cell-volume-um3`) |
-| `min_nucleus_volume_um3` | 25.0 | µm³ | heuristic | Candidate nuclei smaller than this fail pairing (`too_small_nucleus`). | Not validated on real data | Not tested | Yes (`--min-nucleus-volume-um3`) |
-| `max_nc_ratio` | 1.0 | fraction (nucleus voxels / cell voxels) | heuristic | Candidate pairs with nucleus volume exceeding the cell volume are rejected (`nc_ratio_too_high`) as biologically implausible. | Not validated | Not tested | Yes (`--max-nc-ratio`) |
-| `min_nucleus_containment` | 0.5 | fraction (overlap voxels / nucleus voxels) | heuristic | A candidate nucleus must have at least this fraction of its own volume inside the cell to be paired (`nucleus_not_contained`). | Not validated | Not tested | Yes (`--min-nucleus-containment`) |
-| `require_nucleus` | `True` | boolean | engineering/QC policy choice | When true, an unpaired cell is dropped entirely rather than kept anucleate; `--allow-nucleusless` flips this. | N/A (policy choice, not a measurement threshold) | N/A | Yes (`--allow-nucleusless`) |
-| `neighbor_radius_um` | 25.0 | µm | heuristic | Physical radius for the cell-neighborhood density/nearest-neighbor query (`cell_neighborhood`); a cell whose search sphere would extend past the image border is flagged `neighborhood_complete=False` rather than silently biased. | Not validated | Not tested | Yes (`--neighbor-radius-um`) |
-
----
-
-## Segmentation-validation matching parameter
-
-Source of truth: `src/organoid_analysis/validation/segmentation_metrics.py::match_instances`. Stated as a narrative fact in `docs/METHODS.md` and `docs/SCIENTIFIC_SPEC.md` ("Hungarian assignment at IoU ≥ 0.5") but not previously entered in this catalog. See `docs/ALGORITHM_DECISIONS.md` D9.
-
-| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
-|---|---|---|---|---|---|---|---|
-| `iou_threshold` | 0.5 | fraction (IoU) | conventional (common minimum-overlap convention in instance-segmentation benchmarks; not independently calibrated for this pipeline) | A predicted instance below this IoU with its best-matching truth object counts as a false positive/negative rather than a weak match; directly sets precision/recall/Dice/panoptic-quality values. | Not validated (conventional value, not calibrated) | Not tested | Yes (function argument; not currently exposed as a CLI flag) |
-
----
-
-## Data-contract spacing/position tolerances
-
-Source of truth: `src/organoid_analysis/microscopy_io/tiff_contract.py` (`ome_spacing`, `load_sample`) and `src/organoid_analysis/command_line/organoid_commands.py` (`_run_cells`, `_run_multilevel`). The same literal tolerance is repeated at `io.py:142,182,194,245` and `cli.py:91,99,156,163`.
-
-| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
-|---|---|---|---|---|---|---|---|
-| spacing/Z-position consistency tolerance | `rtol=0.01, atol=1e-5` | relative fraction / µm | heuristic (engineering judgment for "close enough to be the same acquisition metadata", not independently calibrated) | Governs whether the pipeline accepts or rejects (a) OME plane Z-positions as a uniform grid, (b) explicit manifest/CLI spacing against OME metadata, and (c) spacing agreement between paired label volumes in the `cells`/`analyze-3d` routes. Too loose silently accepts mismatched acquisitions; too tight rejects valid metadata rounding. | Not validated | Not tested | No (hardcoded) |
-
----
-
-## Statistical testing parameters (`stats.py`)
-
-Source of truth: `src/organoid_analysis/statistics/inference.py`. See `docs/ALGORITHM_DECISIONS.md` D11 for the LMM/BH-FDR method decision.
-
-| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
-|---|---|---|---|---|---|---|---|
-| `LOG10_FEATURES` | `{"volume_um3"}` | – | heuristic (engineering judgment: volume is right-skewed/multiplicative, sphericity is not) | Determines which features are log10-transformed before the LMM/OLS fit; changes the scale on which the omnibus test and pairwise contrasts are computed for that feature. | Not validated | Not tested | No (hardcoded set) |
-| degenerate random-effect threshold | `1e-6` (× `fit.scale`) | dimensionless (variance ratio) | heuristic (numerical-stability engineering judgment) | Below this ratio the LMM's random-effect variance is treated as collapsed to zero and the fit falls back to clustered-SE OLS instead of trusting a numerically singular mixed model. | Not validated | Not tested | No (hardcoded) |
-
----
-
-## Exploratory statistics/ML parameters (`src/organoid_analysis/statistics/exploration.py`, Tutorials 2-5)
-
-Source of truth: `src/organoid_analysis/statistics/exploration.py`. These functions are explicitly scoped as reusable exploratory tutorial workflows (module docstring: "centralises the analysis workflows that live in Tutorials 2-5"), not part of the core `analyze`/`analyze-3d` measurement pipeline, and their outputs (classifier accuracy, feature importance, shape category) are exploratory/descriptive, not validated biological classifications.
-
-| Parameter | Value | Unit | Origin | Rationale / impact | Status | Sensitivity | User configurable |
-|---|---|---|---|---|---|---|---|
-| Rod/Disk/Sphere gating percentiles | 75th / 25th percentile of the loaded dataset's prolate/oblate ratio | percentile of sample distribution | heuristic (descriptive-statistics split, not a biologically validated shape boundary) | Assigns a categorical shape label per object from a distribution-relative cutoff; the same object can receive a different label depending on what other objects are in the loaded dataset. | Not validated as a biological shape classification | Not tested | No |
-| Binary-classifier hyperparameters (Tutorial 4) | `RandomForestClassifier(n_estimators=100, max_depth=10)`; `XGBClassifier(n_estimators=100, max_depth=5, learning_rate=0.1)` | – | engineering default (not tuned or cross-validated for this pipeline's data) | Determines the reported "best model" accuracy and feature-importance ranking shown to the user; untuned defaults may understate achievable accuracy or misrank features. | Not validated | Not tested | No |
-| Cluster-classifier hyperparameters | `RandomForestClassifier(n_estimators=200, max_depth=15)` | – | engineering default (not tuned) | Determines cluster-membership prediction accuracy and the feature-importance ranking used to characterize clusters. | Not validated | Not tested | No |
-
----
-
-## Notes
-
-- All values have a machine-readable home in `src/organoid_analysis/config.py` or `src/organoid_analysis/quantification/multilevel_relationships/config.py`; no silent magic numbers gate scientific behavior.
-- Thresholds marked `Not validated on real data` require independent calibration to justify a biological claim. The pipeline labels such results as research-use only and does not claim clinical or biological endpoint validity.
-- Viability gates (0.30/0.60) are documented as starting gates, not experimentally calibrated assay thresholds.
-
-## Traceability
-
-- Multilevel config: `src/organoid_analysis/quantification/multilevel_relationships/config.py`
-- Classical config defaults + validation: `src/organoid_analysis/config.py`
-- CLI exposure: `src/organoid_analysis/command_line/organoid_commands.py`
-- Cellpose 3D segmentation: `src/organoid_analysis/segmentation/cellpose_inference.py`, `src/organoid_analysis/segmentation/parameter_estimation.py`, UI exposure in `src/organoid_analysis/web_interface/segmentation_workspace.py`
-- Cell–nucleus pairing: `src/organoid_analysis/quantification/cellular_measurements.py`, CLI exposure in `src/organoid_analysis/command_line/organoid_commands.py::_run_cells`
-- Segmentation-validation matching: `src/organoid_analysis/validation/segmentation_metrics.py`
-- Data-contract tolerances: `src/organoid_analysis/microscopy_io/tiff_contract.py`, `src/organoid_analysis/command_line/organoid_commands.py`
-- Statistical testing: `src/organoid_analysis/statistics/inference.py`
-- Exploratory tutorial statistics/ML: `src/organoid_analysis/statistics/exploration.py`
+See [algorithm decisions](ALGORITHM_DECISIONS.md) for authoritative method/API sources and their claim boundaries; [validation report](VALIDATION_REPORT.md) records readiness. Numeric range checks in configuration are software domain constraints, not experiment-derived acceptance criteria.

@@ -36,7 +36,7 @@ import numpy as np
 import pandas as pd
 import tifffile
 
-from .metadata import SPACING_ATOL_UM, SPACING_RTOL, to_um
+from .metadata import SPACING_ATOL_UM, SPACING_RTOL, to_um, validate_z_positions
 
 REQUIRED = ["sample_id", "condition", "biological_replicate", "image_path"]
 PATH_FIELDS = ["image_path", "structure_path", "calcein_path", "pi_path", "probability_path", "labels_path", "truth_labels_path"]
@@ -98,6 +98,10 @@ def read_manifest(path: str | Path) -> pd.DataFrame:
 
 
 def canonical_czyx(array: np.ndarray, axes: str, time_index: int | None = None) -> np.ndarray:
+    if time_index is not None and (
+        isinstance(time_index, bool) or not isinstance(time_index, (int, np.integer)) or time_index < 0
+    ):
+        raise ValueError("time_index must be a nonnegative integer")
     axes = axes.upper()
     if len(axes) != array.ndim or len(set(axes)) != len(axes):
         raise ValueError(f"Axes '{axes}' do not uniquely describe shape {array.shape}")
@@ -127,8 +131,8 @@ def canonical_czyx(array: np.ndarray, axes: str, time_index: int | None = None) 
         array = array[np.newaxis]
         axes = "C" + axes
     array = np.transpose(array, [axes.index(axis) for axis in "CZYX"])
-    if not np.issubdtype(array.dtype, np.number) and array.dtype != bool:
-        raise ValueError("Only numeric microscopy images are supported")
+    if not (np.issubdtype(array.dtype, np.integer) or np.issubdtype(array.dtype, np.floating) or array.dtype == bool):
+        raise ValueError("Only real numeric microscopy images are supported")
     if np.issubdtype(array.dtype, np.inexact) and not np.isfinite(array).all():
         raise ValueError("Image contains NaN or infinite voxels")
     return array
@@ -141,32 +145,32 @@ def ome_spacing(xml: str | None, series_index: int = 0, time_index: int | None =
     if series_index >= len(pixels):
         return None
     pixel = pixels[series_index]
-    values = []
+    values: list[float | None] = []
     for axis in "ZYX":
         value = pixel.get(f"PhysicalSize{axis}")
         if value is None:
-            return None
-        values.append(to_um(float(value), pixel.get(f"PhysicalSize{axis}Unit", "µm")))
-    values = np.asarray(values, float)
-    if not np.isfinite(values).all() or (values <= 0).any():
-        raise ValueError("Invalid OME physical spacing")
+            values.append(None)
+        else:
+            converted = to_um(float(value), pixel.get(f"PhysicalSize{axis}Unit", "µm"))
+            if not np.isfinite(converted) or converted <= 0:
+                raise ValueError("Invalid OME physical spacing")
+            values.append(converted)
     # When plane positions are available, reject a nonuniform Z grid.
     positions = {}
     for plane in pixel.findall("{*}Plane"):
         if int(plane.get("TheT", "0")) == (time_index or 0) and int(plane.get("TheC", "0")) == 0:
             if plane.get("PositionZ") is not None:
-                positions[int(plane.get("TheZ", "0"))] = to_um(float(plane.get("PositionZ")), plane.get("PositionZUnit", "µm"))
-    if len(positions) >= 3:
-        indices = np.array(sorted(positions))
-        zvalues = np.array([positions[k] for k in indices])
-        steps = np.abs(np.diff(zvalues) / np.diff(indices))
-        if not np.allclose(steps, values[0], rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
-            raise ValueError("OME plane positions disagree with a uniformly spaced Z grid; resample before analysis")
+                positions[int(plane.get("TheZ", "0"))] = to_um(float(plane.get("PositionZ")), plane.get("PositionZUnit", "reference frame"))
+    validate_z_positions(positions, values[0])
+    if any(value is None for value in values):
+        return None
     return tuple(values)
 
 
 def read_tiff(path: str | Path, axes: str = "", time_index: int | None = None,
               series_index: int = 0) -> tuple[np.ndarray, tuple | None, str]:
+    if isinstance(series_index, bool) or not isinstance(series_index, (int, np.integer)) or series_index < 0:
+        raise ValueError("series_index must be a nonnegative integer")
     with tifffile.TiffFile(path) as handle:
         if series_index >= len(handle.series):
             raise ValueError("series_index is outside the TIFF series list")
@@ -268,7 +272,21 @@ def load_truth_labels(row: dict, expected_shape: tuple[int, int, int], spacing: 
     return truth
 
 
+def validate_label_export(labels: np.ndarray, spacing: tuple) -> None:
+    """Validate the lossless OME uint32 export contract before any write."""
+    if not isinstance(labels, np.ndarray) or labels.ndim != 3 or not labels.size:
+        raise ValueError("Export requires a nonempty 3D label volume")
+    if not np.issubdtype(labels.dtype, np.integer) or np.any(labels < 0):
+        raise ValueError("Export requires nonnegative integer labels")
+    if int(labels.max()) > np.iinfo(np.uint32).max:
+        raise ValueError("Label IDs exceed the uint32 OME export range; refusing lossy conversion")
+    values = np.asarray(spacing, dtype=float)
+    if values.shape != (3,) or not np.isfinite(values).all() or (values <= 0).any():
+        raise ValueError("Export spacing must contain three positive finite values")
+
+
 def write_labels(path: Path, labels: np.ndarray, spacing: tuple) -> None:
+    validate_label_export(labels, spacing)
     tifffile.imwrite(path, labels.astype(np.uint32), ome=True, photometric="minisblack",
                      compression="zlib", metadata={"axes": "ZYX", "PhysicalSizeZ": spacing[0],
                      "PhysicalSizeY": spacing[1], "PhysicalSizeX": spacing[2],
@@ -281,6 +299,12 @@ def sha256(path: str | Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def source_code_hashes() -> dict[str, str]:
+    """Hash the complete installed package, with collision-free relative paths."""
+    root = Path(__file__).resolve().parent.parent
+    return {str(path.relative_to(root)): sha256(path) for path in sorted(root.rglob("*.py"))}
 
 
 def git_commit_hash(repo_root: Path | None = None) -> str | None:

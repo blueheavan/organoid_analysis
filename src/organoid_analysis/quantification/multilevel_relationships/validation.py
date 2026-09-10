@@ -22,6 +22,8 @@ def validate_labels(name: str, labels: np.ndarray, expected_shape: tuple[int, in
         raise ValueError(f"{name} must contain nonnegative integer instance IDs")
     if np.issubdtype(labels.dtype, np.signedinteger) and np.any(labels < 0):
         raise ValueError(f"{name} must contain nonnegative integer instance IDs")
+    if labels.size and int(labels.max()) > np.iinfo(np.int64).max:
+        raise ValueError(f"{name} IDs exceed the signed int64 feature-table range")
 
 
 def validate_inputs(
@@ -40,6 +42,8 @@ def validate_inputs(
             raise ValueError("nucleus_intensity must be a 3D (Z, Y, X) image")
         if nucleus_intensity.shape != organoid_labels.shape:
             raise ValueError("nucleus_intensity must match label-mask shape")
-        if not np.issubdtype(nucleus_intensity.dtype, np.number) or not np.isfinite(nucleus_intensity).all():
+        if not (np.issubdtype(nucleus_intensity.dtype, np.integer) or np.issubdtype(nucleus_intensity.dtype, np.floating)):
+            raise ValueError("nucleus_intensity must be real numeric data")
+        if not np.isfinite(nucleus_intensity).all():
             raise ValueError("nucleus_intensity must be finite numeric data")
     return validate_spacing(spacing_zyx_um)

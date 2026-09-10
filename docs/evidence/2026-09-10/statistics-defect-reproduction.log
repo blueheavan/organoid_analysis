@@ -1,0 +1,43 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_______ test_undefined_effect_sizes_and_assumption_tests_are_not_success _______
+
+    def test_undefined_effect_sizes_and_assumption_tests_are_not_success():
+        from organoid_analysis.statistics.exploration import (
+            check_equal_variance, check_normality, cohens_d, effect_size_label,
+            field_coefficient_of_variation,
+        )
+>       assert np.isnan(cohens_d(pd.Series([1., 1.]), pd.Series([9., 9.])))
+E       AssertionError: assert np.False_
+E        +  where np.False_ = <ufunc 'isnan'>(0.0)
+E        +    where <ufunc 'isnan'> = np.isnan
+E        +    and   0.0 = <function cohens_d at 0x1778334c0>(0    1.0\n1    1.0\ndtype: float64, 0    9.0\n1    9.0\ndtype: float64)
+E        +      where 0    1.0\n1    1.0\ndtype: float64 = <class 'pandas.core.series.Series'>([1.0, 1.0])
+E        +        where <class 'pandas.core.series.Series'> = pd.Series
+E        +      and   0    9.0\n1    9.0\ndtype: float64 = <class 'pandas.core.series.Series'>([9.0, 9.0])
+E        +        where <class 'pandas.core.series.Series'> = pd.Series
+
+tests/statistics/test_statistical_contract_regressions.py:91: AssertionError
+____________ test_small_group_comparison_and_empty_cluster_abstain _____________
+
+    def test_small_group_comparison_and_empty_cluster_abstain():
+        from organoid_analysis.statistics.exploration import cluster_characterization, compare_two_groups
+        small = pd.DataFrame({'group': ['a', 'a', 'b', 'b'], 'value': [1., 2., 3., 4.]})
+        row = compare_two_groups(small, ['value'], 'group').iloc[0]
+>       assert row.Test_Used == 'NOT ASSESSED'
+E       AssertionError: assert 'Mann-Whitney U' == 'NOT ASSESSED'
+E         
+E         - NOT ASSESSED
+E         + Mann-Whitney U
+
+tests/statistics/test_statistical_contract_regressions.py:104: AssertionError
+=============================== warnings summary ===============================
+tests/statistics/test_statistical_contract_regressions.py::test_small_group_comparison_and_empty_cluster_abstain
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/scipy/stats/_morestats.py:3326: RuntimeWarning: invalid value encountered in divide
+    W = numer / denom
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/statistics/test_statistical_contract_regressions.py::test_undefined_effect_sizes_and_assumption_tests_are_not_success
+FAILED tests/statistics/test_statistical_contract_regressions.py::test_small_group_comparison_and_empty_cluster_abstain
+2 failed, 9 deselected, 1 warning in 1.30s

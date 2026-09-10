@@ -17,6 +17,24 @@ RESULT_TABLES = {
 }
 
 
+def read_registered_organoid_labels(path: str | Path, expected_shape: tuple[int, ...],
+                                   spacing_zyx_um: tuple[float, float, float]) -> np.ndarray:
+    """Check uploaded mask axes and physical grid before joining hierarchies."""
+    from organoid_analysis.microscopy_io.tiff_contract import (
+        SPACING_ATOL_UM,
+        SPACING_RTOL,
+        read_tiff,
+    )
+    stack, spacing, _ = read_tiff(path)
+    if stack.shape[0] != 1 or stack.shape[1:] != expected_shape:
+        raise ValueError("Organoid mask must be a single channel on the cell/nucleus ZYX grid")
+    if spacing is None:
+        raise ValueError("Organoid mask spacing is missing; use a calibrated OME-TIFF or the analyze-3d CLI with explicit spacing")
+    if not np.allclose(spacing, spacing_zyx_um, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
+        raise ValueError("Organoid mask spacing conflicts with the saved cell/nucleus grid")
+    return np.asarray(stack[0])
+
+
 def _session_spacing_zyx() -> tuple[float, float, float] | None:
     """Return saved Cellpose spacing when its current-session masks exist."""
     import streamlit as st
@@ -90,8 +108,8 @@ def _render_current_session_runner() -> None:
             st.error("Saved voxel spacing is unavailable; use the analyze-3d CLI with explicit spacing instead.")
             return
         try:
+            from organoid_analysis.microscopy_io.tiff_contract import sha256, source_code_hashes
             from organoid_analysis.result_export.measurement_tables import export_results
-            from organoid_analysis.segmentation.cellpose_inference import read_stack
             from organoid_analysis.workflows.multilevel_measurement_workflow import (
                 analyze_multilevel_3d,
             )
@@ -99,10 +117,19 @@ def _render_current_session_runner() -> None:
             with tempfile.NamedTemporaryFile(suffix=".tif") as handle:
                 handle.write(organoid_upload.getbuffer())
                 handle.flush()
-                organoid_labels = read_stack(handle.name)
+                organoid_labels = read_registered_organoid_labels(handle.name, cell_labels.shape, spacing)
+                organoid_sha256 = sha256(handle.name)
             metadata = {"sample_id": sample_id, "well_id": well_id, "field_id": field_id}
             with st.spinner("Measuring hierarchy, morphology, topology, spatial features, and QC…"):
                 result = analyze_multilevel_3d(organoid_labels, cell_labels, nucleus_labels, spacing, metadata=metadata)
+                import hashlib
+                result.summary["provenance"] = {
+                    "source_code_sha256": source_code_hashes(),
+                    "organoid_tiff_sha256": organoid_sha256,
+                    "session_masks": {name: {"sha256": hashlib.sha256(np.ascontiguousarray(mask).tobytes()).hexdigest(),
+                                               "shape": list(mask.shape), "dtype": str(mask.dtype), "order": "C"}
+                                      for name, mask in (("cell", cell_labels), ("nucleus", nucleus_labels))},
+                }
                 export_results(output, organoids=result.organoid_features, cells=result.cell_features,
                                nuclei=result.nucleus_features, edges=result.cell_topology_edges,
                                qc_flags=result.qc_flags, summary=result.summary,
@@ -117,6 +144,8 @@ def _render_current_session_runner() -> None:
 def load_multilevel_result_tables(result_directory: str | Path) -> tuple[dict, dict[str, pd.DataFrame]]:
     """Load a completed `analyze-3d` result directory without recomputation."""
     root = Path(result_directory).expanduser().resolve()
+    if (root / "RUN_INCOMPLETE.txt").exists():
+        raise ValueError("This result export is incomplete; do not interpret partial outputs")
     summary_path = root / "summary" / "analysis_summary.json"
     if not summary_path.is_file():
         raise FileNotFoundError("Select a Result directory containing summary/analysis_summary.json")

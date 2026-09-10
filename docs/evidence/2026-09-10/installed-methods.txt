@@ -1,0 +1,143 @@
+numpy=2.5.2
+scipy=1.17.1
+scikit-image=0.26.0
+tifffile=2026.3.3
+statsmodels=0.14.6
+cellpose=4.2.1.1
+torch=2.7.1
+scikit-learn=1.9.0
+Cellpose.eval (self, x, batch_size=8, resample=True, channels=None, channel_axis=None, z_axis=None, normalize=True, rescale=None, diameter=None, flow_threshold=0.4, cellprob_threshold=0.0, do_3D=False, anisotropy=None, flow3D_smooth=0, stitch_threshold=0.0, min_size=15, max_size_fraction=0.4, niter=None, augment=False, tile_overlap=0.1, bsize=None, compute_masks=True, progress=None)
+normalize_default={'lowhigh': None, 'percentile': None, 'normalize': True, 'norm3D': True, 'sharpen_radius': 0, 'smooth_radius': 0, 'tile_norm_blocksize': 0, 'tile_norm_smooth3D': 1, 'invert': False}
+marching_cubes (volume, level=None, *, spacing=(1.0, 1.0, 1.0), gradient_direction='descent', step_size=1, allow_degenerate=True, method='lewiner', mask=None)
+    def _compute_masks(self, shape, dP, cellprob, flow_threshold=0.4, cellprob_threshold=0.0,
+                       min_size=15, max_size_fraction=0.4, niter=None,
+                       do_3D=False, stitch_threshold=0.0):
+        """ compute masks from flows and cell probability """
+        if self.device.type == "mps" and do_3D:
+            models_logger.warning("MPS does not support 3D post-processing, using CPU")
+            device = torch.device("cpu")
+        else:
+            device = self.device
+            
+        Lz, Ly, Lx = shape[:3]
+        tic = time.time()
+        if do_3D:
+            masks = dynamics.resize_and_compute_masks(
+                dP, cellprob, niter=niter, cellprob_threshold=cellprob_threshold,
+                flow_threshold=flow_threshold, do_3D=do_3D,
+                min_size=min_size, max_size_fraction=max_size_fraction, 
+                resize=shape[:3] if (np.array(dP.shape[-3:])!=np.array(shape[:3])).sum() 
+                        else None,
+                device=device)
+        else:
+            nimg = shape[0]
+            Ly0, Lx0 = cellprob[0].shape 
+            resize = None if Ly0==Ly and Lx0==Lx else [Ly, Lx]
+            tqdm_out = utils.TqdmToLogger(models_logger, level=logging.INFO)
+            iterator = trange(nimg, file=tqdm_out,
+                            mininterval=30) if nimg > 1 else range(nimg)
+            for i in iterator:
+                # turn off min_size for 3D stitching
+                min_size0 = min_size if stitch_threshold == 0 or nimg == 1 else -1
+                outputs = dynamics.resize_and_compute_masks(
+                    dP[:, i], cellprob[i],
+                    niter=niter, cellprob_threshold=cellprob_threshold,
+                    flow_threshold=flow_threshold, resize=resize,
+                    min_size=min_size0, max_size_fraction=max_size_fraction,
+                    device=device)
+                if i==0 and nimg > 1:
+                    masks = np.zeros((nimg, shape[1], shape[2]), outputs.dtype)
+                if nimg > 1:
+                    masks[i] = outputs
+                else:
+                    masks = outputs
+
+            if stitch_threshold > 0 and nimg > 1:
+                models_logger.info(
+                    f"stitching {nimg} planes using stitch_threshold={stitch_threshold:0.3f} to make 3D masks"
+                )
+                masks = utils.stitch3D(masks, stitch_threshold=stitch_threshold)
+                masks = utils.fill_holes_and_remove_small_masks(
+                    masks, min_size=min_size)
+            elif nimg > 1:
+                models_logger.warning(
+                    "3D stack used, but stitch_threshold=0 and do_3D=False, so masks are made per plane only"
+                )
+
+        flow_time = time.time() - tic
+        if shape[0] > 1:
+            models_logger.info("masks created in %2.2fs" % (flow_time))
+        
+        return masks
+
+def compute_masks(dP, cellprob, p=None, niter=200, cellprob_threshold=0.0,
+                  flow_threshold=0.4, do_3D=False, min_size=-1,
+                  max_size_fraction=0.4, device=torch.device("cpu")):
+    """Compute masks using dynamics from dP and cellprob.
+
+    Args:
+        dP (numpy.ndarray): The dynamics flow field array.
+        cellprob (numpy.ndarray): The cell probability array.
+        p (numpy.ndarray, optional): The pixels on which to run dynamics. Defaults to None
+        niter (int, optional): The number of iterations for mask computation. Defaults to 200.
+        cellprob_threshold (float, optional): The threshold for cell probability. Defaults to 0.0.
+        flow_threshold (float, optional): The threshold for quality control metrics. Defaults to 0.4.
+        interp (bool, optional): Whether to interpolate during dynamics computation. Defaults to True.
+        do_3D (bool, optional): Whether to perform mask computation in 3D. Defaults to False.
+        min_size (int, optional): The minimum size of the masks. Defaults to 15.
+        max_size_fraction (float, optional): Masks larger than max_size_fraction of
+            total image size are removed. Default is 0.4.
+        device (torch.device, optional): The device to use for computation. Defaults to torch.device("cpu").
+
+    Returns:
+        tuple: A tuple containing the computed masks and the final pixel locations.
+    """
+    
+    if (cellprob > cellprob_threshold).sum():  #mask at this point is a cell cluster binary map, not labels
+        inds = np.nonzero(cellprob > cellprob_threshold)
+        if len(inds[0]) == 0:
+            dynamics_logger.info("No cell pixels found.")
+            shape = cellprob.shape
+            mask = np.zeros(shape, "uint16")
+            return mask
+
+        p_final = follow_flows(dP * (cellprob > cellprob_threshold) / 5., 
+                               inds=inds, niter=niter, 
+                                device=device)
+        if not torch.is_tensor(p_final):
+            p_final = torch.from_numpy(p_final).to(device, dtype=torch.int)
+        else:
+            p_final = p_final.int()
+        # calculate masks
+        if device.type == "mps":
+            p_final = p_final.to(torch.device("cpu"))
+        mask = get_masks_torch(p_final, inds, dP.shape[1:], 
+                               max_size_fraction=max_size_fraction)
+        del p_final
+        # flow thresholding factored out of get_masks
+        if not do_3D:
+            if mask.max() > 0 and flow_threshold is not None and flow_threshold > 0:
+                # make sure labels are unique at output of get_masks
+                mask = remove_bad_flow_masks(mask, dP, threshold=flow_threshold,
+                                             device=device)
+
+        if mask.max() < 2**16 and mask.dtype != "uint16":
+            mask = mask.astype("uint16")
+
+    else:  # nothing to compute, just make it compatible
+        dynamics_logger.info("No cell pixels found.")
+        shape = cellprob.shape
+        mask = np.zeros(cellprob.shape, "uint16")
+        return mask
+    
+    if min_size > 0:
+        mask = utils.fill_holes_and_remove_small_masks(mask, min_size=min_size)
+
+    if mask.dtype == np.uint32:
+        if mask.max() < 2**16:
+            mask = mask.astype("uint16")
+        else:
+            dynamics_logger.warning(
+            "more than 65535 masks in image, masks returned as np.uint32")
+
+    return mask

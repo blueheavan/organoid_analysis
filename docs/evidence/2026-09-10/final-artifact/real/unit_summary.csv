@@ -1,0 +1,3 @@
+condition,biological_replicate,unit_id,batch_id,control,n_fields,n_successful_fields,unit_complete,n_detected,n_included,n_excluded,median_volume_um3,median_surface_area_um2,median_sphericity,median_equivalent_diameter_um,total_volume_um3,n_viable_like,fraction_viable_like,n_mixed_signal,fraction_mixed_signal,n_compromised_like,fraction_compromised_like,n_indeterminate,fraction_indeterminate,data_origin
+unannotated_file_1,file_identity_only_1,local_1,batch1,sample,1,1,True,3,0,3,,,,,0,0,,0,,0,,0,,user_images_unvalidated
+unannotated_file_4,file_identity_only_4,local_4,batch1,sample,1,1,True,8,5,3,3587.637383,1865.95459,0.5880670759,18.99342587,18925.41161,0,0,0,0,0,0,5,1,user_images_unvalidated

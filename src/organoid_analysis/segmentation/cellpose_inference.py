@@ -15,8 +15,14 @@ import numpy as np
 import tifffile
 
 from organoid_analysis import __version__
-from organoid_analysis.microscopy_io import Spacing, ZStack, load_zstack, read_axes
-from organoid_analysis.microscopy_io.tiff_contract import git_commit_hash
+from organoid_analysis.microscopy_io import (
+    Spacing,
+    ZStack,
+    load_zstack,
+    read_axes,
+    validate_voxel_spacing_xyz,
+)
+from organoid_analysis.microscopy_io.tiff_contract import git_commit_hash, source_code_hashes
 from organoid_analysis.microscopy_io.tiff_contract import sha256 as _hash_file
 from organoid_analysis.segmentation.paths import SEGMENTATION_OUTPUT_DIR, detect_torch_acceleration
 
@@ -103,7 +109,7 @@ def read_stack(path: str | Path) -> np.ndarray:
     return stack
 
 
-def read_stack_multichannel(path: str | Path) -> ZStack:
+def read_stack_multichannel(path: str | Path, time_index: int | None = None) -> ZStack:
     """Axis-aware TIFF load: resolves OME/ImageJ metadata instead of assuming
     a plain 3D array. Returns a :class:`ZStack` whose ``volume`` is ``(Z,Y,X)``
     for single-channel input or ``(C,Z,Y,X)`` when ``is_multichannel`` is set,
@@ -116,13 +122,14 @@ def read_stack_multichannel(path: str | Path) -> ZStack:
     should keep working exactly as they did before this function existed.
     """
     try:
-        zstack = load_zstack(path)
+        zstack = load_zstack(path, time_index=time_index)
     except ValueError:
         # Legacy plain multipage grayscale TIFFs are commonly reported as QYX
         # or IYX. Only those explicitly metadata-free layouts may use the old
         # reader; never reinterpret rejected CYX/RGB/ambiguous metadata as ZYX.
         with tifffile.TiffFile(path) as handle:
             if (read_axes(path).upper() not in {"QYX", "IYX"}
+                    or time_index not in (None, 0)
                     or handle.ome_metadata is not None
                     or getattr(handle, "imagej_metadata", None) is not None):
                 raise
@@ -194,6 +201,28 @@ def segment_stacks(
     ``on_progress`` fraction, so the UI percentage climbs continuously instead of
     staying pinned until the pass finishes.
     """
+    if config.model_type not in _3D_CAPABLE:
+        raise ValueError("Unsupported 3D model_type")
+    for name in ("nuclei_diameter", "cell_diameter", "anisotropy", "xy_spacing_um", "xy_downsample"):
+        value = getattr(config, name)
+        if isinstance(value, bool) or not np.isfinite(value) or value <= 0:
+            raise ValueError(f"{name} must be finite and positive")
+    for name in ("nuclei_flow_threshold", "cell_flow_threshold", "flow3d_smooth"):
+        value = getattr(config, name)
+        if not np.isfinite(value) or value < 0:
+            raise ValueError(f"{name} must be finite and nonnegative")
+    for name in ("nuclei_cellprob_threshold", "cell_cellprob_threshold"):
+        if not np.isfinite(getattr(config, name)):
+            raise ValueError(f"{name} must be finite")
+    if isinstance(config.batch_size, bool) or not isinstance(config.batch_size, int) or config.batch_size < 1:
+        raise ValueError("batch_size must be a positive integer")
+    for name, volume in (("nuclei", nuclei), ("cells", cells)):
+        if volume is None and name == "cells":
+            continue
+        if not isinstance(volume, np.ndarray) or volume.ndim != 3 or min(volume.shape) < 2:
+            raise ValueError(f"{name} must be a 3D stack with at least two voxels per axis")
+        if not (np.issubdtype(volume.dtype, np.integer) or np.issubdtype(volume.dtype, np.floating)) or not np.isfinite(volume).all():
+            raise ValueError(f"{name} must contain finite real numeric intensities")
     if cells is not None:
         validate_stacks(nuclei, cells)
     if on_progress:
@@ -202,6 +231,8 @@ def segment_stacks(
     downsample = config.xy_downsample
     if not 0 < downsample <= 1.0:
         raise ValueError("xy_downsample must be in (0, 1], with 1.0 meaning full resolution.")
+    if any(round(size * downsample) < 2 for size in nuclei.shape[1:]):
+        raise ValueError("xy_downsample would leave fewer than two XY pixels")
     work_nuclei = nuclei
     work_cells = cells
     if downsample < 1.0:
@@ -234,7 +265,7 @@ def segment_stacks(
             nuclei_masks = _validated_mask(
                 model.eval(
                     work_nuclei,
-                    diameter=config.nuclei_diameter,
+                    diameter=config.nuclei_diameter * downsample,
                     flow_threshold=config.nuclei_flow_threshold,
                     cellprob_threshold=config.nuclei_cellprob_threshold,
                     **common,
@@ -254,7 +285,7 @@ def segment_stacks(
                     model.eval(
                         cell_input,
                         channel_axis=-1,
-                        diameter=config.cell_diameter,
+                        diameter=config.cell_diameter * downsample,
                         flow_threshold=config.cell_flow_threshold,
                         cellprob_threshold=config.cell_cellprob_threshold,
                         **common,
@@ -281,7 +312,7 @@ def segment_stacks(
 def _validated_mask(mask: np.ndarray, expected_shape: tuple[int, ...], name: str) -> np.ndarray:
     """Validate model output before it reaches persistence or measurements."""
     result = np.asarray(mask)
-    if result.shape != expected_shape:
+    if result.ndim != 3 or result.shape != expected_shape:
         raise RuntimeError(f"Cellpose returned {name} mask shape {result.shape}; expected {expected_shape}")
     if not np.issubdtype(result.dtype, np.integer) or np.any(result < 0):
         raise RuntimeError(f"Cellpose returned invalid {name} instance labels")
@@ -423,6 +454,7 @@ def build_provenance(
     return {
         "pipeline_version": __version__,
         "git_commit": git_commit_hash(),
+        "source_code_sha256": source_code_hashes(),
         "timestamp_utc": datetime.now(UTC).isoformat(),
         "python": sys.version,
         "platform": platform.platform(),
@@ -458,22 +490,29 @@ def save_result(
     cell_channel: int | None = None,
     cell_dtype: str | None = None,
 ) -> SegmentationResult:
+    nuclei_masks = _validated_mask(nuclei_masks, nuclei_masks.shape, "nuclei")
+    if cell_masks is not None:
+        cell_masks = _validated_mask(cell_masks, nuclei_masks.shape, "cell")
+    validate_voxel_spacing_xyz(config_spacing(config))
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     run_directory = output_directory / f"run-{timestamp}"
     run_directory.mkdir(parents=True, exist_ok=False)
+    sentinel = run_directory / "RUN_INCOMPLETE.txt"
+    sentinel.write_text("Saving incomplete. Do not interpret partial outputs.\n", encoding="utf-8")
 
     nuclei_mask_path = run_directory / "nuclei_masks_3d.tif"
     summary_path = run_directory / "summary.json"
     provenance_path = run_directory / "provenance.json"
     archive_path = run_directory / "segmentation_results.zip"
-    nuclei_masks = _validated_mask(nuclei_masks, nuclei_masks.shape, "nuclei")
     paths = [nuclei_mask_path]
-    tifffile.imwrite(nuclei_mask_path, nuclei_masks, compression="zlib")
+    from organoid_analysis.microscopy_io.tiff_contract import write_labels
+
+    spacing_zyx = config_spacing(config)[::-1]
+    write_labels(nuclei_mask_path, nuclei_masks, spacing_zyx)
     cell_count = 0
     if cell_masks is not None:
-        cell_masks = _validated_mask(cell_masks, nuclei_masks.shape, "cell")
         cell_mask_path = run_directory / "cell_masks_3d.tif"
-        tifffile.imwrite(cell_mask_path, cell_masks, compression="zlib")
+        write_labels(cell_mask_path, cell_masks, spacing_zyx)
         cell_count = _instance_count(cell_masks)
         paths.append(cell_mask_path)
     else:
@@ -506,6 +545,7 @@ def save_result(
         for path in paths:
             compression = zipfile.ZIP_DEFLATED if path in (summary_path, provenance_path) else zipfile.ZIP_STORED
             archive.write(path, path.name, compress_type=compression)
+    sentinel.unlink()
 
     return SegmentationResult(
         run_directory=run_directory,
@@ -524,6 +564,8 @@ def list_saved_results(output_directory: Path = SEGMENTATION_OUTPUT_DIR) -> list
         return []
     results = []
     for run_directory in output_directory.glob("run-*"):
+        if (run_directory / "RUN_INCOMPLETE.txt").exists():
+            continue
         summary_path = run_directory / "summary.json"
         nuclei_path = run_directory / "nuclei_masks_3d.tif"
         if not summary_path.is_file() or not nuclei_path.is_file():
@@ -555,8 +597,18 @@ def restore_saved_result(run_directory: str | Path) -> RestoredSegmentationRun:
         config = SegmentationConfig(**summary["config"])
     except (KeyError, TypeError) as error:
         raise ValueError(f"Saved run has invalid segmentation configuration: {directory}") from error
-    nuclei = _validated_mask(tifffile.imread(result.nuclei_mask_path), tuple(summary["shape"]), "nuclei")
+    def read_mask(path: Path, expected_shape: tuple[int, ...], name: str) -> np.ndarray:
+        with tifffile.TiffFile(path) as handle:
+            series = handle.series[0]
+            mask = series.asarray()
+            # OME readers squeeze a singleton Z axis. Restore only that
+            # declared singleton, retaining the saved-run shape contract.
+            if series.axes == "YX" and expected_shape == (1, *mask.shape):
+                mask = mask[np.newaxis]
+        return _validated_mask(mask, expected_shape, name)
+
+    nuclei = read_mask(result.nuclei_mask_path, tuple(summary["shape"]), "nuclei")
     cells = None
     if result.cell_mask_path is not None:
-        cells = _validated_mask(tifffile.imread(result.cell_mask_path), nuclei.shape, "cell")
+        cells = read_mask(result.cell_mask_path, nuclei.shape, "cell")
     return RestoredSegmentationRun(result=result, config=config, nuclei_masks=nuclei, cell_masks=cells)

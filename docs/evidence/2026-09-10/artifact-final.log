@@ -1,0 +1,338 @@
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/setuptools/config/_apply_pyprojecttoml.py:82: SetuptoolsDeprecationWarning: `project.license` as a TOML table is deprecated
+!!
+
+        ********************************************************************************
+        Please use a simple string containing a SPDX expression for `project.license`. You can also use `project.license-files`. (Both options available on setuptools>=77.0.0).
+
+        By 2027-Feb-18, you need to update your project and remove deprecated calls
+        or your builds will no longer be supported.
+
+        See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+        ********************************************************************************
+
+!!
+  corresp(dist, value, root_dir)
+running bdist_wheel
+running build
+running build_py
+creating build/lib/organoid_analysis
+copying src/organoid_analysis/config.py -> build/lib/organoid_analysis
+copying src/organoid_analysis/__init__.py -> build/lib/organoid_analysis
+copying src/organoid_analysis/__main__.py -> build/lib/organoid_analysis
+creating build/lib/organoid_analysis/statistics
+copying src/organoid_analysis/statistics/aggregation.py -> build/lib/organoid_analysis/statistics
+copying src/organoid_analysis/statistics/exploration.py -> build/lib/organoid_analysis/statistics
+copying src/organoid_analysis/statistics/__init__.py -> build/lib/organoid_analysis/statistics
+copying src/organoid_analysis/statistics/inference.py -> build/lib/organoid_analysis/statistics
+creating build/lib/organoid_analysis/visualization
+copying src/organoid_analysis/visualization/projection_rendering.py -> build/lib/organoid_analysis/visualization
+copying src/organoid_analysis/visualization/__init__.py -> build/lib/organoid_analysis/visualization
+copying src/organoid_analysis/visualization/capabilities.py -> build/lib/organoid_analysis/visualization
+copying src/organoid_analysis/visualization/surface_rendering.py -> build/lib/organoid_analysis/visualization
+copying src/organoid_analysis/visualization/_stpv.py -> build/lib/organoid_analysis/visualization
+creating build/lib/organoid_analysis/segmentation
+copying src/organoid_analysis/segmentation/paths.py -> build/lib/organoid_analysis/segmentation
+copying src/organoid_analysis/segmentation/cellpose_inference.py -> build/lib/organoid_analysis/segmentation
+copying src/organoid_analysis/segmentation/watershed_instances.py -> build/lib/organoid_analysis/segmentation
+copying src/organoid_analysis/segmentation/__init__.py -> build/lib/organoid_analysis/segmentation
+copying src/organoid_analysis/segmentation/parameter_estimation.py -> build/lib/organoid_analysis/segmentation
+creating build/lib/organoid_analysis/workflows
+copying src/organoid_analysis/workflows/__init__.py -> build/lib/organoid_analysis/workflows
+copying src/organoid_analysis/workflows/demo_workflow.py -> build/lib/organoid_analysis/workflows
+copying src/organoid_analysis/workflows/organoid_measurement_workflow.py -> build/lib/organoid_analysis/workflows
+copying src/organoid_analysis/workflows/multilevel_measurement_workflow.py -> build/lib/organoid_analysis/workflows
+creating build/lib/organoid_analysis/web_interface
+copying src/organoid_analysis/web_interface/preview_2d.py -> build/lib/organoid_analysis/web_interface
+copying src/organoid_analysis/web_interface/analysis_ui.py -> build/lib/organoid_analysis/web_interface
+copying src/organoid_analysis/web_interface/__init__.py -> build/lib/organoid_analysis/web_interface
+copying src/organoid_analysis/web_interface/organoid_workspace.py -> build/lib/organoid_analysis/web_interface
+copying src/organoid_analysis/web_interface/segmentation_workspace.py -> build/lib/organoid_analysis/web_interface
+copying src/organoid_analysis/web_interface/multilevel_results.py -> build/lib/organoid_analysis/web_interface
+copying src/organoid_analysis/web_interface/demo_app.py -> build/lib/organoid_analysis/web_interface
+creating build/lib/organoid_analysis/quantification
+copying src/organoid_analysis/quantification/labels.py -> build/lib/organoid_analysis/quantification
+copying src/organoid_analysis/quantification/__init__.py -> build/lib/organoid_analysis/quantification
+copying src/organoid_analysis/quantification/features.py -> build/lib/organoid_analysis/quantification
+copying src/organoid_analysis/quantification/mask_features.py -> build/lib/organoid_analysis/quantification
+copying src/organoid_analysis/quantification/cellular_measurements.py -> build/lib/organoid_analysis/quantification
+creating build/lib/organoid_analysis/result_export
+copying src/organoid_analysis/result_export/__init__.py -> build/lib/organoid_analysis/result_export
+copying src/organoid_analysis/result_export/measurement_tables.py -> build/lib/organoid_analysis/result_export
+copying src/organoid_analysis/result_export/report.py -> build/lib/organoid_analysis/result_export
+creating build/lib/organoid_analysis/command_line
+copying src/organoid_analysis/command_line/__init__.py -> build/lib/organoid_analysis/command_line
+copying src/organoid_analysis/command_line/organoid_commands.py -> build/lib/organoid_analysis/command_line
+creating build/lib/organoid_analysis/phenotyping
+copying src/organoid_analysis/phenotyping/__init__.py -> build/lib/organoid_analysis/phenotyping
+copying src/organoid_analysis/phenotyping/viability.py -> build/lib/organoid_analysis/phenotyping
+creating build/lib/organoid_analysis/microscopy_io
+copying src/organoid_analysis/microscopy_io/metadata.py -> build/lib/organoid_analysis/microscopy_io
+copying src/organoid_analysis/microscopy_io/__init__.py -> build/lib/organoid_analysis/microscopy_io
+copying src/organoid_analysis/microscopy_io/voxel_spacing.py -> build/lib/organoid_analysis/microscopy_io
+copying src/organoid_analysis/microscopy_io/tiff_contract.py -> build/lib/organoid_analysis/microscopy_io
+copying src/organoid_analysis/microscopy_io/zstack_reader.py -> build/lib/organoid_analysis/microscopy_io
+creating build/lib/organoid_analysis/validation
+copying src/organoid_analysis/validation/__init__.py -> build/lib/organoid_analysis/validation
+copying src/organoid_analysis/validation/segmentation_metrics.py -> build/lib/organoid_analysis/validation
+creating build/lib/organoid_analysis/visualization/volume_viewer
+copying src/organoid_analysis/visualization/volume_viewer/rendering_presets.py -> build/lib/organoid_analysis/visualization/volume_viewer
+copying src/organoid_analysis/visualization/volume_viewer/__init__.py -> build/lib/organoid_analysis/visualization/volume_viewer
+copying src/organoid_analysis/visualization/volume_viewer/viewer_payload.py -> build/lib/organoid_analysis/visualization/volume_viewer
+creating build/lib/organoid_analysis/quantification/multilevel_relationships
+copying src/organoid_analysis/quantification/multilevel_relationships/config.py -> build/lib/organoid_analysis/quantification/multilevel_relationships
+copying src/organoid_analysis/quantification/multilevel_relationships/qc.py -> build/lib/organoid_analysis/quantification/multilevel_relationships
+copying src/organoid_analysis/quantification/multilevel_relationships/__init__.py -> build/lib/organoid_analysis/quantification/multilevel_relationships
+copying src/organoid_analysis/quantification/multilevel_relationships/spatial.py -> build/lib/organoid_analysis/quantification/multilevel_relationships
+copying src/organoid_analysis/quantification/multilevel_relationships/hierarchy.py -> build/lib/organoid_analysis/quantification/multilevel_relationships
+copying src/organoid_analysis/quantification/multilevel_relationships/morphology.py -> build/lib/organoid_analysis/quantification/multilevel_relationships
+copying src/organoid_analysis/quantification/multilevel_relationships/topology.py -> build/lib/organoid_analysis/quantification/multilevel_relationships
+copying src/organoid_analysis/quantification/multilevel_relationships/validation.py -> build/lib/organoid_analysis/quantification/multilevel_relationships
+running egg_info
+creating src/organoid_analysis.egg-info
+writing src/organoid_analysis.egg-info/PKG-INFO
+writing dependency_links to src/organoid_analysis.egg-info/dependency_links.txt
+writing entry points to src/organoid_analysis.egg-info/entry_points.txt
+writing requirements to src/organoid_analysis.egg-info/requires.txt
+writing top-level names to src/organoid_analysis.egg-info/top_level.txt
+writing manifest file 'src/organoid_analysis.egg-info/SOURCES.txt'
+reading manifest file 'src/organoid_analysis.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'src/organoid_analysis.egg-info/SOURCES.txt'
+creating build/lib/organoid_analysis/visualization/volume_viewer/static
+copying src/organoid_analysis/visualization/volume_viewer/static/vtk.js -> build/lib/organoid_analysis/visualization/volume_viewer/static
+copying src/organoid_analysis/visualization/volume_viewer/static/vtk.js.LICENSE.txt -> build/lib/organoid_analysis/visualization/volume_viewer/static
+installing to build/bdist.macosx-11.0-arm64/wheel
+running install
+running install_lib
+creating build/bdist.macosx-11.0-arm64/wheel
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/statistics
+copying build/lib/organoid_analysis/statistics/aggregation.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/statistics
+copying build/lib/organoid_analysis/statistics/exploration.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/statistics
+copying build/lib/organoid_analysis/statistics/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/statistics
+copying build/lib/organoid_analysis/statistics/inference.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/statistics
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/visualization
+copying build/lib/organoid_analysis/visualization/projection_rendering.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/visualization
+copying build/lib/organoid_analysis/visualization/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/visualization
+copying build/lib/organoid_analysis/visualization/capabilities.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/visualization
+copying build/lib/organoid_analysis/visualization/surface_rendering.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/visualization
+copying build/lib/organoid_analysis/visualization/_stpv.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/visualization
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/visualization/volume_viewer
+copying build/lib/organoid_analysis/visualization/volume_viewer/rendering_presets.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/visualization/volume_viewer
+copying build/lib/organoid_analysis/visualization/volume_viewer/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/visualization/volume_viewer
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/visualization/volume_viewer/static
+copying build/lib/organoid_analysis/visualization/volume_viewer/static/vtk.js.LICENSE.txt -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/visualization/volume_viewer/static
+copying build/lib/organoid_analysis/visualization/volume_viewer/static/vtk.js -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/visualization/volume_viewer/static
+copying build/lib/organoid_analysis/visualization/volume_viewer/viewer_payload.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/visualization/volume_viewer
+copying build/lib/organoid_analysis/config.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/segmentation
+copying build/lib/organoid_analysis/segmentation/paths.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/segmentation
+copying build/lib/organoid_analysis/segmentation/cellpose_inference.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/segmentation
+copying build/lib/organoid_analysis/segmentation/watershed_instances.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/segmentation
+copying build/lib/organoid_analysis/segmentation/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/segmentation
+copying build/lib/organoid_analysis/segmentation/parameter_estimation.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/segmentation
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/workflows
+copying build/lib/organoid_analysis/workflows/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/workflows
+copying build/lib/organoid_analysis/workflows/demo_workflow.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/workflows
+copying build/lib/organoid_analysis/workflows/organoid_measurement_workflow.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/workflows
+copying build/lib/organoid_analysis/workflows/multilevel_measurement_workflow.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/workflows
+copying build/lib/organoid_analysis/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/web_interface
+copying build/lib/organoid_analysis/web_interface/preview_2d.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/web_interface
+copying build/lib/organoid_analysis/web_interface/analysis_ui.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/web_interface
+copying build/lib/organoid_analysis/web_interface/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/web_interface
+copying build/lib/organoid_analysis/web_interface/organoid_workspace.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/web_interface
+copying build/lib/organoid_analysis/web_interface/segmentation_workspace.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/web_interface
+copying build/lib/organoid_analysis/web_interface/multilevel_results.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/web_interface
+copying build/lib/organoid_analysis/web_interface/demo_app.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/web_interface
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/quantification
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/quantification/multilevel_relationships
+copying build/lib/organoid_analysis/quantification/multilevel_relationships/config.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/quantification/multilevel_relationships
+copying build/lib/organoid_analysis/quantification/multilevel_relationships/qc.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/quantification/multilevel_relationships
+copying build/lib/organoid_analysis/quantification/multilevel_relationships/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/quantification/multilevel_relationships
+copying build/lib/organoid_analysis/quantification/multilevel_relationships/spatial.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/quantification/multilevel_relationships
+copying build/lib/organoid_analysis/quantification/multilevel_relationships/hierarchy.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/quantification/multilevel_relationships
+copying build/lib/organoid_analysis/quantification/multilevel_relationships/morphology.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/quantification/multilevel_relationships
+copying build/lib/organoid_analysis/quantification/multilevel_relationships/topology.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/quantification/multilevel_relationships
+copying build/lib/organoid_analysis/quantification/multilevel_relationships/validation.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/quantification/multilevel_relationships
+copying build/lib/organoid_analysis/quantification/labels.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/quantification
+copying build/lib/organoid_analysis/quantification/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/quantification
+copying build/lib/organoid_analysis/quantification/features.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/quantification
+copying build/lib/organoid_analysis/quantification/mask_features.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/quantification
+copying build/lib/organoid_analysis/quantification/cellular_measurements.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/quantification
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/result_export
+copying build/lib/organoid_analysis/result_export/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/result_export
+copying build/lib/organoid_analysis/result_export/measurement_tables.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/result_export
+copying build/lib/organoid_analysis/result_export/report.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/result_export
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/command_line
+copying build/lib/organoid_analysis/command_line/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/command_line
+copying build/lib/organoid_analysis/command_line/organoid_commands.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/command_line
+copying build/lib/organoid_analysis/__main__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/phenotyping
+copying build/lib/organoid_analysis/phenotyping/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/phenotyping
+copying build/lib/organoid_analysis/phenotyping/viability.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/phenotyping
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/microscopy_io
+copying build/lib/organoid_analysis/microscopy_io/metadata.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/microscopy_io
+copying build/lib/organoid_analysis/microscopy_io/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/microscopy_io
+copying build/lib/organoid_analysis/microscopy_io/voxel_spacing.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/microscopy_io
+copying build/lib/organoid_analysis/microscopy_io/tiff_contract.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/microscopy_io
+copying build/lib/organoid_analysis/microscopy_io/zstack_reader.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/microscopy_io
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis/validation
+copying build/lib/organoid_analysis/validation/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/validation
+copying build/lib/organoid_analysis/validation/segmentation_metrics.py -> build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis/validation
+running install_egg_info
+Copying src/organoid_analysis.egg-info to build/bdist.macosx-11.0-arm64/wheel/./organoid_analysis-1.0.0-py3.12.egg-info
+running install_scripts
+creating build/bdist.macosx-11.0-arm64/wheel/organoid_analysis-1.0.0.dist-info/WHEEL
+creating '/var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/organoid-final-artifact-b28dqwh5/wheel/.tmp-0fykoriq/organoid_analysis-1.0.0-py3-none-any.whl' and adding 'build/bdist.macosx-11.0-arm64/wheel' to it
+adding 'organoid_analysis/__init__.py'
+adding 'organoid_analysis/__main__.py'
+adding 'organoid_analysis/config.py'
+adding 'organoid_analysis/command_line/__init__.py'
+adding 'organoid_analysis/command_line/organoid_commands.py'
+adding 'organoid_analysis/microscopy_io/__init__.py'
+adding 'organoid_analysis/microscopy_io/metadata.py'
+adding 'organoid_analysis/microscopy_io/tiff_contract.py'
+adding 'organoid_analysis/microscopy_io/voxel_spacing.py'
+adding 'organoid_analysis/microscopy_io/zstack_reader.py'
+adding 'organoid_analysis/phenotyping/__init__.py'
+adding 'organoid_analysis/phenotyping/viability.py'
+adding 'organoid_analysis/quantification/__init__.py'
+adding 'organoid_analysis/quantification/cellular_measurements.py'
+adding 'organoid_analysis/quantification/features.py'
+adding 'organoid_analysis/quantification/labels.py'
+adding 'organoid_analysis/quantification/mask_features.py'
+adding 'organoid_analysis/quantification/multilevel_relationships/__init__.py'
+adding 'organoid_analysis/quantification/multilevel_relationships/config.py'
+adding 'organoid_analysis/quantification/multilevel_relationships/hierarchy.py'
+adding 'organoid_analysis/quantification/multilevel_relationships/morphology.py'
+adding 'organoid_analysis/quantification/multilevel_relationships/qc.py'
+adding 'organoid_analysis/quantification/multilevel_relationships/spatial.py'
+adding 'organoid_analysis/quantification/multilevel_relationships/topology.py'
+adding 'organoid_analysis/quantification/multilevel_relationships/validation.py'
+adding 'organoid_analysis/result_export/__init__.py'
+adding 'organoid_analysis/result_export/measurement_tables.py'
+adding 'organoid_analysis/result_export/report.py'
+adding 'organoid_analysis/segmentation/__init__.py'
+adding 'organoid_analysis/segmentation/cellpose_inference.py'
+adding 'organoid_analysis/segmentation/parameter_estimation.py'
+adding 'organoid_analysis/segmentation/paths.py'
+adding 'organoid_analysis/segmentation/watershed_instances.py'
+adding 'organoid_analysis/statistics/__init__.py'
+adding 'organoid_analysis/statistics/aggregation.py'
+adding 'organoid_analysis/statistics/exploration.py'
+adding 'organoid_analysis/statistics/inference.py'
+adding 'organoid_analysis/validation/__init__.py'
+adding 'organoid_analysis/validation/segmentation_metrics.py'
+adding 'organoid_analysis/visualization/__init__.py'
+adding 'organoid_analysis/visualization/_stpv.py'
+adding 'organoid_analysis/visualization/capabilities.py'
+adding 'organoid_analysis/visualization/projection_rendering.py'
+adding 'organoid_analysis/visualization/surface_rendering.py'
+adding 'organoid_analysis/visualization/volume_viewer/__init__.py'
+adding 'organoid_analysis/visualization/volume_viewer/rendering_presets.py'
+adding 'organoid_analysis/visualization/volume_viewer/viewer_payload.py'
+adding 'organoid_analysis/visualization/volume_viewer/static/vtk.js'
+adding 'organoid_analysis/visualization/volume_viewer/static/vtk.js.LICENSE.txt'
+adding 'organoid_analysis/web_interface/__init__.py'
+adding 'organoid_analysis/web_interface/analysis_ui.py'
+adding 'organoid_analysis/web_interface/demo_app.py'
+adding 'organoid_analysis/web_interface/multilevel_results.py'
+adding 'organoid_analysis/web_interface/organoid_workspace.py'
+adding 'organoid_analysis/web_interface/preview_2d.py'
+adding 'organoid_analysis/web_interface/segmentation_workspace.py'
+adding 'organoid_analysis/workflows/__init__.py'
+adding 'organoid_analysis/workflows/demo_workflow.py'
+adding 'organoid_analysis/workflows/multilevel_measurement_workflow.py'
+adding 'organoid_analysis/workflows/organoid_measurement_workflow.py'
+adding 'organoid_analysis-1.0.0.dist-info/licenses/LICENSE'
+adding 'organoid_analysis-1.0.0.dist-info/METADATA'
+adding 'organoid_analysis-1.0.0.dist-info/WHEEL'
+adding 'organoid_analysis-1.0.0.dist-info/entry_points.txt'
+adding 'organoid_analysis-1.0.0.dist-info/top_level.txt'
+adding 'organoid_analysis-1.0.0.dist-info/RECORD'
+removing build/bdist.macosx-11.0-arm64/wheel
+Using CPython 3.12.14 interpreter at: .pixi/envs/default/bin/python
+Resolved 1 package in 0.72ms
+Prepared 1 package in 11ms
+Installed 1 package in 2ms
+ + organoid-analysis==1.0.0 (from file:///var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/organoid-final-artifact-b28dqwh5/wheel/organoid_analysis-1.0.0-py3-none-any.whl)
+PASS: installed package Python/static bytes match final source
+PASS: isolated artifact import, offline viewer and analytical voxel volume
+COMMAND: python -m organoid_analysis --version
+1.0.0
+COMMAND: python -m organoid_analysis demo --out /var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/organoid-final-artifact-b28dqwh5/demo
+/Users/jlwang/.matplotlib is not a writable directory
+Matplotlib created a temporary cache directory at /var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/matplotlib-0b0pawpl because there was an issue with the default path ({configdir}); it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
+Matplotlib is building the font cache; this may take a moment.
+[1/15] SYN_Vehicle_R1: 6 objects; 6 pass geometry QC
+[2/15] SYN_Treatment_A_R1: 6 objects; 6 pass geometry QC
+[3/15] SYN_Treatment_B_R1: 6 objects; 6 pass geometry QC
+[4/15] SYN_Live_control_R1: 6 objects; 6 pass geometry QC
+[5/15] SYN_Dead_control_R1: 6 objects; 6 pass geometry QC
+[6/15] SYN_Vehicle_R2: 6 objects; 6 pass geometry QC
+[7/15] SYN_Treatment_A_R2: 6 objects; 6 pass geometry QC
+[8/15] SYN_Treatment_B_R2: 6 objects; 6 pass geometry QC
+[9/15] SYN_Live_control_R2: 6 objects; 6 pass geometry QC
+[10/15] SYN_Dead_control_R2: 6 objects; 6 pass geometry QC
+[11/15] SYN_Vehicle_R3: 6 objects; 6 pass geometry QC
+[12/15] SYN_Treatment_A_R3: 6 objects; 6 pass geometry QC
+[13/15] SYN_Treatment_B_R3: 6 objects; 6 pass geometry QC
+[14/15] SYN_Live_control_R3: 6 objects; 6 pass geometry QC
+[15/15] SYN_Dead_control_R3: 6 objects; 6 pass geometry QC
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:1634: UserWarning: Random effects covariance is singular
+  warnings.warn(msg)
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:2237: ConvergenceWarning: The MLE may be on the boundary of the parameter space.
+  warnings.warn(msg, ConvergenceWarning)
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/base/model.py:1912: FutureWarning: The behavior of wald_test will change after 0.14 to returning scalar test statistic values. To get the future behavior now, set scalar to True. To silence this message while retaining the legacy behavior, set scalar to False.
+  warnings.warn(
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:1634: UserWarning: Random effects covariance is singular
+  warnings.warn(msg)
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:2237: ConvergenceWarning: The MLE may be on the boundary of the parameter space.
+  warnings.warn(msg, ConvergenceWarning)
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/base/model.py:1912: FutureWarning: The behavior of wald_test will change after 0.14 to returning scalar test statistic values. To get the future behavior now, set scalar to True. To silence this message while retaining the legacy behavior, set scalar to False.
+  warnings.warn(
+{
+  "status": "complete",
+  "out": "/private/var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/organoid-final-artifact-b28dqwh5/demo/results",
+  "n_samples": 15,
+  "n_detected_organoids": 90,
+  "n_geometry_eligible_organoids": 90,
+  "n_failed_samples": 0,
+  "elapsed_seconds": 11.677060540998355,
+  "synthetic_validation": {
+    "data_origin": "synthetic_phantom",
+    "limitation": "Software verification on simple phantoms; not real-image accuracy or independent classifier validation. Control scaling and simulation intentionally share simple marker assumptions.",
+    "expected_objects": 90,
+    "detected_objects": 90,
+    "matched_objects": 90,
+    "instance_matching": "Hungarian assignment at IoU >= 0.5",
+    "false_positives": 0,
+    "false_negatives": 0,
+    "mean_image_detection_precision": 1.0,
+    "mean_image_detection_recall": 1.0,
+    "median_dice": 1.0,
+    "minimum_dice": 0.9996526571726294,
+    "median_absolute_relative_volume_error": 0.0,
+    "maximum_absolute_relative_volume_error": 0.0006944444444444445,
+    "state_agreement_fraction_matched_objects": 1.0,
+    "state_agreement_fraction_treatment_conditions": 1.0,
+    "state_agreement_fraction_live_dead_control_conditions": 1.0
+  }
+}
+COMMAND: python -m organoid_analysis analyze --manifest /tmp/organoid-audit-real-20260910/manifest.csv --out /var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/organoid-final-artifact-b28dqwh5/real --keep-going
+/Users/jlwang/.matplotlib is not a writable directory
+Matplotlib created a temporary cache directory at /var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/matplotlib-0nothmlw because there was an issue with the default path ({configdir}); it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
+Matplotlib is building the font cache; this may take a moment.
+[1/2] local_1: 3 objects; 0 pass geometry QC
+[2/2] local_4: 8 objects; 5 pass geometry QC
+{
+  "status": "complete",
+  "out": "/private/var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/organoid-final-artifact-b28dqwh5/real",
+  "n_samples": 2,
+  "n_detected_organoids": 11,
+  "n_geometry_eligible_organoids": 5,
+  "n_failed_samples": 0,
+  "elapsed_seconds": 10.402509375009686
+}
+PASS: final artifact demo and real-file execution; accuracy is a separate claim

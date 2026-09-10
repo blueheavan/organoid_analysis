@@ -1,0 +1,57 @@
+........................................................................ [ 54%]
+............................................................             [100%]
+=============================== warnings summary ===============================
+tests/microscopy_io/test_io.py: 3 warnings
+tests/microscopy_io/test_metadata_contract_regressions.py: 8 warnings
+tests/segmentation/test_cellpose_inference.py: 3 warnings
+tests/visualization/test_3d_preview.py: 6 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:4656: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = shape
+
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:23116: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    out.shape = shape
+
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/segmentation/test_cellpose_inference.py::SegmentationTests::test_saved_result_can_be_listed_and_restored_after_session_loss
+tests/segmentation/test_cellpose_inference.py::SegmentationTests::test_saved_result_can_be_listed_and_restored_after_session_loss
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:9371: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = keyframe.shaped
+
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/segmentation/test_cellpose_inference.py::SegmentationTests::test_saved_result_can_be_listed_and_restored_after_session_loss
+tests/segmentation/test_cellpose_inference.py::SegmentationTests::test_saved_result_can_be_listed_and_restored_after_session_loss
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:9375: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = keyframe.shape
+
+tests/microscopy_io/test_voxel_spacing.py: 48 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/skimage/measure/_marching_cubes_lewiner.py:237: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    ar.shape = shape
+
+tests/microscopy_io/test_voxel_spacing.py::test_voxel_volume_uses_real_metadata_spacing_not_the_0_414_default
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/skimage/measure/_marching_cubes_lewiner.py:213: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    faces.shape = -1, 3
+
+tests/segmentation/test_parameter_estimation.py::AnisotropyTests::test_anisotropy_unknown_when_no_metadata
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:1463: DeprecationWarning: <tifffile.TiffWriter.write> data with shape (4, 8, 8) and dtype 'uint16' are stored as RGB with separate component planes. Future versions will store such data as MINISBLACK in separate pages by default, unless the 'photometric' and 'planarconfig' parameters are specified.
+    return tif.write(
+
+tests/segmentation/test_watershed_instances.py::test_touching_spheres_split_into_two_instances_in_anisotropic_grid
+tests/segmentation/test_watershed_instances.py::test_probability_and_imported_label_paths
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/skimage/morphology/grayreconstruct.py:216: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    rec_img.shape = np.array(seed.shape) + (np.array(footprint.shape) - 1)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html

@@ -1,0 +1,47 @@
+..................                                                       [100%]
+=============================== warnings summary ===============================
+tests/segmentation/test_cellpose_inference.py::SegmentationTests::test_read_stack_accepts_3d_tiff
+tests/segmentation/test_cellpose_inference.py::SegmentationTests::test_saved_result_can_be_listed_and_restored_after_session_loss
+tests/segmentation/test_cellpose_inference.py::SegmentationTests::test_saved_result_can_be_listed_and_restored_after_session_loss
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:4656: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = shape
+
+tests/segmentation/test_cellpose_inference.py::SegmentationTests::test_saved_result_can_be_listed_and_restored_after_session_loss
+tests/segmentation/test_cellpose_inference.py::SegmentationTests::test_saved_result_can_be_listed_and_restored_after_session_loss
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:9371: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = keyframe.shaped
+
+tests/segmentation/test_cellpose_inference.py::SegmentationTests::test_saved_result_can_be_listed_and_restored_after_session_loss
+tests/segmentation/test_cellpose_inference.py::SegmentationTests::test_saved_result_can_be_listed_and_restored_after_session_loss
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:9375: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = keyframe.shape
+
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+tests/workflows/test_export_contract_regressions.py::test_saved_masks_are_calibrated_zyx_not_rgb
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:23116: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    out.shape = shape
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+18 passed, 27 warnings in 16.45s

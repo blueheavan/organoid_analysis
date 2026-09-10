@@ -287,7 +287,7 @@ def _render_morphology(available: dict[str, Path]) -> None:
 def _barplot_cohens_d(result: pd.DataFrame) -> None:
     plot = result.sort_values("Cohens_d").copy()
     colors = [
-        "#e74c3c" if s else "#95a5a6" for s in plot["Significant_Bonferroni"]
+        "#e74c3c" if s else "#95a5a6" for s in plot["Significant_Bonferroni"].fillna(False)
     ]
     fig, ax = plt.subplots(figsize=(9, max(4, 0.5 * len(plot) + 2)))
     ax.barh(plot["Feature"], plot["Cohens_d"], color=colors, edgecolor="black")
@@ -345,7 +345,7 @@ def _render_ml(available: dict[str, Path]) -> None:
                 df, feature_cols, group_col, g1, g2
             )
             summary, fitted, _, _, _ = analysis.train_binary_classifiers(X, y, label_map)
-            st.success(f"Best model: {summary.attrs.get('best_model')}")
+            st.success(f"Model selected by training CV accuracy: {summary.attrs.get('best_model')}")
             st.dataframe(summary)
             importance = analysis.feature_importance(fitted, feature_cols)
             st.markdown("**Feature importance (consensus across models)**")

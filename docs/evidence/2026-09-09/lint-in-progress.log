@@ -1,0 +1,24 @@
+✨ Pixi task (lint): ruff check src tests scripts
+I001 [*] Import block is un-sorted or un-formatted
+  --> src/organoid_analysis/result_export/measurement_tables.py:28:9
+   |
+26 |         if spacing_zyx_um is None:
+27 |             raise ValueError("spacing_zyx_um is required when exporting label masks")
+28 |         from organoid_analysis.microscopy_io.tiff_contract import validate_label_export, write_labels
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+29 |         expected_shape = None
+30 |         for level, labels in label_masks.items():
+   |
+help: Organize imports
+   |
+27 |             raise ValueError("spacing_zyx_um is required when exporting label masks")
+   -         from organoid_analysis.microscopy_io.tiff_contract import validate_label_export, write_labels
+28 +         from organoid_analysis.microscopy_io.tiff_contract import (
+29 +             validate_label_export,
+30 +             write_labels,
+31 +         )
+32 |         expected_shape = None
+   |
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.

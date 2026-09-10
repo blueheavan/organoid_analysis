@@ -1,0 +1,274 @@
+FF..FFFFFFFFFFFFF..FFF...FFFF..FFFFFFFFFFFFFF                            [100%]
+=================================== FAILURES ===================================
+__________________ test_imagej_z_units_are_converted[nm-2000] __________________
+tests/microscopy_io/test_metadata_contract_regressions.py:31: in test_imagej_z_units_are_converted
+    assert parse_spacing_imagej({'spacing': value, 'unit': unit}).z == pytest.approx(2, rel=1e-12)
+E   assert 2000.0 == 2 ± 2.0e-12
+E     
+E     comparison failed
+E     Obtained: 2000.0
+E     Expected: 2 ± 2.0e-12
+_________________ test_imagej_z_units_are_converted[mm-0.002] __________________
+tests/microscopy_io/test_metadata_contract_regressions.py:31: in test_imagej_z_units_are_converted
+    assert parse_spacing_imagej({'spacing': value, 'unit': unit}).z == pytest.approx(2, rel=1e-12)
+E   assert 0.002 == 2 ± 2.0e-12
+E     
+E     comparison failed
+E     Obtained: 0.002
+E     Expected: 2 ± 2.0e-12
+______________ test_uncalibrated_imagej_spacing_is_unknown[None] _______________
+tests/microscopy_io/test_metadata_contract_regressions.py:36: in test_uncalibrated_imagej_spacing_is_unknown
+    assert parse_spacing_imagej({'spacing': 2, 'unit': unit}).z is None
+E   AssertionError: assert 2.0 is None
+E    +  where 2.0 = Spacing(x=None, y=None, z=2.0).z
+E    +    where Spacing(x=None, y=None, z=2.0) = parse_spacing_imagej({'spacing': 2, 'unit': None})
+________________ test_uncalibrated_imagej_spacing_is_unknown[] _________________
+tests/microscopy_io/test_metadata_contract_regressions.py:36: in test_uncalibrated_imagej_spacing_is_unknown
+    assert parse_spacing_imagej({'spacing': 2, 'unit': unit}).z is None
+E   AssertionError: assert 2.0 is None
+E    +  where 2.0 = Spacing(x=None, y=None, z=2.0).z
+E    +    where Spacing(x=None, y=None, z=2.0) = parse_spacing_imagej({'spacing': 2, 'unit': ''})
+______________ test_uncalibrated_imagej_spacing_is_unknown[pixel] ______________
+tests/microscopy_io/test_metadata_contract_regressions.py:36: in test_uncalibrated_imagej_spacing_is_unknown
+    assert parse_spacing_imagej({'spacing': 2, 'unit': unit}).z is None
+E   AssertionError: assert 2.0 is None
+E    +  where 2.0 = Spacing(x=None, y=None, z=2.0).z
+E    +    where Spacing(x=None, y=None, z=2.0) = parse_spacing_imagej({'spacing': 2, 'unit': 'pixel'})
+_____________ test_uncalibrated_imagej_spacing_is_unknown[pixels] ______________
+tests/microscopy_io/test_metadata_contract_regressions.py:36: in test_uncalibrated_imagej_spacing_is_unknown
+    assert parse_spacing_imagej({'spacing': 2, 'unit': unit}).z is None
+E   AssertionError: assert 2.0 is None
+E    +  where 2.0 = Spacing(x=None, y=None, z=2.0).z
+E    +    where Spacing(x=None, y=None, z=2.0) = parse_spacing_imagej({'spacing': 2, 'unit': 'pixels'})
+______________ test_invalid_physical_imagej_spacing_rejected[-1] _______________
+tests/microscopy_io/test_metadata_contract_regressions.py:41: in test_invalid_physical_imagej_spacing_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_______________ test_invalid_physical_imagej_spacing_rejected[0] _______________
+tests/microscopy_io/test_metadata_contract_regressions.py:41: in test_invalid_physical_imagej_spacing_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+______________ test_invalid_physical_imagej_spacing_rejected[inf] ______________
+tests/microscopy_io/test_metadata_contract_regressions.py:41: in test_invalid_physical_imagej_spacing_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+______________ test_invalid_physical_imagej_spacing_rejected[nan] ______________
+tests/microscopy_io/test_metadata_contract_regressions.py:41: in test_invalid_physical_imagej_spacing_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_______________ test_imagej_unit_calibrates_resolution_none_tiff _______________
+tests/microscopy_io/test_metadata_contract_regressions.py:51: in test_imagej_unit_calibrates_resolution_none_tiff
+    assert (result.spacing.x, result.spacing.y, result.spacing.z) == pytest.approx((500, 250, 2))
+E   assert (None, None, 0.002) == approx((500 ±... 2 ± 2.0e-06))
+E     
+E     comparison failed. Mismatched elements: 3 / 3:
+E     Max absolute difference: 1.998
+E     Max relative difference: 999.0
+E     Index | Obtained | Expected     
+E     0     | None     | 500 ± 5.0e-04
+E     1     | None     | 250 ± 2.5e-04
+E     2     | 0.002    | 2 ± 2.0e-06
+___ test_nonuniform_or_nonmonotonic_z_rejected[positions0-parse_spacing_ome] ___
+tests/microscopy_io/test_metadata_contract_regressions.py:58: in test_nonuniform_or_nonmonotonic_z_rejected
+    with pytest.raises(ValueError, match='uniformly'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+______ test_nonuniform_or_nonmonotonic_z_rejected[positions0-ome_spacing] ______
+tests/microscopy_io/test_metadata_contract_regressions.py:58: in test_nonuniform_or_nonmonotonic_z_rejected
+    with pytest.raises(ValueError, match='uniformly'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+___ test_nonuniform_or_nonmonotonic_z_rejected[positions1-parse_spacing_ome] ___
+tests/microscopy_io/test_metadata_contract_regressions.py:58: in test_nonuniform_or_nonmonotonic_z_rejected
+    with pytest.raises(ValueError, match='uniformly'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+______ test_nonuniform_or_nonmonotonic_z_rejected[positions1-ome_spacing] ______
+tests/microscopy_io/test_metadata_contract_regressions.py:58: in test_nonuniform_or_nonmonotonic_z_rejected
+    with pytest.raises(ValueError, match='uniformly'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+___ test_reference_frame_is_not_silently_micrometres[None-parse_spacing_ome] ___
+tests/microscopy_io/test_metadata_contract_regressions.py:65: in test_reference_frame_is_not_silently_micrometres
+    with pytest.raises(ValueError, match='unit'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+______ test_reference_frame_is_not_silently_micrometres[None-ome_spacing] ______
+tests/microscopy_io/test_metadata_contract_regressions.py:65: in test_reference_frame_is_not_silently_micrometres
+    with pytest.raises(ValueError, match='unit'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_reference_frame_is_not_silently_micrometres[reference frame-parse_spacing_ome] _
+tests/microscopy_io/test_metadata_contract_regressions.py:65: in test_reference_frame_is_not_silently_micrometres
+    with pytest.raises(ValueError, match='unit'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_multiframe_upload_requires_explicit_time_and_preserves_selected_identity _
+tests/microscopy_io/test_metadata_contract_regressions.py:81: in test_multiframe_upload_requires_explicit_time_and_preserves_selected_identity
+    with pytest.raises(ValueError, match='time_index'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_________ test_label_export_rejects_lossy_cast_before_writing[labels0] _________
+tests/microscopy_io/test_metadata_contract_regressions.py:97: in test_label_export_rejects_lossy_cast_before_writing
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_________ test_label_export_rejects_lossy_cast_before_writing[labels1] _________
+tests/microscopy_io/test_metadata_contract_regressions.py:97: in test_label_export_rejects_lossy_cast_before_writing
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_________ test_label_export_rejects_lossy_cast_before_writing[labels2] _________
+tests/microscopy_io/test_metadata_contract_regressions.py:97: in test_label_export_rejects_lossy_cast_before_writing
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_________ test_working_diameter_and_anisotropy_use_same_xy_scale[0.5] __________
+tests/segmentation/test_inference_contract_regressions.py:27: in test_working_diameter_and_anisotropy_use_same_xy_scale
+    assert model.calls[0][1]['diameter'] == 32 * factor
+E   assert 32 == (32 * 0.5)
+_________ test_working_diameter_and_anisotropy_use_same_xy_scale[0.25] _________
+tests/segmentation/test_inference_contract_regressions.py:27: in test_working_diameter_and_anisotropy_use_same_xy_scale
+    assert model.calls[0][1]['diameter'] == 32 * factor
+E   assert 32 == (32 * 0.25)
+_________ test_invalid_nuclei_only_input_rejected_before_model[image0] _________
+tests/segmentation/test_inference_contract_regressions.py:38: in test_invalid_nuclei_only_input_rejected_before_model
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_________ test_invalid_nuclei_only_input_rejected_before_model[image1] _________
+tests/segmentation/test_inference_contract_regressions.py:38: in test_invalid_nuclei_only_input_rejected_before_model
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_________ test_invalid_nuclei_only_input_rejected_before_model[image2] _________
+tests/segmentation/test_inference_contract_regressions.py:38: in test_invalid_nuclei_only_input_rejected_before_model
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_________ test_invalid_nuclei_only_input_rejected_before_model[image3] _________
+tests/segmentation/test_inference_contract_regressions.py:38: in test_invalid_nuclei_only_input_rejected_before_model
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_______ test_invalid_configuration_rejected_before_model[anisotropy--1] ________
+tests/segmentation/test_inference_contract_regressions.py:48: in test_invalid_configuration_rejected_before_model
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_____ test_invalid_configuration_rejected_before_model[xy_spacing_um-nan] ______
+tests/segmentation/test_inference_contract_regressions.py:48: in test_invalid_configuration_rejected_before_model
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_____ test_invalid_configuration_rejected_before_model[nuclei_diameter-0] ______
+tests/segmentation/test_inference_contract_regressions.py:48: in test_invalid_configuration_rejected_before_model
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_____ test_invalid_configuration_rejected_before_model[model_type-unknown] _____
+tests/segmentation/test_inference_contract_regressions.py:48: in test_invalid_configuration_rejected_before_model
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+________ test_invalid_configuration_rejected_before_model[batch_size-0] ________
+tests/segmentation/test_inference_contract_regressions.py:48: in test_invalid_configuration_rejected_before_model
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_____ test_invalid_configuration_rejected_before_model[xy_downsample-0.01] _____
+tests/segmentation/test_inference_contract_regressions.py:49: in test_invalid_configuration_rejected_before_model
+    segment_stacks(model, np.zeros((3, 8, 8)), None, replace(SegmentationConfig(), **{key: value}))
+/var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/organoid-audit-baseline-249m3oxv/src/organoid_analysis/segmentation/cellpose_inference.py:269: in segment_stacks
+    nuclei_masks = _upsample_masks(nuclei_masks, nuclei.shape)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/organoid-audit-baseline-249m3oxv/src/organoid_analysis/segmentation/cellpose_inference.py:302: in _upsample_masks
+    factors = tuple(full / orig for full, orig in zip(full_shape, masks.shape))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/organoid-audit-baseline-249m3oxv/src/organoid_analysis/segmentation/cellpose_inference.py:302: in <genexpr>
+    factors = tuple(full / orig for full, orig in zip(full_shape, masks.shape))
+                    ^^^^^^^^^^^
+E   ZeroDivisionError: division by zero
+_____________ test_invalid_export_never_publishes_complete_summary _____________
+tests/workflows/test_export_contract_regressions.py:18: in test_invalid_export_never_publishes_complete_summary
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+____ test_mask_write_failure_leaves_incomplete_marker_not_complete_summary _____
+tests/workflows/test_export_contract_regressions.py:32: in test_mask_write_failure_leaves_incomplete_marker_not_complete_summary
+    assert (output / 'RUN_INCOMPLETE.txt').exists()
+E   AssertionError: assert False
+E    +  where False = exists()
+E    +    where exists = (PosixPath('/private/var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/pytest-of-jlwang/pytest-268/test_mask_write_failure_leaves0/result') / 'RUN_INCOMPLETE.txt').exists
+=============================== warnings summary ===============================
+tests/microscopy_io/test_metadata_contract_regressions.py::test_imagej_unit_calibrates_resolution_none_tiff
+tests/microscopy_io/test_metadata_contract_regressions.py::test_multiframe_upload_requires_explicit_time_and_preserves_selected_identity
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:4656: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = shape
+
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:23116: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    out.shape = shape
+
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:9371: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = keyframe.shaped
+
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+tests/microscopy_io/test_metadata_contract_regressions.py::test_uint32_max_id_export_roundtrip
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:9375: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = keyframe.shape
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_imagej_z_units_are_converted[nm-2000]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_imagej_z_units_are_converted[mm-0.002]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_uncalibrated_imagej_spacing_is_unknown[None]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_uncalibrated_imagej_spacing_is_unknown[]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_uncalibrated_imagej_spacing_is_unknown[pixel]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_uncalibrated_imagej_spacing_is_unknown[pixels]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_invalid_physical_imagej_spacing_rejected[-1]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_invalid_physical_imagej_spacing_rejected[0]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_invalid_physical_imagej_spacing_rejected[inf]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_invalid_physical_imagej_spacing_rejected[nan]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_imagej_unit_calibrates_resolution_none_tiff
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_nonuniform_or_nonmonotonic_z_rejected[positions0-parse_spacing_ome]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_nonuniform_or_nonmonotonic_z_rejected[positions0-ome_spacing]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_nonuniform_or_nonmonotonic_z_rejected[positions1-parse_spacing_ome]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_nonuniform_or_nonmonotonic_z_rejected[positions1-ome_spacing]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_reference_frame_is_not_silently_micrometres[None-parse_spacing_ome]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_reference_frame_is_not_silently_micrometres[None-ome_spacing]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_reference_frame_is_not_silently_micrometres[reference frame-parse_spacing_ome]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_multiframe_upload_requires_explicit_time_and_preserves_selected_identity
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_label_export_rejects_lossy_cast_before_writing[labels0]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_label_export_rejects_lossy_cast_before_writing[labels1]
+FAILED tests/microscopy_io/test_metadata_contract_regressions.py::test_label_export_rejects_lossy_cast_before_writing[labels2]
+FAILED tests/segmentation/test_inference_contract_regressions.py::test_working_diameter_and_anisotropy_use_same_xy_scale[0.5]
+FAILED tests/segmentation/test_inference_contract_regressions.py::test_working_diameter_and_anisotropy_use_same_xy_scale[0.25]
+FAILED tests/segmentation/test_inference_contract_regressions.py::test_invalid_nuclei_only_input_rejected_before_model[image0]
+FAILED tests/segmentation/test_inference_contract_regressions.py::test_invalid_nuclei_only_input_rejected_before_model[image1]
+FAILED tests/segmentation/test_inference_contract_regressions.py::test_invalid_nuclei_only_input_rejected_before_model[image2]
+FAILED tests/segmentation/test_inference_contract_regressions.py::test_invalid_nuclei_only_input_rejected_before_model[image3]
+FAILED tests/segmentation/test_inference_contract_regressions.py::test_invalid_configuration_rejected_before_model[anisotropy--1]
+FAILED tests/segmentation/test_inference_contract_regressions.py::test_invalid_configuration_rejected_before_model[xy_spacing_um-nan]
+FAILED tests/segmentation/test_inference_contract_regressions.py::test_invalid_configuration_rejected_before_model[nuclei_diameter-0]
+FAILED tests/segmentation/test_inference_contract_regressions.py::test_invalid_configuration_rejected_before_model[model_type-unknown]
+FAILED tests/segmentation/test_inference_contract_regressions.py::test_invalid_configuration_rejected_before_model[batch_size-0]
+FAILED tests/segmentation/test_inference_contract_regressions.py::test_invalid_configuration_rejected_before_model[xy_downsample-0.01]
+FAILED tests/workflows/test_export_contract_regressions.py::test_invalid_export_never_publishes_complete_summary
+FAILED tests/workflows/test_export_contract_regressions.py::test_mask_write_failure_leaves_incomplete_marker_not_complete_summary
+BASELINE_REGRESSION_EXIT 1

@@ -1,0 +1,265 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/jlwang/Desktop/organoid_analysis
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.1.0, anyio-4.14.2
+collected 316 items / 8 deselected / 308 selected
+
+tests/microscopy_io/test_io.py .................                         [  5%]
+tests/microscopy_io/test_metadata_contract_regressions.py .............. [ 10%]
+.................                                                        [ 15%]
+tests/microscopy_io/test_voxel_spacing.py ...............                [ 20%]
+tests/phenotyping/test_viability_summary.py ........                     [ 23%]
+tests/quantification/test_audit_contracts.py ............                [ 26%]
+tests/quantification/test_cellular_measurements.py ..............        [ 31%]
+tests/quantification/test_geometry.py .....                              [ 33%]
+tests/quantification/test_labels.py ...                                  [ 34%]
+tests/quantification/test_marker_measurements.py ....                    [ 35%]
+tests/quantification/test_mask_features.py ................              [ 40%]
+tests/segmentation/test_cellpose_inference.py ......F......              [ 44%]
+tests/segmentation/test_inference_contract_regressions.py .............  [ 49%]
+tests/segmentation/test_parameter_estimation.py .........                [ 51%]
+tests/segmentation/test_watershed_instances.py ..........                [ 55%]
+tests/statistics/test_exploration.py ..................                  [ 61%]
+tests/statistics/test_inference.py ...........                           [ 64%]
+tests/statistics/test_statistical_contract_regressions.py ...........    [ 68%]
+tests/test_validate_notebooks_script.py .                                [ 68%]
+tests/visualization/test_3d_preview.py .......................           [ 75%]
+tests/visualization/test_layout_render.py sssss                          [ 77%]
+tests/visualization/test_render_smoke.py sss                             [ 78%]
+tests/visualization/test_surface_coordinates.py ..                       [ 79%]
+tests/visualization/test_viewer.py ............................          [ 88%]
+tests/web_interface/test_multilevel_results_ui.py .                      [ 88%]
+tests/web_interface/test_segmentation_workspace.py .....                 [ 90%]
+tests/workflows/test_export_contract_regressions.py .....                [ 91%]
+tests/workflows/test_multilevel_measurement_workflow.py ...............  [ 96%]
+tests/workflows/test_multilevel_numerical_regressions.py ....            [ 98%]
+tests/workflows/test_organoid_measurement_workflow.py ......             [100%]
+
+=================================== FAILURES ===================================
+_ SegmentationTests.test_saved_result_can_be_listed_and_restored_after_session_loss _
+
+self = <tests.segmentation.test_cellpose_inference.SegmentationTests testMethod=test_saved_result_can_be_listed_and_restored_after_session_loss>
+
+    def test_saved_result_can_be_listed_and_restored_after_session_loss(self) -> None:
+        nuclei = np.array([[[0, 7], [9, 0]]], dtype=np.uint32)
+        cells = np.array([[[0, 2], [2, 0]]], dtype=np.uint32)
+        config = SegmentationConfig(anisotropy=2.0, xy_spacing_um=0.65)
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output = Path(temporary_directory)
+            saved = save_result(nuclei, cells, config, output)
+            self.assertEqual([item.run_directory for item in list_saved_results(output)], [saved.run_directory])
+>           restored = restore_saved_result(saved.run_directory)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/segmentation/test_cellpose_inference.py:92: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/organoid_analysis/segmentation/cellpose_inference.py:600: in restore_saved_result
+    nuclei = _validated_mask(tifffile.imread(result.nuclei_mask_path), tuple(summary["shape"]), "nuclei")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+mask = array([[0, 7],
+       [9, 0]], dtype=uint32), expected_shape = (1, 2, 2)
+name = 'nuclei'
+
+    def _validated_mask(mask: np.ndarray, expected_shape: tuple[int, ...], name: str) -> np.ndarray:
+        """Validate model output before it reaches persistence or measurements."""
+        result = np.asarray(mask)
+        if result.ndim != 3 or result.shape != expected_shape:
+>           raise RuntimeError(f"Cellpose returned {name} mask shape {result.shape}; expected {expected_shape}")
+E           RuntimeError: Cellpose returned nuclei mask shape (2, 2); expected (1, 2, 2)
+
+src/organoid_analysis/segmentation/cellpose_inference.py:316: RuntimeError
+=============================== warnings summary ===============================
+tests/microscopy_io/test_io.py: 3 warnings
+tests/microscopy_io/test_metadata_contract_regressions.py: 8 warnings
+tests/quantification/test_cellular_measurements.py: 2 warnings
+tests/segmentation/test_cellpose_inference.py: 2 warnings
+tests/statistics/test_inference.py: 7 warnings
+tests/visualization/test_3d_preview.py: 6 warnings
+tests/workflows/test_export_contract_regressions.py: 2 warnings
+tests/workflows/test_multilevel_measurement_workflow.py: 3 warnings
+tests/workflows/test_multilevel_numerical_regressions.py: 2 warnings
+tests/workflows/test_organoid_measurement_workflow.py: 9 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:4656: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = shape
+
+tests/microscopy_io/test_metadata_contract_regressions.py: 3 warnings
+tests/quantification/test_cellular_measurements.py: 96 warnings
+tests/workflows/test_export_contract_regressions.py: 6 warnings
+tests/workflows/test_multilevel_measurement_workflow.py: 48 warnings
+tests/workflows/test_organoid_measurement_workflow.py: 20 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:23116: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    out.shape = shape
+
+tests/microscopy_io/test_metadata_contract_regressions.py: 3 warnings
+tests/quantification/test_cellular_measurements.py: 96 warnings
+tests/segmentation/test_cellpose_inference.py: 1 warning
+tests/workflows/test_export_contract_regressions.py: 6 warnings
+tests/workflows/test_multilevel_measurement_workflow.py: 48 warnings
+tests/workflows/test_organoid_measurement_workflow.py: 20 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:9371: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = keyframe.shaped
+
+tests/microscopy_io/test_metadata_contract_regressions.py: 3 warnings
+tests/quantification/test_cellular_measurements.py: 96 warnings
+tests/segmentation/test_cellpose_inference.py: 1 warning
+tests/workflows/test_export_contract_regressions.py: 6 warnings
+tests/workflows/test_multilevel_measurement_workflow.py: 48 warnings
+tests/workflows/test_organoid_measurement_workflow.py: 20 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:9375: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = keyframe.shape
+
+tests/microscopy_io/test_voxel_spacing.py: 48 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/skimage/measure/_marching_cubes_lewiner.py:237: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    ar.shape = shape
+
+tests/microscopy_io/test_voxel_spacing.py: 1 warning
+tests/quantification/test_audit_contracts.py: 3 warnings
+tests/quantification/test_cellular_measurements.py: 7 warnings
+tests/quantification/test_geometry.py: 8 warnings
+tests/quantification/test_mask_features.py: 14 warnings
+tests/statistics/test_inference.py: 14 warnings
+tests/visualization/test_viewer.py: 17 warnings
+tests/workflows/test_multilevel_measurement_workflow.py: 104 warnings
+tests/workflows/test_multilevel_numerical_regressions.py: 8 warnings
+tests/workflows/test_organoid_measurement_workflow.py: 8 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/skimage/measure/_marching_cubes_lewiner.py:213: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    faces.shape = -1, 3
+
+tests/segmentation/test_parameter_estimation.py::AnisotropyTests::test_anisotropy_unknown_when_no_metadata
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/tifffile/tifffile.py:1463: DeprecationWarning: <tifffile.TiffWriter.write> data with shape (4, 8, 8) and dtype 'uint16' are stored as RGB with separate component planes. Future versions will store such data as MINISBLACK in separate pages by default, unless the 'photometric' and 'planarconfig' parameters are specified.
+    return tif.write(
+
+tests/segmentation/test_watershed_instances.py: 2 warnings
+tests/statistics/test_inference.py: 7 warnings
+tests/workflows/test_organoid_measurement_workflow.py: 4 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/skimage/morphology/grayreconstruct.py:216: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    rec_img.shape = np.array(seed.shape) + (np.array(footprint.shape) - 1)
+
+tests/statistics/test_exploration.py::ClusteringTests::test_cluster_feature_importance
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/joblib/externals/loky/backend/context.py:131: UserWarning: Could not find the number of physical cores for the following reason:
+  invalid literal for int() with base 10: ''
+  Returning the number of logical cores instead. You can silence this warning by setting LOKY_MAX_CPU_COUNT to the number of cores you want to use.
+    warnings.warn(
+
+tests/statistics/test_inference.py: 13 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:2237: ConvergenceWarning: The MLE may be on the boundary of the parameter space.
+    warnings.warn(msg, ConvergenceWarning)
+
+tests/statistics/test_inference.py::test_real_effect_is_significant_and_null_feature_is_not
+tests/statistics/test_inference.py::test_real_effect_is_significant_and_null_feature_is_not
+tests/statistics/test_inference.py::test_bh_fdr_padj_never_below_raw_p
+tests/statistics/test_inference.py::test_pairwise_output_is_self_describing_and_scale_correct
+tests/statistics/test_inference.py::test_raw_scale_feature_reports_no_geometric_mean_ratio
+tests/statistics/test_inference.py::test_condition_with_too_few_replicates_is_excluded
+tests/statistics/test_inference.py::test_pipeline_writes_pairwise_contrasts_end_to_end
+tests/statistics/test_inference.py::test_pipeline_writes_pairwise_contrasts_end_to_end
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/base/model.py:1912: FutureWarning: The behavior of wald_test will change after 0.14 to returning scalar test statistic values. To get the future behavior now, set scalar to True. To silence this message while retaining the legacy behavior, set scalar to False.
+    warnings.warn(
+
+tests/statistics/test_inference.py::test_real_effect_is_significant_and_null_feature_is_not
+tests/statistics/test_inference.py::test_pairwise_output_is_self_describing_and_scale_correct
+tests/statistics/test_inference.py::test_raw_scale_feature_reports_no_geometric_mean_ratio
+tests/statistics/test_inference.py::test_condition_with_too_few_replicates_is_excluded
+tests/statistics/test_inference.py::test_pipeline_writes_pairwise_contrasts_end_to_end
+tests/statistics/test_inference.py::test_pipeline_writes_pairwise_contrasts_end_to_end
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:2261: ConvergenceWarning: The Hessian matrix at the estimated parameter values is not positive definite.
+    warnings.warn(msg, ConvergenceWarning)
+
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:1556: RuntimeWarning: divide by zero encountered in log
+    likeval -= (self.n_totobs - self.k_fe) * np.log(qf) / 2.
+
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:1796: RuntimeWarning: invalid value encountered in divide
+    score_re += 0.5 * fac * rvavr[0:self.k_re2] / rvir
+
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/numpy/linalg/_linalg.py:2349: RuntimeWarning: invalid value encountered in slogdet
+    sign, logdet = _umath_linalg.slogdet(a, signature=signature)
+
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/base/model.py:607: ConvergenceWarning: Maximum Likelihood optimization failed to converge. Check mle_retvals
+    warnings.warn("Maximum Likelihood optimization failed to "
+
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:2206: ConvergenceWarning: MixedLM optimization failed, trying a different optimizer may help.
+    warnings.warn(msg, ConvergenceWarning)
+
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:2218: ConvergenceWarning: Gradient optimization failed, |grad| = nan
+    warnings.warn(msg, ConvergenceWarning)
+
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:2005: RuntimeWarning: divide by zero encountered in divide
+    hess_fe -= fac * xtvix / rvir
+
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:2006: RuntimeWarning: invalid value encountered in divide
+    hess_re = hess_re - 0.5 * fac * (D/rvir - np.outer(B, B) / rvir**2)
+
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_uses_cluster_robust_t_reference
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+tests/statistics/test_inference.py::test_ols_fallback_on_degenerate_random_effect
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:2007: RuntimeWarning: invalid value encountered in divide
+    hess_fere = -fac * hess_fere / rvir
+
+tests/statistics/test_inference.py::test_pipeline_writes_pairwise_contrasts_end_to_end
+tests/statistics/test_inference.py::test_pipeline_writes_pairwise_contrasts_end_to_end
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/base/model.py:1894: ValueWarning: covariance of constraints does not have full rank. The number of constraints is 1, but rank is 0
+    warnings.warn('covariance of constraints does not have full '
+
+tests/statistics/test_statistical_contract_regressions.py::test_small_group_comparison_and_empty_cluster_abstain
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/scipy/stats/_morestats.py:3326: RuntimeWarning: invalid value encountered in divide
+    W = numer / denom
+
+tests/visualization/test_surface_coordinates.py::test_surface_preserves_asymmetric_zyx_locations_and_sparse_label[None]
+tests/visualization/test_surface_coordinates.py::test_surface_preserves_asymmetric_zyx_locations_and_sparse_label[None]
+tests/visualization/test_surface_coordinates.py::test_surface_preserves_asymmetric_zyx_locations_and_sparse_label[513]
+tests/visualization/test_surface_coordinates.py::test_surface_preserves_asymmetric_zyx_locations_and_sparse_label[513]
+tests/visualization/test_surface_coordinates.py::test_surface_preserves_asymmetric_zyx_locations_and_sparse_label[513]
+tests/visualization/test_surface_coordinates.py::test_surface_preserves_asymmetric_zyx_locations_and_sparse_label[513]
+tests/visualization/test_surface_coordinates.py::test_surface_preserves_asymmetric_zyx_locations_and_sparse_label[513]
+tests/visualization/test_surface_coordinates.py::test_surface_preserves_asymmetric_zyx_locations_and_sparse_label[513]
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/vtkmodules/util/numpy_support.py:244: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = shape
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /Users/jlwang/Desktop/organoid_analysis/docs/evidence/2026-09-10/pytest.xml -
+=========================== short test summary info ============================
+FAILED tests/segmentation/test_cellpose_inference.py::SegmentationTests::test_saved_result_can_be_listed_and_restored_after_session_loss
+==== 1 failed, 299 passed, 8 skipped, 8 deselected, 884 warnings in 37.57s =====

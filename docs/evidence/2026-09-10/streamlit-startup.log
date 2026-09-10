@@ -1,0 +1,11 @@
+2026-09-10 08:35:28.855 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+/Users/jlwang/.matplotlib is not a writable directory
+Matplotlib created a temporary cache directory at /var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/matplotlib-ojyx8_hi because there was an issue with the default path ({configdir}); it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
+Matplotlib is building the font cache; this may take a moment.
+2026-09-10 08:35:44.109 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+Exceptions: []
+Headless Streamlit startup PASS; no browser-upload/render interaction claim

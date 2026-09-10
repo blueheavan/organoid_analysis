@@ -1,0 +1,58 @@
+/Users/jlwang/.matplotlib is not a writable directory
+Matplotlib created a temporary cache directory at /var/folders/rf/k7y9n9_54m58m7j9z1n3rnc00000gn/T/matplotlib-mrpxkwgo because there was an issue with the default path ({configdir}); it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
+Matplotlib is building the font cache; this may take a moment.
+[1/15] SYN_Vehicle_R1: 6 objects; 6 pass geometry QC
+[2/15] SYN_Treatment_A_R1: 6 objects; 6 pass geometry QC
+[3/15] SYN_Treatment_B_R1: 6 objects; 6 pass geometry QC
+[4/15] SYN_Live_control_R1: 6 objects; 6 pass geometry QC
+[5/15] SYN_Dead_control_R1: 6 objects; 6 pass geometry QC
+[6/15] SYN_Vehicle_R2: 6 objects; 6 pass geometry QC
+[7/15] SYN_Treatment_A_R2: 6 objects; 6 pass geometry QC
+[8/15] SYN_Treatment_B_R2: 6 objects; 6 pass geometry QC
+[9/15] SYN_Live_control_R2: 6 objects; 6 pass geometry QC
+[10/15] SYN_Dead_control_R2: 6 objects; 6 pass geometry QC
+[11/15] SYN_Vehicle_R3: 6 objects; 6 pass geometry QC
+[12/15] SYN_Treatment_A_R3: 6 objects; 6 pass geometry QC
+[13/15] SYN_Treatment_B_R3: 6 objects; 6 pass geometry QC
+[14/15] SYN_Live_control_R3: 6 objects; 6 pass geometry QC
+[15/15] SYN_Dead_control_R3: 6 objects; 6 pass geometry QC
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:1634: UserWarning: Random effects covariance is singular
+  warnings.warn(msg)
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:2237: ConvergenceWarning: The MLE may be on the boundary of the parameter space.
+  warnings.warn(msg, ConvergenceWarning)
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/base/model.py:1912: FutureWarning: The behavior of wald_test will change after 0.14 to returning scalar test statistic values. To get the future behavior now, set scalar to True. To silence this message while retaining the legacy behavior, set scalar to False.
+  warnings.warn(
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:1634: UserWarning: Random effects covariance is singular
+  warnings.warn(msg)
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/regression/mixed_linear_model.py:2237: ConvergenceWarning: The MLE may be on the boundary of the parameter space.
+  warnings.warn(msg, ConvergenceWarning)
+/Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/statsmodels/base/model.py:1912: FutureWarning: The behavior of wald_test will change after 0.14 to returning scalar test statistic values. To get the future behavior now, set scalar to True. To silence this message while retaining the legacy behavior, set scalar to False.
+  warnings.warn(
+{
+  "status": "complete",
+  "out": "/private/tmp/organoid-audit-demo-20260910/results",
+  "n_samples": 15,
+  "n_detected_organoids": 90,
+  "n_geometry_eligible_organoids": 90,
+  "n_failed_samples": 0,
+  "elapsed_seconds": 12.298962457978632,
+  "synthetic_validation": {
+    "data_origin": "synthetic_phantom",
+    "limitation": "Software verification on simple phantoms; not real-image accuracy or independent classifier validation. Control scaling and simulation intentionally share simple marker assumptions.",
+    "expected_objects": 90,
+    "detected_objects": 90,
+    "matched_objects": 90,
+    "instance_matching": "Hungarian assignment at IoU >= 0.5",
+    "false_positives": 0,
+    "false_negatives": 0,
+    "mean_image_detection_precision": 1.0,
+    "mean_image_detection_recall": 1.0,
+    "median_dice": 1.0,
+    "minimum_dice": 0.9996526571726294,
+    "median_absolute_relative_volume_error": 0.0,
+    "maximum_absolute_relative_volume_error": 0.0006944444444444445,
+    "state_agreement_fraction_matched_objects": 1.0,
+    "state_agreement_fraction_treatment_conditions": 1.0,
+    "state_agreement_fraction_live_dead_control_conditions": 1.0
+  }
+}

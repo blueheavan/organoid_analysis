@@ -8,8 +8,8 @@ layouts:
 
 We never assume "page order == Z". Axis semantics are resolved from the
 TIFF series ``axes`` string / OME-XML DimensionOrder / ImageJ hyperstack
-metadata. Time (T>1) is not spliced into the volume; it is carried for the UI
-to pick a single time point. RGB data (S/Q axes or samples-per-pixel > 1) is
+metadata. Time (T>1) requires an explicit time_index; it is never silently
+discarded. RGB data (S/Q axes or samples-per-pixel > 1) is
 rejected rather than silently treated as grey.
 """
 
@@ -51,7 +51,7 @@ def read_axes(path: str | Path) -> str:
         return tf.series[0].axes
 
 
-def load_zstack(path: str | Path) -> ZStack:
+def load_zstack(path: str | Path, time_index: int | None = None) -> ZStack:
     """Load a Z-stack TIFF and return a normalised :class:`ZStack`.
 
     Raises:
@@ -86,8 +86,6 @@ def load_zstack(path: str | Path) -> ZStack:
         else:
             samples = None
 
-        spacing = resolve_spacing(ome_metadata, imagej_metadata, tiff_tags)
-
         if reject_rgb(axes, samples):
             raise ValueError(
                 "RGB/RGBA image detected (samples-per-pixel > 1). This is not "
@@ -112,7 +110,13 @@ def load_zstack(path: str | Path) -> ZStack:
         # After reorder, dims are (T, C, Z, Y, X) minimal form.
         frames = int(data.shape[0])
         channels = int(data.shape[1])
-        volume = data[0]  # (C, Z, Y, X)
+        if frames > 1 and time_index is None:
+            raise ValueError("Multiple time frames require an explicit time_index; select a single frame before upload.")
+        selected_time = 0 if time_index is None else time_index
+        if isinstance(selected_time, bool) or not isinstance(selected_time, int) or not 0 <= selected_time < frames:
+            raise ValueError("time_index is outside the TIFF time axis")
+        spacing = resolve_spacing(ome_metadata, imagej_metadata, tiff_tags, selected_time)
+        volume = data[selected_time]  # (C, Z, Y, X)
 
         is_multichannel = channels > 1
         if not is_multichannel:
@@ -123,6 +127,7 @@ def load_zstack(path: str | Path) -> ZStack:
         "imagej_metadata": imagej_metadata,
         "tiff_tags": tiff_tags,
         "source": str(path),
+        "time_index": selected_time,
     }
     return ZStack(
         volume=volume,

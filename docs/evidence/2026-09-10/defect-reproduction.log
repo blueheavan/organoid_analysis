@@ -1,0 +1,106 @@
+FFFF..FFFF                                                               [100%]
+=================================== FAILURES ===================================
+____ test_multilevel_qc_rejects_invalid_numeric_values[nan-minimum_voxels] _____
+
+field = 'minimum_voxels', value = nan
+
+    @pytest.mark.parametrize('field', ['minimum_voxels', 'mad_z_threshold'])
+    @pytest.mark.parametrize('value', [np.nan, np.inf, -np.inf, True])
+    def test_multilevel_qc_rejects_invalid_numeric_values(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/quantification/test_audit_contracts.py:14: Failed
+____ test_multilevel_qc_rejects_invalid_numeric_values[nan-mad_z_threshold] ____
+
+field = 'mad_z_threshold', value = nan
+
+    @pytest.mark.parametrize('field', ['minimum_voxels', 'mad_z_threshold'])
+    @pytest.mark.parametrize('value', [np.nan, np.inf, -np.inf, True])
+    def test_multilevel_qc_rejects_invalid_numeric_values(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/quantification/test_audit_contracts.py:14: Failed
+____ test_multilevel_qc_rejects_invalid_numeric_values[inf-minimum_voxels] _____
+
+field = 'minimum_voxels', value = inf
+
+    @pytest.mark.parametrize('field', ['minimum_voxels', 'mad_z_threshold'])
+    @pytest.mark.parametrize('value', [np.nan, np.inf, -np.inf, True])
+    def test_multilevel_qc_rejects_invalid_numeric_values(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/quantification/test_audit_contracts.py:14: Failed
+____ test_multilevel_qc_rejects_invalid_numeric_values[inf-mad_z_threshold] ____
+
+field = 'mad_z_threshold', value = inf
+
+    @pytest.mark.parametrize('field', ['minimum_voxels', 'mad_z_threshold'])
+    @pytest.mark.parametrize('value', [np.nan, np.inf, -np.inf, True])
+    def test_multilevel_qc_rejects_invalid_numeric_values(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/quantification/test_audit_contracts.py:14: Failed
+____ test_multilevel_qc_rejects_invalid_numeric_values[True-minimum_voxels] ____
+
+field = 'minimum_voxels', value = True
+
+    @pytest.mark.parametrize('field', ['minimum_voxels', 'mad_z_threshold'])
+    @pytest.mark.parametrize('value', [np.nan, np.inf, -np.inf, True])
+    def test_multilevel_qc_rejects_invalid_numeric_values(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/quantification/test_audit_contracts.py:14: Failed
+___ test_multilevel_qc_rejects_invalid_numeric_values[True-mad_z_threshold] ____
+
+field = 'mad_z_threshold', value = True
+
+    @pytest.mark.parametrize('field', ['minimum_voxels', 'mad_z_threshold'])
+    @pytest.mark.parametrize('value', [np.nan, np.inf, -np.inf, True])
+    def test_multilevel_qc_rejects_invalid_numeric_values(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/quantification/test_audit_contracts.py:14: Failed
+_________________ test_multilevel_voxel_count_requires_integer _________________
+
+    def test_multilevel_voxel_count_requires_integer():
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/quantification/test_audit_contracts.py:19: Failed
+____________ test_pairing_preserves_mixed_signed_unsigned_large_ids ____________
+
+    def test_pairing_preserves_mixed_signed_unsigned_large_ids():
+        cells = np.ones((3, 4, 4), dtype=np.int64)
+        cells[1:] = 2
+        nuclei = np.full(cells.shape, 2**53, dtype=np.uint64)
+        nuclei[1:] = 2**53 + 1
+        _, _, pairs, summary = pair_and_filter_cells(
+            cells, nuclei, (1, 1, 1), min_cell_volume_um3=0, min_nucleus_volume_um3=0,
+        )
+>       assert summary['paired_cells'] == 2
+E       assert 1 == 2
+
+tests/quantification/test_audit_contracts.py:31: AssertionError
+=========================== short test summary info ============================
+FAILED tests/quantification/test_audit_contracts.py::test_multilevel_qc_rejects_invalid_numeric_values[nan-minimum_voxels]
+FAILED tests/quantification/test_audit_contracts.py::test_multilevel_qc_rejects_invalid_numeric_values[nan-mad_z_threshold]
+FAILED tests/quantification/test_audit_contracts.py::test_multilevel_qc_rejects_invalid_numeric_values[inf-minimum_voxels]
+FAILED tests/quantification/test_audit_contracts.py::test_multilevel_qc_rejects_invalid_numeric_values[inf-mad_z_threshold]
+FAILED tests/quantification/test_audit_contracts.py::test_multilevel_qc_rejects_invalid_numeric_values[True-minimum_voxels]
+FAILED tests/quantification/test_audit_contracts.py::test_multilevel_qc_rejects_invalid_numeric_values[True-mad_z_threshold]
+FAILED tests/quantification/test_audit_contracts.py::test_multilevel_voxel_count_requires_integer
+FAILED tests/quantification/test_audit_contracts.py::test_pairing_preserves_mixed_signed_unsigned_large_ids
+8 failed, 2 passed in 0.66s

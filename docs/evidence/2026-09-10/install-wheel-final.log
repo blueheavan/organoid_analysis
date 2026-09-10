@@ -1,0 +1,5 @@
+Using CPython 3.12.14 interpreter at: .pixi/envs/default/bin/python
+Resolved 1 package in 2ms
+Prepared 1 package in 8ms
+Installed 1 package in 2ms
+ + organoid-analysis==1.0.0 (from file:///tmp/organoid-audit-final-wheel-20260910/organoid_analysis-1.0.0-py3-none-any.whl)

@@ -59,13 +59,13 @@ def _add_nuclear_intensity(nuclei: pd.DataFrame, nucleus_labels: np.ndarray,
     values = intensity[foreground].astype(float, copy=False)
     counts = np.bincount(label_indices, minlength=len(ids)).astype(float)
     sums = np.bincount(label_indices, weights=values, minlength=len(ids))
-    sum_squares = np.bincount(label_indices, weights=values * values, minlength=len(ids))
     minima = np.full(len(ids), np.inf)
     maxima = np.full(len(ids), -np.inf)
     np.minimum.at(minima, label_indices, values)
     np.maximum.at(maxima, label_indices, values)
     means = sums / counts
-    variances = np.maximum(0.0, sum_squares / counts - means * means)
+    residuals = values - means[label_indices]
+    variances = np.bincount(label_indices, weights=residuals * residuals, minlength=len(ids)) / counts
     stds = np.sqrt(variances)
     measurements = pd.DataFrame({
         "nucleus_id": ids,
@@ -103,30 +103,30 @@ def _cell_nucleus_features(cells: pd.DataFrame, nuclei: pd.DataFrame) -> pd.Data
         return result
 
     nuclear = nuclei.loc[nuclei.cell_id > 0].copy()
-    voxel_weights = nuclear["voxel_count"].astype(float)
-    nuclear["_intensity_sum_squares"] = voxel_weights * (
-        nuclear["std_nuclear_intensity"] ** 2 + nuclear["mean_nuclear_intensity"] ** 2
-    )
     intensity = nuclear.groupby("cell_id", sort=False).agg(
         _nuclear_intensity_voxels=("voxel_count", "sum"),
         integrated_nuclear_intensity=("integrated_nuclear_intensity", "sum"),
         min_nuclear_intensity=("min_nuclear_intensity", "min"),
         max_nuclear_intensity=("max_nuclear_intensity", "max"),
-        _intensity_sum_squares=("_intensity_sum_squares", "sum"),
     )
     intensity["mean_nuclear_intensity"] = (
         intensity["integrated_nuclear_intensity"] / intensity["_nuclear_intensity_voxels"]
     )
-    intensity["std_nuclear_intensity"] = np.sqrt(np.maximum(
-        0.0,
-        intensity["_intensity_sum_squares"] / intensity["_nuclear_intensity_voxels"]
-        - intensity["mean_nuclear_intensity"] ** 2,
-    ))
+    # Pool population variance using within- and between-nucleus residuals,
+    # avoiding cancellation of two nearly equal squared intensities.
+    cell_means = nuclear.cell_id.map(intensity["mean_nuclear_intensity"])
+    nuclear["_residual_sum_squares"] = nuclear.voxel_count.astype(float) * (
+        nuclear.std_nuclear_intensity ** 2 + (nuclear.mean_nuclear_intensity - cell_means) ** 2
+    )
+    intensity["std_nuclear_intensity"] = np.sqrt(
+        nuclear.groupby("cell_id")["_residual_sum_squares"].sum()
+        / intensity["_nuclear_intensity_voxels"]
+    )
     intensity["CV_chromatin"] = np.divide(
         intensity["std_nuclear_intensity"], intensity["mean_nuclear_intensity"],
         out=np.full(len(intensity), np.nan), where=intensity["mean_nuclear_intensity"].to_numpy() != 0,
     )
-    intensity = intensity.drop(columns=["_nuclear_intensity_voxels", "_intensity_sum_squares"])
+    intensity = intensity.drop(columns=["_nuclear_intensity_voxels"])
     return result.merge(intensity, on="cell_id", how="left", validate="one_to_one")
 
 

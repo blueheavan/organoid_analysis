@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from math import isfinite
+from numbers import Integral, Real
 
 
 @dataclass(frozen=True)
@@ -23,6 +25,13 @@ class Multilevel3DConfig:
         return asdict(self)
 
     def validate(self) -> None:
+        if isinstance(self.minimum_voxels, bool) or not isinstance(self.minimum_voxels, Integral):
+            raise ValueError("minimum_voxels must be an integer")
+        for name in ("low_parent_overlap_fraction", "mad_z_threshold",
+                     "core_max_normalized_radial_position", "peripheral_min_normalized_radial_position"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, Real) or not isfinite(value):
+                raise ValueError(f"{name} must be a finite real number")
         if self.minimum_voxels < 1:
             raise ValueError("minimum_voxels must be at least one")
         if not 0 <= self.low_parent_overlap_fraction <= 1:
