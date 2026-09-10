@@ -21,7 +21,7 @@ CALIBRATION_COLUMNS = ["batch_id", "status", "reason", "live_control_replicates"
                        "pi_low", "pi_high", "calcein_separation_snr", "pi_separation_snr"]
 
 
-def _mad(values) -> float:
+def _mad(values: np.ndarray) -> float:
     values = np.asarray(values, dtype=float)
     return float(MAD_TO_SIGMA * np.median(np.abs(values - np.median(values))))
 
@@ -29,7 +29,11 @@ def _mad(values) -> float:
 def calibrate(objects: pd.DataFrame, batch_ids: list[str], cfg: dict) -> pd.DataFrame:
     rows = []
     for batch in batch_ids:
-        row = {key: np.nan for key in CALIBRATION_COLUMNS}
+        # Genuinely heterogeneous: most entries are float (nan placeholders,
+        # later filled with low/high/separation values), but batch_id/status/
+        # reason are str and the control replicate/unit counts are int -- one
+        # output row, not a uniformly-typed mapping.
+        row: dict[str, float | str | int] = {key: np.nan for key in CALIBRATION_COLUMNS}
         row.update(batch_id=batch, status="unavailable", reason="viability_mode_uncalibrated",
                    live_control_replicates=0, dead_control_replicates=0,
                    live_control_units=0, dead_control_units=0)
