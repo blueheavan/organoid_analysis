@@ -118,7 +118,6 @@ typecheck = "mypy src/organoid_analysis"
 # change) that would otherwise hide whether lint/test/check ever ran.
 ci = { depends-on = ["lint", "test", "check", "typecheck"] }
 web = "python scripts/streamlit_run.py src/organoid_analysis/web_interface/organoid_workspace.py"
-preview = "python scripts/streamlit_run.py src/organoid_analysis/web_interface/preview_2d.py"
 # --- data management ---
 data = "bash scripts/download_data.sh"
 # --- analysis pipeline ---
