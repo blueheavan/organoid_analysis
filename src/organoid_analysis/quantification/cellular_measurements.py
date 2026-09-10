@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypedDict
 
 import numpy as np
 import pandas as pd
@@ -122,6 +123,23 @@ def _distance_to_mask_surface(mask: np.ndarray, point_zyx: np.ndarray, spacing: 
     return float(np.sqrt(best_squared))
 
 
+class _PairingCandidate(TypedDict):
+    """The fixed schema of one cell/nucleus pairing candidate record, used
+    throughout ``pair_and_filter_cells`` (built, filtered, ranked, and read
+    back for the output rows). A plain ``dict[str, int | float | str]`` gives
+    every key that same widened union on read, which breaks the `<`/`>`/`*`
+    operations this function does on `containment`/`nc_ratio`/`overlap`
+    elsewhere; a TypedDict keeps each key's own real type.
+    """
+
+    cell: int
+    nucleus: int
+    overlap: int
+    containment: float
+    nc_ratio: float
+    failure: str
+
+
 def pair_and_filter_cells(
     cell_masks: np.ndarray,
     nuclei_masks: np.ndarray,
@@ -170,25 +188,28 @@ def pair_and_filter_cells(
             for (cell_id, nucleus_id), count in zip(pairs, counts)
         }
 
-    candidates: dict[int, list[dict]] = {int(cell_id): [] for cell_id in cell_ids}
+    candidates: dict[int, list[_PairingCandidate]] = {int(cell_id): [] for cell_id in cell_ids}
     for (cell_id, nucleus_id), overlap in overlap_voxels.items():
         cell_count = cell_sizes[cell_id]
         nucleus_count = nucleus_sizes[nucleus_id]
-        record = {
+        containment = overlap / nucleus_count
+        nc_ratio = nucleus_count / cell_count
+        if nucleus_count * voxel_volume < min_nucleus_volume_um3:
+            failure = "too_small_nucleus"
+        elif containment < min_nucleus_containment:
+            failure = "nucleus_not_contained"
+        elif nc_ratio > max_nc_ratio:
+            failure = "nc_ratio_too_high"
+        else:
+            failure = ""
+        record: _PairingCandidate = {
             "cell": cell_id,
             "nucleus": nucleus_id,
             "overlap": overlap,
-            "containment": overlap / nucleus_count,
-            "nc_ratio": nucleus_count / cell_count,
+            "containment": containment,
+            "nc_ratio": nc_ratio,
+            "failure": failure,
         }
-        if nucleus_count * voxel_volume < min_nucleus_volume_um3:
-            record["failure"] = "too_small_nucleus"
-        elif record["containment"] < min_nucleus_containment:
-            record["failure"] = "nucleus_not_contained"
-        elif record["nc_ratio"] > max_nc_ratio:
-            record["failure"] = "nc_ratio_too_high"
-        else:
-            record["failure"] = ""
         candidates[cell_id].append(record)
 
     eligible_cells = {
@@ -202,7 +223,7 @@ def pair_and_filter_cells(
         )
         for cell_id in eligible_cells
     }
-    assignments: dict[int, dict] = {}
+    assignments: dict[int, _PairingCandidate] = {}
     matching_cells = sorted(eligible_cells)
     matching_nuclei = sorted({item["nucleus"] for group in adjacency.values() for item in group})
     if matching_cells:
@@ -215,10 +236,13 @@ def pair_and_filter_cells(
         overlap_total = sum(item["overlap"] for item in candidate_lookup.values())
         cardinality_bonus = overlap_total + 1
         row_indices, column_indices, weights = [], [], []
-        for (cell_id, nucleus_id), candidate in candidate_lookup.items():
+        # Named `entry`, not `candidate`, to avoid colliding with the
+        # `candidate: _PairingCandidate | None` variable used later in this
+        # function -- same dict shape, but a different, non-Optional role.
+        for (cell_id, nucleus_id), entry in candidate_lookup.items():
             row_indices.append(cell_index[cell_id])
             column_indices.append(nucleus_index[nucleus_id])
-            weights.append(cardinality_bonus + candidate["overlap"])
+            weights.append(cardinality_bonus + entry["overlap"])
         # Every cell has a unique dummy column, guaranteeing a full matching.
         for row_index in range(len(matching_cells)):
             row_indices.append(row_index)
@@ -235,9 +259,16 @@ def pair_and_filter_cells(
                 nucleus_id = matching_nuclei[column_index]
                 assignments[cell_id] = candidate_lookup[(cell_id, nucleus_id)]
 
-    decisions: dict[int, tuple[bool, str, dict | None]] = {}
+    decisions: dict[int, tuple[bool, str, _PairingCandidate | None]] = {}
     removed: dict[str, int] = {}
     for cell_id in sorted(cell_sizes):
+        # Declared once so every branch below is checked against the same
+        # real type -- `candidate` genuinely is a dict on some paths (a
+        # matched/dominant candidate record) and None on others (no
+        # candidate at all), matching `decisions`'s own declared value type.
+        kept: bool
+        reason: str
+        candidate: _PairingCandidate | None
         if cell_sizes[cell_id] * voxel_volume < min_cell_volume_um3:
             kept, reason, candidate = False, "too_small_cell", None
         elif cell_id in assignments:
@@ -295,14 +326,16 @@ def pair_and_filter_cells(
 
     pairing = pd.DataFrame(rows, columns=PAIR_COLUMNS)
     paired = int((pairing["nucleus_id"] > 0).sum()) if len(pairing) else 0
-    kept = int(pairing["kept"].sum()) if len(pairing) else 0
+    # A distinct name from the per-row `kept: bool` above -- this is a count,
+    # not a flag, and reusing the name made mypy see a bool/int conflict.
+    kept_count = int(pairing["kept"].sum()) if len(pairing) else 0
     summary = {
         "cells_before": len(cell_sizes),
         "nuclei_before": len(nucleus_sizes),
-        "cells_after": kept,
+        "cells_after": kept_count,
         "nuclei_after": paired,
         "paired_cells": paired,
-        "unpaired_cells": kept - paired,
+        "unpaired_cells": kept_count - paired,
         "removed": removed,
     }
     return filtered_cells, filtered_nuclei, pairing, summary
@@ -418,6 +451,22 @@ def cell_neighborhood(cell_labels: np.ndarray, spacing: tuple[float, float, floa
     return pd.DataFrame(rows, columns=columns)
 
 
+class _PairingQCConfig(TypedDict):
+    """The exact keyword-only QC schema ``pair_and_filter_cells`` accepts.
+
+    A plain dict here mixes float thresholds with one bool
+    (``require_nucleus``), so mypy would widen every value to a single type
+    and could not check the ``**qc`` call below per-key; a TypedDict keeps
+    each key's real, distinct type and lets mypy verify the unpacking.
+    """
+
+    min_cell_volume_um3: float
+    min_nucleus_volume_um3: float
+    require_nucleus: bool
+    max_nc_ratio: float
+    min_nucleus_containment: float
+
+
 def analyze_cells(cell_masks: np.ndarray, nuclei_masks: np.ndarray,
                   spacing: tuple[float, float, float], *, neighbor_radius_um: float = 25.0,
                   min_cell_volume_um3: float = 200.0,
@@ -425,7 +474,7 @@ def analyze_cells(cell_masks: np.ndarray, nuclei_masks: np.ndarray,
                   require_nucleus: bool = True, max_nc_ratio: float = 1.0,
                   min_nucleus_containment: float = 0.5) -> CellAnalysisResult:
     """Run N:C pairing QC, geometry, and neighborhood analysis."""
-    qc = {
+    qc: _PairingQCConfig = {
         "min_cell_volume_um3": min_cell_volume_um3,
         "min_nucleus_volume_um3": min_nucleus_volume_um3,
         "require_nucleus": require_nucleus,

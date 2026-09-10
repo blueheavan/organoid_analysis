@@ -7,6 +7,9 @@ import numpy as np
 from scipy import ndimage as ndi
 from skimage.measure import marching_cubes, mesh_surface_area
 
+from organoid_analysis.microscopy_io.tiff_contract import Sample
+from organoid_analysis.segmentation.watershed_instances import SegmentationResult
+
 from .labels import bbox_touches_volume_boundary
 
 # Consistency constant rescaling MAD into a sigma-equivalent robust scale
@@ -30,10 +33,17 @@ MARKER_COLUMNS = ["background_voxels"] + [f"{marker}_{field}" for marker in ["ca
 
 
 def outer_envelope(mask: np.ndarray) -> np.ndarray:
-    return ndi.binary_fill_holes(np.pad(mask, 1))[1:-1, 1:-1, 1:-1]
+    # binary_fill_holes/slicing on an ndarray input always return an ndarray;
+    # np.asarray only fixes scipy's untyped (Any) stub, no value/dtype change.
+    return np.asarray(ndi.binary_fill_holes(np.pad(mask, 1))[1:-1, 1:-1, 1:-1])
 
 
-def surface_mesh(mask: np.ndarray, spacing: tuple, origin_zyx=(0, 0, 0), step_size=1) -> tuple:
+def surface_mesh(
+    mask: np.ndarray,
+    spacing: tuple[float, float, float],
+    origin_zyx: tuple[float, float, float] = (0, 0, 0),
+    step_size: int = 1,
+) -> tuple[np.ndarray, np.ndarray]:
     # Marching cubes: Lorensen & Cline (1987), ACM SIGGRAPH Computer Graphics
     # 21(4):163-169, https://doi.org/10.1145/37401.37422. See
     # docs/ALGORITHM_DECISIONS.md D3 for the level/spacing/padding rationale.
@@ -44,7 +54,13 @@ def surface_mesh(mask: np.ndarray, spacing: tuple, origin_zyx=(0, 0, 0), step_si
     return vertices, faces
 
 
-def geometry(mask: np.ndarray, spacing: tuple, origin_zyx=(0, 0, 0), *, fill_holes: bool = True) -> tuple[dict, tuple]:
+def geometry(
+    mask: np.ndarray,
+    spacing: tuple[float, float, float],
+    origin_zyx: tuple[float, float, float] = (0, 0, 0),
+    *,
+    fill_holes: bool = True,
+) -> tuple[dict, tuple]:
     """Return physical geometry for a nonempty 3D mask.
 
     The established organoid pipeline measures the filled outer envelope by
@@ -54,25 +70,27 @@ def geometry(mask: np.ndarray, spacing: tuple, origin_zyx=(0, 0, 0), *, fill_hol
     """
     if mask.ndim != 3 or not mask.any():
         raise ValueError("Geometry needs a nonempty 3D instance mask")
-    spacing = np.asarray(spacing, float)
-    if spacing.shape != (3,) or not np.isfinite(spacing).all() or (spacing <= 0).any():
+    # A distinct name from the `spacing` parameter (rather than reassigning
+    # it to a different type) -- same values, only the static type changes.
+    spacing_arr = np.asarray(spacing, float)
+    if spacing_arr.shape != (3,) or not np.isfinite(spacing_arr).all() or (spacing_arr <= 0).any():
         raise ValueError("Geometry needs three positive finite spacings")
     envelope = outer_envelope(mask) if fill_holes else mask.astype(bool, copy=False)
     segmented = int(mask.sum())
     count = int(envelope.sum())
-    volume = float(count * np.prod(spacing))
-    vertices, faces = surface_mesh(envelope, tuple(spacing), origin_zyx)
+    volume = float(count * np.prod(spacing_arr))
+    vertices, faces = surface_mesh(envelope, tuple(spacing_arr), origin_zyx)
     area = float(mesh_surface_area(vertices, faces))
     sphericity = float(np.cbrt(np.pi) * (6.0 * volume) ** (2 / 3) / area)
     points = np.argwhere(envelope)
-    center = (points.mean(axis=0) + origin_zyx) * spacing
-    extent = (points.max(axis=0) - points.min(axis=0) + 1) * spacing
-    centered = (points-points.mean(axis=0))*spacing
+    center = (points.mean(axis=0) + origin_zyx) * spacing_arr
+    extent = (points.max(axis=0) - points.min(axis=0) + 1) * spacing_arr
+    centered = (points-points.mean(axis=0))*spacing_arr
     # Include each voxel's intrinsic second moment; axes describe a moment-equivalent ellipsoid.
-    covariance = centered.T @ centered / len(points) + np.diag(spacing**2/12)
+    covariance = centered.T @ centered / len(points) + np.diag(spacing_arr**2/12)
     lengths = 2*np.sqrt(5*np.linalg.eigvalsh(covariance)[::-1])
     values = {"segmented_voxels": segmented, "envelope_voxels": count,
-              "segmented_volume_um3": float(segmented * np.prod(spacing)), "volume_um3": volume,
+              "segmented_volume_um3": float(segmented * np.prod(spacing_arr)), "volume_um3": volume,
               "surface_area_um2": area, "sphericity": sphericity,
               "equivalent_diameter_um": float(np.cbrt(6 * volume / np.pi)),
               "enclosed_void_fraction": float((count - segmented) / count),
@@ -98,7 +116,11 @@ def marker_measurements(labels: np.ndarray, object_id: int, bbox: tuple,
                         channels: dict, spacing: tuple, cfg: dict) -> dict:
     fields = ["mean_raw", "background_median", "background_noise_mad", "mean_bg_corrected",
               "integrated_bg_corrected", "saturated_fraction"]
-    result = {
+    # Genuinely heterogeneous: most entries are float measurements (nan until
+    # filled in), but background_voxels is int, the eligibility flag is bool,
+    # and the flags summary is str -- this dict becomes one output row, so
+    # its real value type spans all four, not just float.
+    result: dict[str, float | int | bool | str] = {
         f"{marker}_{field}": np.nan
         for marker in channels
         for field in fields
@@ -154,9 +176,12 @@ def marker_measurements(labels: np.ndarray, object_id: int, bbox: tuple,
     return result
 
 
-def measure_instances(sample, segmentation, cfg: dict, mesh_dir: Path | None = None) -> tuple[list[dict], list[tuple]]:
+def measure_instances(
+    sample: Sample, segmentation: SegmentationResult, cfg: dict, mesh_dir: Path | None = None
+) -> tuple[list[dict], list[tuple]]:
     labels = segmentation.labels
-    rows, preview_meshes = [], []
+    rows: list[dict] = []
+    preview_meshes: list[tuple[int, np.ndarray, np.ndarray]] = []
     if mesh_dir:
         mesh_dir.mkdir(parents=True, exist_ok=True)
     for object_id, bbox in enumerate(ndi.find_objects(labels), start=1):
