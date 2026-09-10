@@ -158,7 +158,10 @@ def normalize_preview(image: np.ndarray) -> np.ndarray:
     low, high = np.percentile(image, (1, 99))
     if high <= low:
         return np.zeros(image.shape, dtype=np.float32)
-    return np.clip((image.astype(np.float32) - low) / (high - low), 0, 1)
+    # np.clip on an ndarray input always returns an ndarray; np.asarray here
+    # only fixes mypy's view of that (np.clip's stub resolves to Any), it
+    # does not copy or otherwise change the array numpy already returns.
+    return np.asarray(np.clip((image.astype(np.float32) - low) / (high - low), 0, 1))
 
 
 def get_accelerator() -> str:
@@ -234,14 +237,11 @@ def segment_stacks(
     if any(round(size * downsample) < 2 for size in nuclei.shape[1:]):
         raise ValueError("xy_downsample would leave fewer than two XY pixels")
     work_nuclei = nuclei
-    work_cells = cells
     if downsample < 1.0:
         from scipy import ndimage
 
         factors = (1.0, downsample, downsample)
         work_nuclei = ndimage.zoom(nuclei, factors, order=1)
-        if cells is not None:
-            work_cells = ndimage.zoom(cells, factors, order=1)
 
     common = {
         "z_axis": 0,
@@ -278,6 +278,13 @@ def segment_stacks(
         if cells is not None:
             if on_progress:
                 on_progress(0.55)
+            # Computed here (rather than carried from a shared `work_cells`
+            # variable set far above) so its type stays `ndarray`, not
+            # `ndarray | None`, in a way mypy can actually verify: it is
+            # derived from `cells`, which this `if` has already narrowed to
+            # non-None, using the exact same downsample/factors as
+            # `work_nuclei` above -- no behavior change from the prior code.
+            work_cells = ndimage.zoom(cells, factors, order=1) if downsample < 1.0 else cells
             cell_input = np.stack((work_cells, work_nuclei), axis=-1)
             restore = _wrap_run_3d(on_progress, 0.55, 1.0)
             try:
@@ -301,6 +308,13 @@ def segment_stacks(
         if on_progress:
             on_progress(1.0)
         return nuclei_masks, None
+    # cells is not None on every path reaching here, and cell_masks was
+    # assigned inside the `if cells is not None:` block above (the same
+    # condition, on the same never-reassigned `cells`), so it is never None
+    # at this point. mypy cannot connect those two separate branches on its
+    # own; this states the traced invariant explicitly rather than widening
+    # cell_masks's declared type or suppressing the check.
+    assert cell_masks is not None
     if downsample < 1.0:
         nuclei_masks = _upsample_masks(nuclei_masks, nuclei.shape)
         cell_masks = _upsample_masks(cell_masks, cells.shape)
@@ -331,12 +345,15 @@ def _upsample_masks(masks: np.ndarray, full_shape: tuple[int, ...]) -> np.ndarra
     from scipy import ndimage
 
     factors = tuple(full / orig for full, orig in zip(full_shape, masks.shape))
-    return ndimage.zoom(masks, factors, order=0, mode="nearest").astype(np.uint32)
+    # scipy is untyped, so ndimage.zoom(...).astype(...) resolves to Any;
+    # np.asarray only fixes that static view -- .astype() already returns a
+    # real ndarray at runtime, so this changes no value or dtype.
+    return np.asarray(ndimage.zoom(masks, factors, order=0, mode="nearest").astype(np.uint32))
 
 
 def _wrap_run_3d(
     on_progress: Callable[[float], None] | None, start: float, end: float
-):
+) -> Callable[[], None]:
     """Route Cellpose's ``run_3D`` plane reports into ``on_progress``.
 
     Cellpose's 3D inference walks the volume along its three orthogonal planes
@@ -355,7 +372,7 @@ def _wrap_run_3d(
     class _PlaneProgress:
         __slots__ = ("start", "end")
 
-        def __init__(self):
+        def __init__(self) -> None:
             self.start = start
             self.end = end
 
@@ -518,10 +535,11 @@ def save_result(
     else:
         cell_mask_path = None
 
+    nuclei_count = _instance_count(nuclei_masks)
     summary = {
         "cellpose_model": config.model_type,
         "config": asdict(config),
-        "nuclei_count": _instance_count(nuclei_masks),
+        "nuclei_count": nuclei_count,
         "cell_count": cell_count,
         "shape": list(nuclei_masks.shape),
     }
@@ -553,7 +571,7 @@ def save_result(
         cell_mask_path=cell_mask_path,
         summary_path=summary_path,
         archive_path=archive_path,
-        nuclei_count=summary["nuclei_count"],
+        nuclei_count=nuclei_count,
         cell_count=cell_count,
     )
 

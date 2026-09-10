@@ -31,10 +31,13 @@ import tempfile
 import threading
 import time
 from pathlib import Path
+from typing import TypedDict
 
 import numpy as np
 import streamlit as st
 from streamlit.components.v1 import html as _st_html
+from streamlit.delta_generator import DeltaGenerator
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from organoid_analysis.microscopy_io import (  # noqa: E402
     GRID_CONFLICT,
@@ -73,7 +76,7 @@ def get_model(model_type: str = ""):
     return create_model(model_type)
 
 
-def _set_tab_busy(busy: bool, slot=None) -> None:
+def _set_tab_busy(busy: bool, slot: DeltaGenerator | None = None) -> None:
     """Blink the browser tab's favicon + title while a long-running analysis
     (segmentation) is in progress, so it's visible from another tab/window.
 
@@ -205,7 +208,9 @@ def resolve_auto_suggestion(
     return raw_suggestion
 
 
-def _read_upload(upload, path: Path, label: str, role: str) -> tuple[np.ndarray, str, int, ZStack]:
+def _read_upload(
+    upload: UploadedFile, path: Path, label: str, role: str
+) -> tuple[np.ndarray, str, int, ZStack]:
     """Decode an upload once per content digest and select its active channel."""
     digest = hashlib.sha256(upload.getbuffer()).hexdigest()
     digest_key = f"{role}_upload_digest"
@@ -416,12 +421,26 @@ def render_preview_tab(config: SegmentationConfig) -> None:
             )
 
 
+class _ProgressState(TypedDict):
+    """``task``'s real per-key contract: ``start``/``frac`` are always set at
+    construction and only ever reassigned to a float; ``estimated`` is the
+    one key that is genuinely optional (unset until progress reaches 50%).
+    A plain ``dict`` literal here would give every key the same widened
+    ``float | None`` type, which is what previously made ``task["start"]``
+    and ``task["frac"]`` look possibly-None everywhere they were read.
+    """
+
+    start: float
+    frac: float
+    estimated: float | None
+
+
 def _run_segmentation(
-    nuclei, cells, config: SegmentationConfig,
+    nuclei: np.ndarray, cells: np.ndarray | None, config: SegmentationConfig,
     *, nuclei_digest: str, nuclei_channel: int,
     cells_digest: str | None, cells_channel: int | None,
 ) -> None:
-    task = {"start": time.monotonic(), "frac": 0.0, "estimated": None}
+    task: _ProgressState = {"start": time.monotonic(), "frac": 0.0, "estimated": None}
     result_queue: queue.Queue = queue.Queue()
 
     def report(fraction: float) -> None:
