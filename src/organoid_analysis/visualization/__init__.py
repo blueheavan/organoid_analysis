@@ -5,8 +5,8 @@ Implements the "Route B (full)" design:
 * Volume / MIP -> server-side offscreen VTK rendering into a numpy image
   (``projection_rendering``), shown with ``st.image`` and repositioned only
   via camera presets (no free rotation).
-* Surface -> interactive stpyvista widget (``surface_rendering``) for free 3D
-  rotation.
+* Surface -> interactive vtk.js viewer (``surface_rendering`` + ``volume_viewer``)
+  for free 3D rotation.
 """
 
 from .capabilities import probe_gpu_mapper

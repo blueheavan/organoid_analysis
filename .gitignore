@@ -9,3 +9,7 @@ __pycache__/
 results/
 data/images/*
 !data/images/.gitkeep
+
+# Local, ephemeral git worktree checkouts created by the coding-agent harness
+# (not project configuration -- .claude/launch.json etc. remain tracked).
+.claude/worktrees/

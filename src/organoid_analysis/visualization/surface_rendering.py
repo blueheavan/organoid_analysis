@@ -1,8 +1,9 @@
 """Surface extraction for 3D preview (binary / label volumes).
 
-The interactive path sends ``vtkPolyData`` to the browser via stpyvista; the
-fallback renders the same polydata offscreen into a static image. Both produce
-the geometry from marching cubes, so they stay visually consistent.
+The interactive path serializes the surface (``surface_to_dict``) for the
+browser-side vtk.js viewer (``visualization.volume_viewer``); the fallback
+renders the same polydata offscreen into a static image. Both produce the
+geometry from marching cubes, so they stay visually consistent.
 """
 
 from __future__ import annotations
@@ -104,7 +105,7 @@ def _label_colors(n: int) -> list[tuple[int, int, int]]:
 
 
 def surface_to_dict(surface: Surface) -> dict:
-    """Serialize a Surface into a plain dict consumable by stpyvista."""
+    """Serialize a Surface into a plain dict consumable by the vtk.js viewer."""
     return {
         "polydata": _poly_repr(surface.polydata),
         "label": surface.label,
