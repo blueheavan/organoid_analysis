@@ -1,7 +1,7 @@
 """Launch a Streamlit app on a free port, then shut it down once the browser tab closes.
 
 Usage:
-    python scripts/run_app.py src/organoid_analysis/web_interface/organoid_workspace.py [--start-port 8501] [--idle-timeout 10]
+    python scripts/streamlit_run.py src/organoid_analysis/web_interface/organoid_workspace.py [--start-port 8501] [--idle-timeout 10]
 """
 from __future__ import annotations
 

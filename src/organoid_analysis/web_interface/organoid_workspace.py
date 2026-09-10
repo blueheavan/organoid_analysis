@@ -10,7 +10,7 @@ additionally exposes:
 
 Run:
     streamlit run src/organoid_analysis/web_interface/organoid_workspace.py
-(or ``pixi run app``)"""
+(or ``pixi run web``)"""
 
 from __future__ import annotations
 

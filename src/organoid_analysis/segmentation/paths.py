@@ -6,7 +6,7 @@ from typing import Any
 # user running outside the pixi-managed checkout point these paths at the
 # right place explicitly, instead of only ever trusting this file's location
 # in the package tree. That inference is still the default (nothing else to
-# fall back on for a bare `pixi run app`/`pytest`), but a prior package move
+# fall back on for a bare `pixi run web`/`pytest`), but a prior package move
 # already broke it once silently (an extra directory level shifted "four
 # parents up" from the repo root to src/, which created stray
 # src/results/{segmentation_output,features}/ directories on import before

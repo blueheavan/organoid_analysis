@@ -48,7 +48,7 @@ pixi run test
 ### 网页应用
 
 ```bash
-pixi run app
+pixi run web
 ```
 
 终端会显示本地访问地址（通常为 `http://localhost:8501`）。应用包含以下工作区：
