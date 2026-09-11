@@ -1,0 +1,475 @@
+{
+  "schema_version": "organoid-analysis/evidence-manifest/1",
+  "contract_id": "analytical-geometry/1",
+  "validation_run_id": "2026-09-11-analytical-geometry-canonical",
+  "validation_scope": "SG-1 analytical surface area and SG-2 analytical voxel-count volume of the production geometry estimator on the frozen development phantom grid",
+  "record_class": "canonical",
+  "generated_utc": "2026-09-11T04:11:33Z",
+  "source": {
+    "validated_source_commit": "27d5449d23bb7ec8f1fc21b22f8231f413dbc141",
+    "validated_source_tree": "d3a62fd6c5659ffd85a4a0e499e402dafce457c3",
+    "whole_tree_clean_at_execution": true,
+    "dirty_paths_at_execution": [],
+    "scope_clean_at_execution": true,
+    "record_storage": "This record is stored in a commit made after validated_source_commit. The storing commit is deliberately not named inside the record (a commit cannot contain its own hash); find it with `git log --format=%H -1 -- <manifest path>`. validated_source_commit identifies the source under validation, never the commit that stores this record."
+  },
+  "dependency_scope": {
+    "description": "Files whose content can change SG-1/SG-2 values or their exported meaning. Any change rejects this record.",
+    "files": [
+      {
+        "path": "src/organoid_analysis/quantification/features.py",
+        "sha256": "272bcb96ab0433593c4312f8d05338f0ca2ba084ceb3a0c843e75380c14408c5",
+        "role": "estimator_core",
+        "rationale": "geometry(): voxel-count volume, marching-cubes surface area and sphericity; surface_mesh(): isosurface level, padding and physical spacing; outer_envelope(): filled support; SURFACE_AREA_METHOD identity. Executed for every phantom."
+      },
+      {
+        "path": "src/organoid_analysis/quantification/mask_features.py",
+        "sha256": "e940900a23e317c00a3f2efe79618a22a2c96fd69de76c0b6c851b8f598c7c96",
+        "role": "support_and_spacing_semantics",
+        "rationale": "Web/mask-feature route: raw-label default versus optional filled support handed to geometry(), and the (x, y, z) to (z, y, x) spacing conversion."
+      },
+      {
+        "path": "src/organoid_analysis/quantification/cellular_measurements.py",
+        "sha256": "9dbcfc3b447e4e81f51e8ce20076a19b3e33a95f69cb6b238764d8b388022b05",
+        "role": "support_semantics",
+        "rationale": "cell_geometry() calls geometry() with the filled-envelope default for cell objects."
+      },
+      {
+        "path": "src/organoid_analysis/quantification/multilevel_relationships/morphology.py",
+        "sha256": "afe49f45515e5ef42c3928984c7b7e26ed2e54e500d95cbaf75d289a6a01b620",
+        "role": "support_semantics",
+        "rationale": "Multilevel morphology calls geometry() on raw labels (fill_holes=False)."
+      },
+      {
+        "path": "src/organoid_analysis/microscopy_io/voxel_spacing.py",
+        "sha256": "893e757cd69dcf4aa08d7e1f9bb5519cb8405e70bdf4c0eed2f516a8ce4382b0",
+        "role": "spacing_interpretation",
+        "rationale": "validate_voxel_spacing_xyz(): axis order, finiteness and positivity of the spacing that the mask-feature route passes to geometry()."
+      }
+    ],
+    "excluded": [
+      {
+        "paths": "src/organoid_analysis/microscopy_io/tiff_contract.py, metadata.py, zstack_reader.py",
+        "rationale": "Acquisition spacing is parsed upstream; whether it is correct is gate item SG-6, not an analytical-phantom result. The V&V passes spacing explicitly."
+      },
+      {
+        "paths": "src/organoid_analysis/workflows/*",
+        "rationale": "Orchestration; reaches geometry() only through the scoped modules (classical route: features.measure_instances)."
+      },
+      {
+        "paths": "src/organoid_analysis/segmentation/watershed_instances.py, src/organoid_analysis/quantification/labels.py",
+        "rationale": "Imported for types, crops and border QC flags; they do not enter area or volume."
+      },
+      {
+        "paths": "numpy, scipy, scikit-image",
+        "rationale": "Bound by the pixi.lock SHA-256 and recorded package versions, and exercised by re-execution."
+      },
+      {
+        "paths": "package __init__ modules",
+        "rationale": "No numerical code (organoid_analysis/__init__.py holds the version string)."
+      },
+      {
+        "paths": "scripts/scientific_validation_gate.py",
+        "rationale": "Presents verified results and applies the PASS rule; it does not derive any value."
+      }
+    ]
+  },
+  "environment": {
+    "lockfile": {
+      "path": "pixi.lock",
+      "sha256": "fdba57d5d030dc0c72eaae1e3f1d950f4b58c44f1ab471aa54ce193308f9ae8c"
+    },
+    "python": "3.12.14",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "machine": "arm64",
+    "packages": {
+      "numpy": "2.5.2",
+      "scipy": "1.17.1",
+      "scikit-image": "0.26.0",
+      "pandas": "2.3.3"
+    }
+  },
+  "vv_plan": [
+    {
+      "path": "docs/evidence/2026-09-11-measurement-vv/SURFACE_VV_PLAN.md",
+      "sha256": "c901c9abd0647a3bd838843123a53a8e94d51e7267878fbe2fa92c76f0a38438",
+      "role": "frozen V&V plan"
+    },
+    {
+      "path": "docs/evidence/2026-09-11-measurement-vv/surface_vv_freeze.txt",
+      "sha256": "f98cdab6378072ad5399b2ef67e947eb11bb2a6b25d55824127b77339be6acb6",
+      "role": "freeze record: plan and harness SHA-256 before any result"
+    }
+  ],
+  "vv_implementation": [
+    {
+      "path": "docs/evidence/2026-09-11-analytical-geometry-canonical/surface_vv.py",
+      "sha256": "38549b6d19ebf734d44c9fadcf1bddcbd910ff258ef4d294a259502afbeabc1f",
+      "role": "V&V harness executed",
+      "byte_identical_to": "docs/evidence/2026-09-11-measurement-vv/surface_vv.py"
+    },
+    {
+      "path": "src/organoid_analysis/validation/analytical_geometry_evidence.py",
+      "sha256": "7411aada73d7c817757ed604b928cb60478dfc2e342e7416a52d73e0eb189952",
+      "role": "derivation, verification and recording tooling"
+    },
+    {
+      "path": "src/organoid_analysis/validation/evidence_manifest.py",
+      "sha256": "7397f2f124fc84089b49e1a0f55696e735ec279df698bbdf4b640509da0de335",
+      "role": "derivation, verification and recording tooling"
+    },
+    {
+      "path": "scripts/record_analytical_geometry_validation.py",
+      "sha256": "95af4e55e215e5f639afed376512d77a14f5c414a871f3d61ed2349a2843d6ce",
+      "role": "derivation, verification and recording tooling"
+    }
+  ],
+  "raw_artifacts": [
+    {
+      "path": "docs/evidence/2026-09-11-analytical-geometry-canonical/surface_vv_dev.csv",
+      "sha256": "b0fbb0278716da46df5115a3ca76493e1686a96b205b023d512253f50b2e16bf"
+    },
+    {
+      "path": "docs/evidence/2026-09-11-analytical-geometry-canonical/surface_vv_dev.log",
+      "sha256": "ab6106e5b036ce9a7b9898fdcf394e20c5adb6372ae98ae45583aadf7fc460a6"
+    }
+  ],
+  "derived_artifacts": [
+    {
+      "path": "docs/evidence/2026-09-11-analytical-geometry-canonical/surface_vv_dev_summary.json",
+      "sha256": "09bae6e3f549a373c33c02ea23e00643b4f6c23e558cba1d7d9a5603ce65f352",
+      "strict_json_replacements": [
+        {
+          "pointer": "/area/overall/1/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/overall/3/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape/3/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape/4/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape/5/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape/9/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape/10/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape/11/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/rho_stratum/7/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/rho_stratum/15/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing/5/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing/6/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing/7/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing/13/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing/14/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing/15/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/anisotropy/5/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/anisotropy/6/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/anisotropy/7/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/anisotropy/13/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/anisotropy/14/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/anisotropy/15/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/15/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/19/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/23/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/39/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/43/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/mean_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/median_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/mean_abs",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/median_abs",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/min_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/max_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/21/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/25/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/29/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/mean_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/median_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/mean_abs",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/median_abs",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/min_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/max_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/mean_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/median_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/mean_abs",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/median_abs",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/min_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/max_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/59/max_abs",
+          "original": "Infinity"
+        }
+      ]
+    },
+    {
+      "path": "docs/evidence/2026-09-11-analytical-geometry-canonical/surface_vv_dev_summary.md",
+      "sha256": "94dc856129aa3c7835235d946ebaef42961f02a62b9349da4073ec34aebb6702"
+    }
+  ],
+  "estimator": {
+    "harness_label": "E0_marching_cubes_binary_v1",
+    "surface_area_method": {
+      "estimator": "marching_cubes_binary",
+      "method_version": "marching_cubes_binary_lewiner_v1",
+      "implementation": "skimage.measure.marching_cubes (Lewiner) + skimage.measure.mesh_surface_area",
+      "input": "binary measurement support, zero-padded by one voxel",
+      "isosurface_level": 0.5,
+      "spacing": "native physical ZYX voxel spacing",
+      "step_size": 1,
+      "smoothing": "none"
+    },
+    "volume_method": "voxel count x product of ZYX spacing (quantification.features.geometry)"
+  },
+  "acceptance_criteria": {
+    "SG-1": {
+      "requirement": "Analytical surface area of the production estimator",
+      "metric": "max over all phantom cases of |A_est / A_true - 1|; a non-estimable case fails",
+      "comparison": "<",
+      "threshold": 0.05,
+      "source": "docs/SCIENTIFIC_SPEC.md section 9"
+    },
+    "SG-2": {
+      "requirement": "Analytical voxel-count volume",
+      "metric": "max over all phantom cases of |V_voxel / V_true - 1|; a non-estimable case fails",
+      "comparison": "<",
+      "threshold": 0.01,
+      "source": "docs/SCIENTIFIC_SPEC.md section 9"
+    }
+  },
+  "commands": [
+    {
+      "command": "python docs/evidence/2026-09-11-analytical-geometry-canonical/surface_vv.py --grid dev",
+      "cwd": ".",
+      "exit_code": 0,
+      "started_utc": "2026-09-11T04:11:11Z",
+      "finished_utc": "2026-09-11T04:11:31Z"
+    },
+    {
+      "command": "organoid_analysis.validation.analytical_geometry_evidence.reproduce_production",
+      "exit_code": 0
+    }
+  ],
+  "invocation": "pixi run validation-record --run-id 2026-09-11-analytical-geometry-canonical",
+  "results": {
+    "SG-1": {
+      "status": "FAIL",
+      "n_cases": 188,
+      "n_nonestimable": 0,
+      "nonestimable_cases": [],
+      "max_abs_rel_error": 0.1873942194,
+      "worst_case": "dev-139-cylinder-size24-sp3x1x1-rot2",
+      "median_signed_rel_error": 0.097170354915
+    },
+    "SG-2": {
+      "status": "FAIL",
+      "n_cases": 188,
+      "n_nonestimable": 0,
+      "nonestimable_cases": [],
+      "max_abs_rel_error": 0.1826116503,
+      "worst_case": "dev-078-cylinder-size3-sp2x1x1-rot0",
+      "median_signed_rel_error": 3.3306720315e-05,
+      "by_rho_stratum": [
+        {
+          "rho_stratum": "large(>=12)",
+          "status": "PASS",
+          "n_cases": 56,
+          "n_nonestimable": 0,
+          "nonestimable_cases": [],
+          "max_abs_rel_error": 0.005281605676,
+          "worst_case": "dev-090-cylinder-size24-sp2x1x1-rot0",
+          "median_signed_rel_error": 4.2977593594999995e-05
+        },
+        {
+          "rho_stratum": "medium(6-12)",
+          "status": "FAIL",
+          "n_cases": 44,
+          "n_nonestimable": 0,
+          "nonestimable_cases": [],
+          "max_abs_rel_error": 0.02566518881,
+          "worst_case": "dev-035-cylinder-size6-sp1x1x1-rot0",
+          "median_signed_rel_error": -0.00014802215365
+        },
+        {
+          "rho_stratum": "small(3-6)",
+          "status": "FAIL",
+          "n_cases": 44,
+          "n_nonestimable": 0,
+          "nonestimable_cases": [],
+          "max_abs_rel_error": 0.02738645888,
+          "worst_case": "dev-000-sphere-size3-sp1x1x1-offset0",
+          "median_signed_rel_error": -0.00074274248375
+        },
+        {
+          "rho_stratum": "very_small(<3)",
+          "status": "FAIL",
+          "n_cases": 44,
+          "n_nonestimable": 0,
+          "nonestimable_cases": [],
+          "max_abs_rel_error": 0.1826116503,
+          "worst_case": "dev-078-cylinder-size3-sp2x1x1-rot0",
+          "median_signed_rel_error": 0.0074286849185
+        }
+      ]
+    }
+  },
+  "resulting_status": {
+    "SG-1": "FAIL",
+    "SG-2": "FAIL"
+  },
+  "reproduction": {
+    "method": "re-executed the production estimator and closed-form oracles on every frozen-grid phantom and compared them with the raw CSV",
+    "cases_reexecuted": 188,
+    "rtol": 1e-09,
+    "max_relative_difference": 4.832336751842852e-10,
+    "mismatches": 0
+  },
+  "manifest_content_sha256": "e40a4b00346e00e27b4c917bf8faa9461f6389c561e2c6f740821b94159c1847"
+}
