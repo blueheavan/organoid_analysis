@@ -3,20 +3,49 @@ import pytest
 
 from organoid_analysis.config import load_config
 from organoid_analysis.microscopy_io.tiff_contract import Sample
-from organoid_analysis.quantification.features import geometry, measure_instances
+from organoid_analysis.quantification.features import (
+    SURFACE_AREA_METHOD,
+    geometry,
+    measure_instances,
+)
 from organoid_analysis.segmentation.watershed_instances import SegmentationResult
+
+# REGRESSION tolerance, not the scientific acceptance criterion. SCIENTIFIC_SPEC
+# section 9 requires <5% area error for analytical shapes, and this production
+# estimator FAILS it (docs/evidence/2026-09-11-measurement-vv). The 15% bound
+# only detects an unintended change in the estimator's known terracing bias;
+# passing it is not evidence of surface accuracy.
+SURFACE_REGRESSION_TOLERANCE=.15
+
+
+def _reference_sphere():
+    z,y,x=np.indices((25,49,49))
+    return ((z-12)*2)**2+(y-24)**2+(x-24)**2<=18.**2
 
 
 def test_anisotropic_sphere_agrees_with_analytic_geometry():
     spacing=(2.,1.,1.)
-    z,y,x=np.indices((25,49,49))
     radius=18.
-    mask=((z-12)*2)**2+(y-24)**2+(x-24)**2<=radius**2
-    measured,_=geometry(mask,spacing)
+    measured,_=geometry(_reference_sphere(),spacing)
     assert abs(measured['volume_um3']/(4*np.pi*radius**3/3)-1)<.025
     # Unsmooth voxel marching cubes has a discretization bias; do not assert perfect spheres.
-    assert abs(measured['surface_area_um2']/(4*np.pi*radius**2)-1)<.15
+    assert abs(measured['surface_area_um2']/(4*np.pi*radius**2)-1)<SURFACE_REGRESSION_TOLERANCE
     assert .85<measured['sphericity']<1.04
+
+
+def test_surface_estimator_version_lock():
+    """Change detector for the versioned production surface estimator.
+
+    The expected value is the area recorded for this exact phantom in
+    docs/evidence/2026-09-11/analytical-geometry.json and reproduced in
+    docs/evidence/2026-09-11-measurement-vv. It is NOT an accuracy oracle: the
+    analytical area is 4*pi*18**2 = 4071.5 um2 (+11.7% bias). If this fails, the
+    estimator changed: bump SURFACE_AREA_METHOD['method_version'] and repeat the
+    surface V&V rather than editing this number.
+    """
+    measured,_=geometry(_reference_sphere(),(2.,1.,1.))
+    assert SURFACE_AREA_METHOD['method_version']=='marching_cubes_binary_lewiner_v1'
+    assert measured['surface_area_um2']==pytest.approx(4549.28466796875,rel=1e-6)
 
 
 def test_units_scale_volume_area_and_not_sphericity():

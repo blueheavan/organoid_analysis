@@ -17,7 +17,9 @@ _MIN_REPLICATES_FOR_BOOTSTRAP_CI = 3
 
 def _describe(objects: pd.DataFrame) -> dict:
     eligible = objects[objects.morphology_eligible.astype(bool)]
-    result = {"n_detected": len(objects), "n_included": len(eligible), "n_excluded": len(objects) - len(eligible)}
+    # Counts are int; medians, totals and fractions are float (nan when empty).
+    result: dict[str, int | float] = {"n_detected": len(objects), "n_included": len(eligible),
+                                      "n_excluded": len(objects) - len(eligible)}
     for metric in MORPHOLOGY:
         result[f"median_{metric}"] = float(eligible[metric].median()) if len(eligible) else np.nan
     result["total_volume_um3"] = float(eligible.volume_um3.sum())

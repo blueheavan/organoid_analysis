@@ -117,8 +117,8 @@ def instance_qc_summary(labels: np.ndarray, spacing: tuple) -> dict:
     if (labels.ndim != 3 or not np.issubdtype(labels.dtype, np.integer)
             or (np.issubdtype(labels.dtype, np.signedinteger) and np.any(labels < 0))):
         raise ValueError("Instance QC requires a 3D nonnegative integer label mask")
-    spacing = np.asarray(spacing, dtype=float)
-    if spacing.shape != (3,) or not np.isfinite(spacing).all() or np.any(spacing <= 0):
+    spacing_um = np.asarray(spacing, dtype=float)
+    if spacing_um.shape != (3,) or not np.isfinite(spacing_um).all() or np.any(spacing_um <= 0):
         raise ValueError("Instance QC spacing must contain three positive finite values")
     ids = np.unique(labels)
     ids = ids[ids != 0]
@@ -144,7 +144,7 @@ def instance_qc_summary(labels: np.ndarray, spacing: tuple) -> dict:
             continue
         local_id = int(object_id) if work is labels else compact_id_by_source_id[int(object_id)]
         occupied_z = np.any(work[bbox] == local_id, axis=(1, 2))
-        z_extents.append(float(occupied_z.sum() * spacing[0]))
+        z_extents.append(float(occupied_z.sum() * spacing_um[0]))
     return {
         "instances": int(len(ids)),
         "median_z_extent_um": float(np.median(z_extents)) if z_extents else 0.0,

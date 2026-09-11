@@ -1,0 +1,4 @@
+2026-09-11T00:49:45Z
+c901c9abd0647a3bd838843123a53a8e94d51e7267878fbe2fa92c76f0a38438  docs/evidence/2026-09-11-measurement-vv/SURFACE_VV_PLAN.md
+38549b6d19ebf734d44c9fadcf1bddcbd910ff258ef4d294a259502afbeabc1f  docs/evidence/2026-09-11-measurement-vv/surface_vv.py
+frozen before first estimator run on any phantom

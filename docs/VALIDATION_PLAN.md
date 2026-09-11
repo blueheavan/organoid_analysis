@@ -174,3 +174,24 @@ scale are updated to the independently derived center-grid scale; interpolation
 coordinates, fractional intensities and unsupported rectangular grids are tested
 explicitly. The [scoped report](WORKFLOW_OPTIMIZATION_2026-09-11.md) separates
 these new contract checks from the broader unresolved research-readiness items.
+
+## 2026-09-11 measurement validation and release readiness
+
+The [surface V&V plan](evidence/2026-09-11-measurement-vv/SURFACE_VV_PLAN.md) was
+frozen before any candidate estimator result. It keeps the §9 criterion
+unchanged and evaluates it **per case**, so a stratum passes only if its
+worst case is below 5%. It predeclares candidate estimators, parameter
+provenance (only σ = max spacing may be selected for E1), the ρ, shape and
+anisotropy strata, and a replacement rule that requires an unseen confirmation
+grid. The confirmation grid was not run because no candidate passed the
+development grid.
+
+The [segmentation validation protocol](evidence/2026-09-11-measurement-vv/SEGMENTATION_VALIDATION_PROTOCOL.md)
+defines the reference-standard qualification, the sample-level independent
+unit, and the detection, mask and downstream-measurement metrics that A10/SG-3
+require. It reports no result, and SG-3 remains INSUFFICIENT EVIDENCE.
+
+Two gates are now separate. The regression tolerance in `test_geometry.py`
+(15%) and the new estimator version-lock test belong to the engineering gate
+(`pixi run ci`). The scientific acceptance items are reported by
+`pixi run science-gate`.

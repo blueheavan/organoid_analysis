@@ -1,0 +1,6 @@
+lint exit=0
+check exit=0
+typecheck exit=1
+test exit=1
+ci exit=1
+science-gate exit=1

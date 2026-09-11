@@ -1,6 +1,9 @@
 # Full scientific workflow audit and release assessment — 2026-09-10
 
-Latest scoped update: [2026-09-11 workflow optimization](WORKFLOW_OPTIMIZATION_2026-09-11.md)
+Latest update: [2026-09-11 measurement validation and release readiness](VALIDATION_UPDATE_2026-09-11.md)
+records the systematic surface/volume V&V, segmentation/assay/statistical evidence
+status and separate engineering/scientific verdicts. Earlier scoped update:
+[2026-09-11 workflow optimization](WORKFLOW_OPTIMIZATION_2026-09-11.md)
 corrects Web measurement support/precision and rounded-grid resampling, adds QC
 and traceable feature downloads, and records fresh engineering checks. The
 2026-09-10 execution counts and source-state statements below are historical;

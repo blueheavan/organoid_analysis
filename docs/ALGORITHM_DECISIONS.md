@@ -71,3 +71,41 @@ The existing linear-intensity / nearest-label center-grid interpolation was reta
 `cellpose_inference.py` invokes `CellposeModel(pretrained_model='cpdino-vitb')`, 3 orthogonal-plane flows and 3D dynamics, not a volumetric network trained/validated by this project. `do_3D=True` ignores flow-error thresholds; [Cellpose's 3D documentation](https://cellpose.readthedocs.io/en/latest/do3d.html) agrees with installed `dynamics.compute_masks`. The disabled UI controls now reflect this. The cell pass combines cytoplasm and nuclei channels; diameter suggestions use a separate coarse 2D model pass.
 
 Origin `SOFTWARE_OR_MODEL_DEFAULT` for library behavior and `HEURISTIC` for project model/parameter selection; basis `CONTEXT_DEPENDENT`; evidence `PARTIAL` for execution and `INSUFFICIENT EVIDENCE` for object accuracy. Cached weights are hashed when found, but alternate model-cache roots/custom model objects can make recorded identity incomplete. Remaining hidden defaults are listed in PARAMETERS. Alternative foundation models/classical watershed are candidates, not validated superior/inferior choices. One 3×256×256 MPS smoke crop is not full-volume, annotation-based, CPU/GPU-equivalence, or repeatability validation.
+
+## D14. Surface-area estimator comparison — 2026-09-11 (no production change)
+
+A systematic surface V&V was frozen before any candidate result was seen
+([plan](evidence/2026-09-11-measurement-vv/SURFACE_VV_PLAN.md), hashes in
+`surface_vv_freeze.txt`). It covered 188 Gauss-digitized phantoms: sphere,
+ellipsoid and flat-capped cylinder; 4 sizes or radii; ZYX spacings (1,1,1),
+(2,1,1), (3,1,1) and (2,0.7,0.7); seeded orientations and sub-voxel offsets.
+Every case was compared with a closed-form area.
+
+The candidates were:
+
+- **E0**, the production binary marching cubes;
+- **E1**, a physical-space Gaussian with the predeclared σ = max spacing, plus
+  0.5× and 1.5× variants that are sensitivity-only and not selectable;
+- **E2**, a signed Euclidean distance field;
+- **E3**, 13-direction discrete Crofton with spherical-Voronoi weights.
+
+The acceptance rule was the unchanged §9 criterion: **every** case must have
+|error| < 5%.
+
+| Estimator | Worst |error| | Median signed | Strata passing |
+|---|---|---|---|
+| E0 production | 18.74% | +9.72% | none (fails even for large isotropic objects: 9.79%) |
+| E1 σ = 1× | non-estimable in 17 cases | −6.64% | large (ρ≥12) only |
+| E2 | 22.48% | +5.36% | none |
+| E3 | 26.51% | −1.67% | sphere and ellipsoid with ρ≥3; cylinders fail in every stratum, matching the analytical plane response |
+
+No candidate met the predeclared replacement rule. None was better in every
+resolution stratum. E1's outcome depends on σ, which has no analytical
+provenance. The production estimator and the historical definition of
+`surface_area_um2` are therefore **unchanged**. The confirmation grid was left
+unseen. Suitability for the §9 criterion remains `NOT SUPPORTED` / `FAIL`. The
+estimator is now identified by `SURFACE_AREA_METHOD`
+(`marching_cubes_binary_lewiner_v1`) in the classical, multilevel and Web
+feature provenance, and a version-lock test detects silent changes. Options
+that need an owner decision are listed in
+[the selection record](evidence/2026-09-11-measurement-vv/SURFACE_SELECTION.md).

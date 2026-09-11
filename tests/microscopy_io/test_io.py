@@ -98,6 +98,24 @@ def test_separate_paths_cannot_reuse_the_segmentation_channel_for_viability(tmp_
         load_sample(row,load_config())
 
 
+def test_channel_grid_verification_distinguishes_shape_only_from_metadata_checked(tmp_path):
+    ome={'axes':'ZYX','PhysicalSizeZ':2.,'PhysicalSizeY':1.,'PhysicalSizeX':1.}
+    primary=tmp_path/'structure.ome.tif'
+    tifffile.imwrite(primary,np.zeros((7,12,12),np.uint16),ome=True,photometric='minisblack',metadata=ome)
+    uncalibrated=tmp_path/'calcein.tif'
+    tifffile.imwrite(uncalibrated,np.ones((7,12,12),np.uint16),photometric='minisblack')
+    calibrated=tmp_path/'pi.ome.tif'
+    tifffile.imwrite(calibrated,np.full((7,12,12),2,np.uint16),ome=True,photometric='minisblack',metadata=ome)
+    row={'image_path':str(primary),'calcein_path':str(uncalibrated),'calcein_axes':'ZYX',
+         'pi_path':str(calibrated),'time_index':'','series_index':''}
+    sample=load_sample(row,load_config())
+    # Equal shape alone is accepted but must not be recorded as a verified grid.
+    assert sample.metadata['channel_grid_verification']=={
+        'structure':'same_file_as_primary',
+        'calcein':'shape_only_no_spacing_metadata',
+        'pi':'spacing_metadata_matches_primary'}
+
+
 def test_shared_multichannel_source_is_decoded_once_per_sample(tmp_path, monkeypatch):
     p=tmp_path/'channels.ome.tif'
     image=np.zeros((3,7,12,12),np.uint16)

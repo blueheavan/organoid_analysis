@@ -21,6 +21,29 @@ from .labels import bbox_touches_volume_boundary
 # identical to 1/1.4826 (they differ by ~1.5ppm, immaterial in practice).
 MAD_TO_SIGMA = 1.4826
 
+# Versioned identity of the estimator that defines every exported
+# ``surface_area_um2`` (and therefore ``sphericity``). Any change to level,
+# padding, smoothing or implementation must bump ``method_version`` and repeat
+# the surface V&V in docs/evidence/2026-09-11-measurement-vv, so historical
+# values are never silently reinterpreted. This estimator FAILS the analytical
+# <5% surface criterion of docs/SCIENTIFIC_SPEC.md section 9 (see that evidence).
+SURFACE_AREA_METHOD: dict[str, str | int | float] = {
+    "estimator": "marching_cubes_binary",
+    "method_version": "marching_cubes_binary_lewiner_v1",
+    "implementation": "skimage.measure.marching_cubes (Lewiner) + skimage.measure.mesh_surface_area",
+    "input": "binary measurement support, zero-padded by one voxel",
+    "isosurface_level": 0.5,
+    "spacing": "native physical ZYX voxel spacing",
+    "step_size": 1,
+    "smoothing": "none",
+}
+
+# Sphericity cannot exceed 1 for a continuous solid; discretized values above
+# this limit are flagged for review, never clipped (SCIENTIFIC_SPEC section 10,
+# item 3). Shared by the classical and Web/mask-feature routes. Heuristic
+# review limit; see docs/PARAMETERS.md.
+SPHERICITY_REVIEW_LIMIT = 1.05
+
 GEOMETRY_COLUMNS = ["organoid_id", "original_label_id", "segmented_voxels", "envelope_voxels",
                     "segmented_volume_um3", "volume_um3", "surface_area_um2", "sphericity",
                     "equivalent_diameter_um", "enclosed_void_fraction", "centroid_z_um", "centroid_y_um",
@@ -201,7 +224,7 @@ def measure_instances(
         maximum = cfg["quality"]["max_volume_um3"]
         if maximum is not None and metrics["volume_um3"] > maximum:
             flags.append("above_maximum_volume")
-        if metrics["sphericity"] > 1.05:
+        if metrics["sphericity"] > SPHERICITY_REVIEW_LIMIT:
             flags.append("sphericity_above_geometric_range")
         if "excess_foreground_review_segmentation" in segmentation.flags:
             flags.append("excess_foreground_review_segmentation")

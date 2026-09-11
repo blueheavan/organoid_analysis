@@ -16,7 +16,8 @@ values retain floating-point precision; rounding belongs in presentation:
   * equivalent_sphere_diameter_um — diameter of the sphere of equal volume
     (equivalent_disk_um is retained as a legacy alias)
   * sphericity       — ratio to the minimal possible surface for a volume
-                      (not clamped; may slightly exceed 1 on discretized voxels)
+                      (not clamped; may exceed 1 on discretized voxels; values
+                      above 1.05 carry a sphericity_above_geometric_range flag)
   * major_axis_um / minor_axis_um / least_axis_um — principal-axis diameters
   * elongation       — 1 - least_axis / major_axis (0 = sphere, up to ~1 = rod)
   * solidity         — volume / convex-hull volume
@@ -40,7 +41,9 @@ from organoid_analysis.quantification.labels import (
     compact_instance_labels,
 )
 
-FEATURE_SCHEMA_VERSION = "2.0"
+# 2.1: qc_flags may contain sphericity_above_geometric_range (same limit as the
+# classical route). Columns and numeric definitions are unchanged from 2.0.
+FEATURE_SCHEMA_VERSION = "2.1"
 FEATURE_COLUMNS = [
     "volume_um3", "surface_area_um2", "equivalent_disk_um", "equivalent_sphere_diameter_um",
     "sphericity", "solidity", "major_axis_um", "minor_axis_um", "least_axis_um", "elongation",
@@ -112,8 +115,8 @@ def extract_mask_features(
     from scipy import ndimage as ndi
     from skimage import measure
 
+    from organoid_analysis.quantification.features import SPHERICITY_REVIEW_LIMIT, outer_envelope
     from organoid_analysis.quantification.features import geometry as _geometry
-    from organoid_analysis.quantification.features import outer_envelope
 
     if not isinstance(fill_holes, bool):
         raise ValueError("fill_holes must be a boolean")
@@ -157,6 +160,9 @@ def extract_mask_features(
             solidity = float(shape_prop.solidity)
         if not np.isfinite(solidity):
             flags.append("solidity_not_estimable")
+        # Same review limit as the classical route; the value is kept unclipped.
+        if sphericity > SPHERICITY_REVIEW_LIMIT:
+            flags.append("sphericity_above_geometric_range")
         eq_disk = g["equivalent_diameter_um"]
         elongation = 1.0 - least / major
         voxel_count = int(np.count_nonzero(binary))

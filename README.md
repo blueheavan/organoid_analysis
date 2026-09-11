@@ -1,6 +1,6 @@
 # Organoid Pipeline — 3D 类器官分析
 
-> **Current local release assessment (2026-09-11): NOT READY FOR THE SPECIFIED RESEARCH USE.** Surface-accuracy and project-specific segmentation, threshold and inferential validation remain unresolved. The [workflow optimization record](docs/WORKFLOW_OPTIMIZATION_2026-09-11.md) covers the latest calibration, measurement and export repairs; [the full audit](docs/VALIDATION_REPORT.md) documents the broader evidence limits.
+> **Current local release assessment (2026-09-11): NOT READY FOR THE SPECIFIED RESEARCH USE.** The [measurement validation update](docs/VALIDATION_UPDATE_2026-09-11.md) gives separate engineering and scientific verdicts. The production surface estimator fails the analytical <5% criterion across 188 phantoms, and voxel volume fails <1% for objects under 12 coarse voxels per radius. Segmentation, assay and study-design validity lack qualifying evidence. `pixi run ci` is the engineering gate; `pixi run science-gate` reports the scientific items and does not pass. Earlier records: [workflow optimization](docs/WORKFLOW_OPTIMIZATION_2026-09-11.md) and [full audit](docs/VALIDATION_REPORT.md).
 
 用于 3D 显微镜 Z-stack 的本地类器官分析工具，提供 Cellpose 3D 分割、可审计的多层级测量、结果浏览与表格统计。项目面向 macOS Apple Silicon，使用 Pixi 管理运行环境。
 

@@ -108,13 +108,14 @@ def main() -> None:
     )
 
     with tab_preview:
-        if HAS_VTK:
+        # config is None exactly when HAS_VTK is false (see above).
+        if config is not None:
             _render_preview(config)
         else:
             st.error("vtk.js viewer unavailable; cannot render the preview tab.")
 
     with tab_results:
-        if HAS_VTK:
+        if config is not None:
             _render_results(config)
         else:
             st.info("Run a segmentation (needs the vtk viewer) for results to appear here.")

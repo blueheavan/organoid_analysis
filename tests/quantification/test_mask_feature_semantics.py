@@ -57,7 +57,9 @@ def test_small_volumes_keep_precision_and_missing_solidity_has_qc():
     result = extract_mask_features(mask, (.01, .01, .01)).loc[3]
     assert result.volume_um3 == pytest.approx(1e-6, rel=1e-12)
     assert np.isnan(result.solidity)
-    assert result.qc_flags == "solidity_not_estimable"
+    # A single voxel's discretized sphericity (~2.79) also exceeds the shared
+    # review limit (feature schema 2.1); the value itself is not clipped.
+    assert result.qc_flags == "solidity_not_estimable;sphericity_above_geometric_range"
     assert result.qc_status == "review"
 
 
@@ -79,3 +81,14 @@ def test_empty_result_retains_download_schema():
     assert result.empty and list(result.columns) == FEATURE_COLUMNS
     assert result.index.name == "Label"
     assert pd.read_csv(io.StringIO(result.to_csv())).columns.tolist() == ["Label", *FEATURE_COLUMNS]
+
+
+def test_discretized_sphericity_above_review_limit_is_flagged_not_clipped():
+    # A single voxel has sphericity ~2.79 (> 1 is impossible for a continuous
+    # solid). The Web route must flag it like the classical route, not clip it.
+    mask = np.zeros((5, 5, 5), np.uint8)
+    mask[2, 2, 2] = 1
+    result = extract_mask_features(mask).loc[1]
+    assert result["sphericity"] > 2.5
+    assert "sphericity_above_geometric_range" in result["qc_flags"].split(";")
+    assert result["qc_status"] == "review"

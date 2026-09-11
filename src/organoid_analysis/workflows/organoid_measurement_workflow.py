@@ -30,6 +30,7 @@ from organoid_analysis.phenotyping.viability import calibrate, classify
 from organoid_analysis.quantification.features import (
     GEOMETRY_COLUMNS,
     MARKER_COLUMNS,
+    SURFACE_AREA_METHOD,
     measure_instances,
 )
 from organoid_analysis.result_export.report import (
@@ -130,16 +131,21 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
     (out / "config.resolved.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
     design.to_csv(out / "manifest.resolved.csv", index=False)
     origin = "synthetic_phantom" if synthetic else "user_images_unvalidated"
-    provenance = {"pipeline_version": __version__, "git_commit": git_commit_hash(), "started_utc": datetime.now(UTC).isoformat(),
+    # JSON provenance is heterogeneous; the two growing members are typed
+    # locals referenced (not copied) by the record.
+    input_files: list[dict[str, object]] = []
+    sample_metadata: dict[str, dict] = {}
+    provenance: dict[str, object] = {"pipeline_version": __version__, "git_commit": git_commit_hash(), "started_utc": datetime.now(UTC).isoformat(),
                   "data_origin": origin, "python": sys.version, "platform": platform.platform(),
                   "manifest": str(manifest_path), "manifest_sha256": sha256(manifest_path),
                   "configuration": cfg, "status": "incomplete",
                   "source_code_sha256": source_code_hashes(),
                   "packages": {package: importlib.metadata.version(package) for package in ["numpy", "scipy", "scikit-image", "tifffile", "pandas", "matplotlib", "PyYAML"]},
-                  "input_files": [], "sample_metadata": {}}
+                  "surface_area_method": dict(SURFACE_AREA_METHOD),
+                  "input_files": input_files, "sample_metadata": sample_metadata}
     paths = sorted({row[field] for row in design.to_dict("records") for field in PATH_FIELDS if row[field]})
     for path in paths:
-        provenance["input_files"].append({"path": path, "sha256": sha256(path), "size_bytes": Path(path).stat().st_size})
+        input_files.append({"path": path, "sha256": sha256(path), "size_bytes": Path(path).stat().st_size})
     rows, sample_rows, failures, qc_rows = [], [], [], []
     validation_matches, validation_metrics = [], []
     for position, row in enumerate(design.to_dict("records"), start=1):
@@ -166,7 +172,7 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
                                 "segmentation_qc_reference": segmentation_qc["reference_method"],
                                 "segmentation_qc_flags": segmentation_qc["qc_flags"],
                                 "spacing_z_um": sample.spacing[0], "spacing_y_um": sample.spacing[1], "spacing_x_um": sample.spacing[2]})
-            provenance["sample_metadata"][row["sample_id"]] = sample.metadata
+            sample_metadata[row["sample_id"]] = sample.metadata
             print(f'[{position}/{len(design)}] {row["sample_id"]}: {len(features)} objects; {sum(f["morphology_eligible"] for f in features)} pass geometry QC',flush=True)
         except Exception as error:
             failure = {"sample_id": row["sample_id"], "error_type": type(error).__name__, "message": str(error)}

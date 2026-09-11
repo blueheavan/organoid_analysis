@@ -1,0 +1,20 @@
+✨ Pixi task (test-render): python -m pytest -v -m render
+============================= test session starts ==============================
+platform darwin -- Python 3.12.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/jlwang/Desktop/organoid_analysis
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.1.0, anyio-4.14.2
+collected 352 items / 344 deselected / 8 selected
+
+tests/visualization/test_3d_preview.py ........                          [100%]
+
+=============================== warnings summary ===============================
+tests/visualization/test_3d_preview.py: 16 warnings
+  /Users/jlwang/Desktop/organoid_analysis/.pixi/envs/default/lib/python3.12/site-packages/vtkmodules/util/numpy_support.py:244: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    result.shape = shape
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================ 8 passed, 344 deselected, 16 warnings in 3.14s ================
+exit=0

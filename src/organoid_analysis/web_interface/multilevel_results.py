@@ -176,7 +176,8 @@ def _load_exported_labels(root: Path) -> tuple[dict[str, np.ndarray], tuple[floa
         spacings.append(spacing)
     if not all(np.allclose(spacings[0], value) for value in spacings[1:]):
         raise ValueError("Exported label-mask spacing is inconsistent")
-    return masks, tuple(float(value) for value in spacings[0])
+    z, y, x = (float(value) for value in spacings[0])
+    return masks, (z, y, x)
 
 
 def _render_label_slice(level: str, labels: np.ndarray, table: pd.DataFrame) -> None:

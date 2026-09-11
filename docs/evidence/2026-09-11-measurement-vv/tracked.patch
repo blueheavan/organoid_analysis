@@ -1,0 +1,656 @@
+diff --git a/README.md b/README.md
+index 2030e01..a873f13 100644
+--- a/README.md
++++ b/README.md
+@@ -1,6 +1,6 @@
+ # Organoid Pipeline — 3D 类器官分析
+ 
+-> **Current local release assessment (2026-09-11): NOT READY FOR THE SPECIFIED RESEARCH USE.** Surface-accuracy and project-specific segmentation, threshold and inferential validation remain unresolved. The [workflow optimization record](docs/WORKFLOW_OPTIMIZATION_2026-09-11.md) covers the latest calibration, measurement and export repairs; [the full audit](docs/VALIDATION_REPORT.md) documents the broader evidence limits.
++> **Current local release assessment (2026-09-11): NOT READY FOR THE SPECIFIED RESEARCH USE.** The [measurement validation update](docs/VALIDATION_UPDATE_2026-09-11.md) gives separate engineering and scientific verdicts. The production surface estimator fails the analytical <5% criterion across 188 phantoms, and voxel volume fails <1% for objects under 12 coarse voxels per radius. Segmentation, assay and study-design validity lack qualifying evidence. `pixi run ci` is the engineering gate; `pixi run science-gate` reports the scientific items and does not pass. Earlier records: [workflow optimization](docs/WORKFLOW_OPTIMIZATION_2026-09-11.md) and [full audit](docs/VALIDATION_REPORT.md).
+ 
+ 用于 3D 显微镜 Z-stack 的本地类器官分析工具，提供 Cellpose 3D 分割、可审计的多层级测量、结果浏览与表格统计。项目面向 macOS Apple Silicon，使用 Pixi 管理运行环境。
+ 
+diff --git a/docs/ALGORITHM_DECISIONS.md b/docs/ALGORITHM_DECISIONS.md
+index 8a6bd5a..cc57c22 100644
+--- a/docs/ALGORITHM_DECISIONS.md
++++ b/docs/ALGORITHM_DECISIONS.md
+@@ -71,3 +71,41 @@ The existing linear-intensity / nearest-label center-grid interpolation was reta
+ `cellpose_inference.py` invokes `CellposeModel(pretrained_model='cpdino-vitb')`, 3 orthogonal-plane flows and 3D dynamics, not a volumetric network trained/validated by this project. `do_3D=True` ignores flow-error thresholds; [Cellpose's 3D documentation](https://cellpose.readthedocs.io/en/latest/do3d.html) agrees with installed `dynamics.compute_masks`. The disabled UI controls now reflect this. The cell pass combines cytoplasm and nuclei channels; diameter suggestions use a separate coarse 2D model pass.
+ 
+ Origin `SOFTWARE_OR_MODEL_DEFAULT` for library behavior and `HEURISTIC` for project model/parameter selection; basis `CONTEXT_DEPENDENT`; evidence `PARTIAL` for execution and `INSUFFICIENT EVIDENCE` for object accuracy. Cached weights are hashed when found, but alternate model-cache roots/custom model objects can make recorded identity incomplete. Remaining hidden defaults are listed in PARAMETERS. Alternative foundation models/classical watershed are candidates, not validated superior/inferior choices. One 3×256×256 MPS smoke crop is not full-volume, annotation-based, CPU/GPU-equivalence, or repeatability validation.
++
++## D14. Surface-area estimator comparison — 2026-09-11 (no production change)
++
++A systematic surface V&V was frozen before any candidate result was seen
++([plan](evidence/2026-09-11-measurement-vv/SURFACE_VV_PLAN.md), hashes in
++`surface_vv_freeze.txt`). It covered 188 Gauss-digitized phantoms: sphere,
++ellipsoid and flat-capped cylinder; 4 sizes or radii; ZYX spacings (1,1,1),
++(2,1,1), (3,1,1) and (2,0.7,0.7); seeded orientations and sub-voxel offsets.
++Every case was compared with a closed-form area.
++
++The candidates were:
++
++- **E0**, the production binary marching cubes;
++- **E1**, a physical-space Gaussian with the predeclared σ = max spacing, plus
++  0.5× and 1.5× variants that are sensitivity-only and not selectable;
++- **E2**, a signed Euclidean distance field;
++- **E3**, 13-direction discrete Crofton with spherical-Voronoi weights.
++
++The acceptance rule was the unchanged §9 criterion: **every** case must have
++|error| < 5%.
++
++| Estimator | Worst |error| | Median signed | Strata passing |
++|---|---|---|---|
++| E0 production | 18.74% | +9.72% | none (fails even for large isotropic objects: 9.79%) |
++| E1 σ = 1× | non-estimable in 17 cases | −6.64% | large (ρ≥12) only |
++| E2 | 22.48% | +5.36% | none |
++| E3 | 26.51% | −1.67% | sphere and ellipsoid with ρ≥3; cylinders fail in every stratum, matching the analytical plane response |
++
++No candidate met the predeclared replacement rule. None was better in every
++resolution stratum. E1's outcome depends on σ, which has no analytical
++provenance. The production estimator and the historical definition of
++`surface_area_um2` are therefore **unchanged**. The confirmation grid was left
++unseen. Suitability for the §9 criterion remains `NOT SUPPORTED` / `FAIL`. The
++estimator is now identified by `SURFACE_AREA_METHOD`
++(`marching_cubes_binary_lewiner_v1`) in the classical, multilevel and Web
++feature provenance, and a version-lock test detects silent changes. Options
++that need an owner decision are listed in
++[the selection record](evidence/2026-09-11-measurement-vv/SURFACE_SELECTION.md).
+diff --git a/docs/PARAMETERS.md b/docs/PARAMETERS.md
+index 48c8ec5..68bc483 100644
+--- a/docs/PARAMETERS.md
++++ b/docs/PARAMETERS.md
+@@ -92,7 +92,7 @@ All scientific values/defaults are unchanged. Input-domain validation now reject
+ | `spacing_agreement.atol` | `1e-05` | um | HEURISTIC / HEURISTIC | Acceptance of grid differences | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+ | `square_xy.rtol_atol` | `[1e-06, 1e-09]` | relative; um | HEURISTIC / HEURISTIC | Reject unsupported rectangular XY for Cellpose | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+ | `high_anisotropy_ratio` | `5` | max/min spacing | HEURISTIC / HEURISTIC | Review flag, not a demonstrated reliability boundary | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+-| `sphericity_review` | `1.05` | dimensionless | HEURISTIC / HEURISTIC | Classical geometry exclusion; not present as a multilevel QC rule | No unless API/config exposed | INSUFFICIENT EVIDENCE |
++| `sphericity_review` | `1.05` (`features.SPHERICITY_REVIEW_LIMIT`) | dimensionless | HEURISTIC / HEURISTIC | Classical geometry exclusion. Since 2026-09-11 the Web/mask-feature route adds the same `sphericity_above_geometric_range` review flag (feature schema 2.1), without exclusion or clipping. Not a multilevel QC rule. Value unchanged. | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+ | `MAD_consistency` | `[1.4826, 0.67448975]` | normal scale | HEURISTIC / HEURISTIC | Gaussian scaling identity; does not justify biological cutoff | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+ | `MAD_zero` | `"finite values not isclose to median; NumPy default rtol=1e-5, atol=1e-8"` | volume units | HEURISTIC / HEURISTIC | Uncalibrated fallback outlier flags | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+ | `viability.noise_floor` | `1e-09` | intensity | HEURISTIC / HEURISTIC | Can make SNR arbitrarily large on constant controls; not instrument noise qualification | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+@@ -122,7 +122,7 @@ All scientific values/defaults are unchanged. Input-domain validation now reject
+ | `mask_features.fragment_connectivity` | 6 face neighbors | adjacency rule | SOFTWARE_OR_MODEL_DEFAULT / CONTEXT_DEPENDENT | Disconnected label fragments are flagged; rows retained | No | PARTIAL; operational QC, not a calibrated exclusion rule |
+ | `cellpose.effective_xy_scale` | `(M-1)/(N-1)` using actual grid lengths; unequal X/Y ratios reject | dimensionless | SOFTWARE_OR_MODEL_DEFAULT / ESTABLISHED | Corrects diameter and anisotropy for center-grid interpolation | Derived | PASS for coordinate/adapter contracts; model equivalence NOT ASSESSED |
+ | `cellpose.resampling_dtype` | float32 for downsampled intensities | numeric representation | SOFTWARE_OR_MODEL_DEFAULT / CONTEXT_DEPENDENT | Preserves fractional interpolation of typical microscopy integer intensities | No | PARTIAL; ramp verified, extreme dynamic range not assessed |
+-| `surface.level_padding_step` | `[0.5, 1, 1]` | level; voxel; step | HEURISTIC / HEURISTIC | Defines discrete surface; existing <5% specification fails | No unless API/config exposed | INSUFFICIENT EVIDENCE |
++| `surface.level_padding_step` | `[0.5, 1, 1]`, method `marching_cubes_binary_lewiner_v1` (`features.SURFACE_AREA_METHOD`) | level; voxel; step | HEURISTIC / HEURISTIC | Defines the discrete surface. The 2026-09-11 V&V (188 analytical phantoms) finds max 18.74% and median +9.72% area error, so the <5% specification FAILS in every resolution stratum. Values unchanged; the method identity is now exported in every provenance record. | No unless API/config exposed | FAIL |
+ | `preview.mesh_step` | `2` | voxels | HEURISTIC / HEURISTIC | Display only; measurement step remains 1 | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+ | `label_export.max_id` | `4294967295` | ID | HEURISTIC / HEURISTIC | OME uint32 export range; overflow rejects | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+ 
+diff --git a/docs/SCIENTIFIC_SPEC.md b/docs/SCIENTIFIC_SPEC.md
+index d8a5bb0..407bd01 100644
+--- a/docs/SCIENTIFIC_SPEC.md
++++ b/docs/SCIENTIFIC_SPEC.md
+@@ -264,3 +264,22 @@ mask hashes and available run lineage. Default/unknown calibration is explicit,
+ not upgraded to verified metadata. These changes do not resolve the surface
+ accuracy criterion, establish segmentation accuracy, or validate biological
+ statistics. No statistical model or biological threshold changed.
++
++## 15. Measurement validation update — 2026-09-11
++
++The §9 criteria (<1% volume, <5% area for analytical shapes) are **unchanged**
++and have now been evaluated systematically. The evaluation used 188 phantoms
++across sphere, ellipsoid and cylinder shapes, 4 spacings up to anisotropy 3,
++seeded orientations, and resolution ratio ρ = smallest semi-axis / largest
++spacing.
++
++- **Area:** the production estimator fails in every ρ stratum (worst 18.74%).
++- **Volume:** voxel-count volume passes for ρ≥12 (worst 0.53%) and fails below
++  it (2.57% for 6≤ρ<12, 2.74% for 3≤ρ<6, 18.3% for ρ<3).
++
++The earlier volume PASS came from a single large sphere and holds only for
++large objects. No intended-use restriction (for example a minimum ρ) has been
++adopted; that is a decision for the project owner. `surface_area_um2` keeps
++its historical definition, now versioned as `marching_cubes_binary_lewiner_v1`
++in provenance. Details:
++[validation update](VALIDATION_UPDATE_2026-09-11.md).
+diff --git a/docs/VALIDATION_PLAN.md b/docs/VALIDATION_PLAN.md
+index c811bd9..3e2246e 100644
+--- a/docs/VALIDATION_PLAN.md
++++ b/docs/VALIDATION_PLAN.md
+@@ -174,3 +174,24 @@ scale are updated to the independently derived center-grid scale; interpolation
+ coordinates, fractional intensities and unsupported rectangular grids are tested
+ explicitly. The [scoped report](WORKFLOW_OPTIMIZATION_2026-09-11.md) separates
+ these new contract checks from the broader unresolved research-readiness items.
++
++## 2026-09-11 measurement validation and release readiness
++
++The [surface V&V plan](evidence/2026-09-11-measurement-vv/SURFACE_VV_PLAN.md) was
++frozen before any candidate estimator result. It keeps the §9 criterion
++unchanged and evaluates it **per case**, so a stratum passes only if its
++worst case is below 5%. It predeclares candidate estimators, parameter
++provenance (only σ = max spacing may be selected for E1), the ρ, shape and
++anisotropy strata, and a replacement rule that requires an unseen confirmation
++grid. The confirmation grid was not run because no candidate passed the
++development grid.
++
++The [segmentation validation protocol](evidence/2026-09-11-measurement-vv/SEGMENTATION_VALIDATION_PROTOCOL.md)
++defines the reference-standard qualification, the sample-level independent
++unit, and the detection, mask and downstream-measurement metrics that A10/SG-3
++require. It reports no result, and SG-3 remains INSUFFICIENT EVIDENCE.
++
++Two gates are now separate. The regression tolerance in `test_geometry.py`
++(15%) and the new estimator version-lock test belong to the engineering gate
++(`pixi run ci`). The scientific acceptance items are reported by
++`pixi run science-gate`.
+diff --git a/docs/VALIDATION_REPORT.md b/docs/VALIDATION_REPORT.md
+index edd60df..15e3daa 100644
+--- a/docs/VALIDATION_REPORT.md
++++ b/docs/VALIDATION_REPORT.md
+@@ -1,6 +1,9 @@
+ # Full scientific workflow audit and release assessment — 2026-09-10
+ 
+-Latest scoped update: [2026-09-11 workflow optimization](WORKFLOW_OPTIMIZATION_2026-09-11.md)
++Latest update: [2026-09-11 measurement validation and release readiness](VALIDATION_UPDATE_2026-09-11.md)
++records the systematic surface/volume V&V, segmentation/assay/statistical evidence
++status and separate engineering/scientific verdicts. Earlier scoped update:
++[2026-09-11 workflow optimization](WORKFLOW_OPTIMIZATION_2026-09-11.md)
+ corrects Web measurement support/precision and rounded-grid resampling, adds QC
+ and traceable feature downloads, and records fresh engineering checks. The
+ 2026-09-10 execution counts and source-state statements below are historical;
+diff --git a/pyproject.toml b/pyproject.toml
+index 66e72b1..1719cf3 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -116,6 +116,11 @@ typecheck = "mypy src/organoid_analysis"
+ # and mypy currently has a large pre-existing backlog (unrelated to any one
+ # change) that would otherwise hide whether lint/test/check ever ran.
+ ci = { depends-on = ["lint", "test", "check", "typecheck"] }
++# `ci` is the ENGINEERING regression gate only. Scientific acceptance
++# (analytical accuracy, segmentation, assay, study design) is a separate gate
++# that exits nonzero until every item has PASS evidence; it is intentionally
++# not part of `ci`. See docs/VALIDATION_UPDATE_2026-09-11.md.
++science-gate = "python scripts/scientific_validation_gate.py"
+ web = "python scripts/streamlit_run.py src/organoid_analysis/web_interface/organoid_workspace.py"
+ # --- data management ---
+ data = "bash scripts/download_data.sh"
+diff --git a/src/organoid_analysis/microscopy_io/metadata.py b/src/organoid_analysis/microscopy_io/metadata.py
+index 5b5b5ba..11fac91 100644
+--- a/src/organoid_analysis/microscopy_io/metadata.py
++++ b/src/organoid_analysis/microscopy_io/metadata.py
+@@ -294,7 +294,7 @@ def parse_axes(axes: str | None) -> dict[str, int]:
+     return {ch: i for i, ch in enumerate(axes)}
+ 
+ 
+-def classify_axes(axes: str | None) -> dict[str, int]:
++def classify_axes(axes: str | None) -> dict[str, int | None]:
+     """Return which axis indices are Z, C, T, Y, X given the axes string.
+ 
+     This is the semantic resolution used by the reader to decide how to
+diff --git a/src/organoid_analysis/microscopy_io/tiff_contract.py b/src/organoid_analysis/microscopy_io/tiff_contract.py
+index 5e91303..fff5da3 100644
+--- a/src/organoid_analysis/microscopy_io/tiff_contract.py
++++ b/src/organoid_analysis/microscopy_io/tiff_contract.py
+@@ -159,8 +159,9 @@ def ome_spacing(xml: str | None, series_index: int = 0, time_index: int | None =
+     positions = {}
+     for plane in pixel.findall("{*}Plane"):
+         if int(plane.get("TheT", "0")) == (time_index or 0) and int(plane.get("TheC", "0")) == 0:
+-            if plane.get("PositionZ") is not None:
+-                positions[int(plane.get("TheZ", "0"))] = to_um(float(plane.get("PositionZ")), plane.get("PositionZUnit", "reference frame"))
++            position_z = plane.get("PositionZ")
++            if position_z is not None:
++                positions[int(plane.get("TheZ", "0"))] = to_um(float(position_z), plane.get("PositionZUnit", "reference frame"))
+     validate_z_positions(positions, values[0])
+     if any(value is None for value in values):
+         return None
+@@ -201,13 +202,17 @@ def load_sample(row: dict, cfg: dict) -> Sample:
+     # Cache each distinct series once per sample instead of decoding it per role.
+     loaded = {main_key: (main, metadata_spacing, source_axes)}
+     explicit = [row.get(f"spacing_{axis}_um", "") for axis in "zyx"]
+-    spacing = tuple(float(x) for x in explicit) if all(explicit) else metadata_spacing
++    spacing = (float(explicit[0]), float(explicit[1]), float(explicit[2])) if all(explicit) else metadata_spacing
+     if spacing is None:
+         raise ValueError("Physical spacing is missing: provide OME metadata or all spacing_*_um columns")
+     if metadata_spacing and all(explicit) and not np.allclose(spacing, metadata_spacing, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
+         raise ValueError(f"Manifest spacing {spacing} conflicts with OME spacing {metadata_spacing}; correct the source metadata or manifest")
+     volumes = {}
+-    channel_sources = {}
++    channel_sources: dict[str, tuple[str, int, int, int]] = {}
++    # A separate TIFF without spacing metadata can only be matched by array
++    # shape; record that its physical grid was not verified instead of letting
++    # it look equivalent to a metadata-checked channel.
++    channel_grid: dict[str, str] = {}
+     for role in ["structure", "calcein", "pi", "probability", "labels"]:
+         separate = row.get(f"{role}_path", "")
+         if separate:
+@@ -218,9 +223,11 @@ def load_sample(row: dict, cfg: dict) -> Sample:
+             index = int(row.get(f"{role}_channel") or 0)
+             if other_spacing and not np.allclose(spacing, other_spacing, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
+                 raise ValueError(f"{role} TIFF spacing differs from the primary image")
++            grid_status = "spacing_metadata_matches_primary" if other_spacing else "shape_only_no_spacing_metadata"
+         else:
+             index = cfg["channels"].get(role)
+             volume = main
++            grid_status = "same_file_as_primary"
+         if index is None:
+             volumes[role] = None
+             continue
+@@ -235,6 +242,7 @@ def load_sample(row: dict, cfg: dict) -> Sample:
+         volumes[role] = volume[index]
+         if volumes[role].shape != main.shape[1:]:
+             raise ValueError(f"{role} stack shape differs from primary image; register/resample channels first")
++        channel_grid[role] = grid_status
+     if volumes["structure"] is None:
+         raise ValueError("Supply a structure channel or structure_path, including when importing labels")
+     if cfg["segmentation"]["method"] == "probability" and volumes["probability"] is None:
+@@ -242,7 +250,8 @@ def load_sample(row: dict, cfg: dict) -> Sample:
+     if cfg["segmentation"]["method"] == "labels" and volumes["labels"] is None:
+         raise ValueError("labels mode requires a labels_path column")
+     metadata = {"input_axes": source_axes, "shape_zyx": list(main.shape[1:]),
+-                "spacing_source": "manifest" if all(explicit) else "OME", "spacing_zyx_um": list(spacing)}
++                "spacing_source": "manifest" if all(explicit) else "OME", "spacing_zyx_um": list(spacing),
++                "channel_grid_verification": channel_grid}
+     return Sample(volumes["structure"], volumes["calcein"], volumes["pi"], volumes["probability"], volumes["labels"], spacing, metadata)
+ 
+ 
+diff --git a/src/organoid_analysis/quantification/features.py b/src/organoid_analysis/quantification/features.py
+index 5367af3..c8b162c 100644
+--- a/src/organoid_analysis/quantification/features.py
++++ b/src/organoid_analysis/quantification/features.py
+@@ -21,6 +21,29 @@ from .labels import bbox_touches_volume_boundary
+ # identical to 1/1.4826 (they differ by ~1.5ppm, immaterial in practice).
+ MAD_TO_SIGMA = 1.4826
+ 
++# Versioned identity of the estimator that defines every exported
++# ``surface_area_um2`` (and therefore ``sphericity``). Any change to level,
++# padding, smoothing or implementation must bump ``method_version`` and repeat
++# the surface V&V in docs/evidence/2026-09-11-measurement-vv, so historical
++# values are never silently reinterpreted. This estimator FAILS the analytical
++# <5% surface criterion of docs/SCIENTIFIC_SPEC.md section 9 (see that evidence).
++SURFACE_AREA_METHOD: dict[str, str | int | float] = {
++    "estimator": "marching_cubes_binary",
++    "method_version": "marching_cubes_binary_lewiner_v1",
++    "implementation": "skimage.measure.marching_cubes (Lewiner) + skimage.measure.mesh_surface_area",
++    "input": "binary measurement support, zero-padded by one voxel",
++    "isosurface_level": 0.5,
++    "spacing": "native physical ZYX voxel spacing",
++    "step_size": 1,
++    "smoothing": "none",
++}
++
++# Sphericity cannot exceed 1 for a continuous solid; discretized values above
++# this limit are flagged for review, never clipped (SCIENTIFIC_SPEC section 10,
++# item 3). Shared by the classical and Web/mask-feature routes. Heuristic
++# review limit; see docs/PARAMETERS.md.
++SPHERICITY_REVIEW_LIMIT = 1.05
++
+ GEOMETRY_COLUMNS = ["organoid_id", "original_label_id", "segmented_voxels", "envelope_voxels",
+                     "segmented_volume_um3", "volume_um3", "surface_area_um2", "sphericity",
+                     "equivalent_diameter_um", "enclosed_void_fraction", "centroid_z_um", "centroid_y_um",
+@@ -201,7 +224,7 @@ def measure_instances(
+         maximum = cfg["quality"]["max_volume_um3"]
+         if maximum is not None and metrics["volume_um3"] > maximum:
+             flags.append("above_maximum_volume")
+-        if metrics["sphericity"] > 1.05:
++        if metrics["sphericity"] > SPHERICITY_REVIEW_LIMIT:
+             flags.append("sphericity_above_geometric_range")
+         if "excess_foreground_review_segmentation" in segmentation.flags:
+             flags.append("excess_foreground_review_segmentation")
+diff --git a/src/organoid_analysis/quantification/mask_features.py b/src/organoid_analysis/quantification/mask_features.py
+index 89f881d..b254f60 100644
+--- a/src/organoid_analysis/quantification/mask_features.py
++++ b/src/organoid_analysis/quantification/mask_features.py
+@@ -16,7 +16,8 @@ values retain floating-point precision; rounding belongs in presentation:
+   * equivalent_sphere_diameter_um — diameter of the sphere of equal volume
+     (equivalent_disk_um is retained as a legacy alias)
+   * sphericity       — ratio to the minimal possible surface for a volume
+-                      (not clamped; may slightly exceed 1 on discretized voxels)
++                      (not clamped; may exceed 1 on discretized voxels; values
++                      above 1.05 carry a sphericity_above_geometric_range flag)
+   * major_axis_um / minor_axis_um / least_axis_um — principal-axis diameters
+   * elongation       — 1 - least_axis / major_axis (0 = sphere, up to ~1 = rod)
+   * solidity         — volume / convex-hull volume
+@@ -40,7 +41,9 @@ from organoid_analysis.quantification.labels import (
+     compact_instance_labels,
+ )
+ 
+-FEATURE_SCHEMA_VERSION = "2.0"
++# 2.1: qc_flags may contain sphericity_above_geometric_range (same limit as the
++# classical route). Columns and numeric definitions are unchanged from 2.0.
++FEATURE_SCHEMA_VERSION = "2.1"
+ FEATURE_COLUMNS = [
+     "volume_um3", "surface_area_um2", "equivalent_disk_um", "equivalent_sphere_diameter_um",
+     "sphericity", "solidity", "major_axis_um", "minor_axis_um", "least_axis_um", "elongation",
+@@ -112,8 +115,8 @@ def extract_mask_features(
+     from scipy import ndimage as ndi
+     from skimage import measure
+ 
++    from organoid_analysis.quantification.features import SPHERICITY_REVIEW_LIMIT, outer_envelope
+     from organoid_analysis.quantification.features import geometry as _geometry
+-    from organoid_analysis.quantification.features import outer_envelope
+ 
+     if not isinstance(fill_holes, bool):
+         raise ValueError("fill_holes must be a boolean")
+@@ -157,6 +160,9 @@ def extract_mask_features(
+             solidity = float(shape_prop.solidity)
+         if not np.isfinite(solidity):
+             flags.append("solidity_not_estimable")
++        # Same review limit as the classical route; the value is kept unclipped.
++        if sphericity > SPHERICITY_REVIEW_LIMIT:
++            flags.append("sphericity_above_geometric_range")
+         eq_disk = g["equivalent_diameter_um"]
+         elongation = 1.0 - least / major
+         voxel_count = int(np.count_nonzero(binary))
+diff --git a/src/organoid_analysis/result_export/mask_feature_bundle.py b/src/organoid_analysis/result_export/mask_feature_bundle.py
+index edd470c..eec4ba3 100644
+--- a/src/organoid_analysis/result_export/mask_feature_bundle.py
++++ b/src/organoid_analysis/result_export/mask_feature_bundle.py
+@@ -14,6 +14,7 @@ import pandas as pd
+ from organoid_analysis import __version__
+ from organoid_analysis.microscopy_io.tiff_contract import git_commit_hash, source_code_hashes
+ from organoid_analysis.microscopy_io.voxel_spacing import validate_voxel_spacing_xyz
++from organoid_analysis.quantification.features import SURFACE_AREA_METHOD
+ from organoid_analysis.quantification.mask_features import FEATURE_SCHEMA_VERSION, validate_mask
+ 
+ 
+@@ -67,7 +68,9 @@ def build_mask_feature_bundle(
+         ),
+         "coordinates": "array-local voxel centers; origin ZYX=(0,0,0); micrometres",
+         "surface_method": "skimage Lewiner marching cubes; level=0.5; native spacing; step_size=1; zero padding",
+-        "surface_accuracy_status": "NOT ASSESSED for this mask; existing analytical <5% criterion fails",
++        "surface_area_method": dict(SURFACE_AREA_METHOD),
++        "surface_accuracy_status": ("NOT ASSESSED for this mask; the estimator fails the analytical <5% criterion "
++                                    "(docs/evidence/2026-09-11-measurement-vv)"),
+         "axis_columns": {"major_axis_um": "largest moment-equivalent diameter", "minor_axis_um": "intermediate diameter (legacy name)", "least_axis_um": "smallest diameter"},
+         "legacy_aliases": {"equivalent_disk_um": "equivalent_sphere_diameter_um"},
+         "qc_policy": "All objects retained; review flags do not imply biological abnormality or validated accuracy",
+diff --git a/src/organoid_analysis/segmentation/watershed_instances.py b/src/organoid_analysis/segmentation/watershed_instances.py
+index 7ab64c1..d70a2da 100644
+--- a/src/organoid_analysis/segmentation/watershed_instances.py
++++ b/src/organoid_analysis/segmentation/watershed_instances.py
+@@ -117,8 +117,8 @@ def instance_qc_summary(labels: np.ndarray, spacing: tuple) -> dict:
+     if (labels.ndim != 3 or not np.issubdtype(labels.dtype, np.integer)
+             or (np.issubdtype(labels.dtype, np.signedinteger) and np.any(labels < 0))):
+         raise ValueError("Instance QC requires a 3D nonnegative integer label mask")
+-    spacing = np.asarray(spacing, dtype=float)
+-    if spacing.shape != (3,) or not np.isfinite(spacing).all() or np.any(spacing <= 0):
++    spacing_um = np.asarray(spacing, dtype=float)
++    if spacing_um.shape != (3,) or not np.isfinite(spacing_um).all() or np.any(spacing_um <= 0):
+         raise ValueError("Instance QC spacing must contain three positive finite values")
+     ids = np.unique(labels)
+     ids = ids[ids != 0]
+@@ -144,7 +144,7 @@ def instance_qc_summary(labels: np.ndarray, spacing: tuple) -> dict:
+             continue
+         local_id = int(object_id) if work is labels else compact_id_by_source_id[int(object_id)]
+         occupied_z = np.any(work[bbox] == local_id, axis=(1, 2))
+-        z_extents.append(float(occupied_z.sum() * spacing[0]))
++        z_extents.append(float(occupied_z.sum() * spacing_um[0]))
+     return {
+         "instances": int(len(ids)),
+         "median_z_extent_um": float(np.median(z_extents)) if z_extents else 0.0,
+diff --git a/src/organoid_analysis/statistics/aggregation.py b/src/organoid_analysis/statistics/aggregation.py
+index 64b7026..0fa11f3 100644
+--- a/src/organoid_analysis/statistics/aggregation.py
++++ b/src/organoid_analysis/statistics/aggregation.py
+@@ -17,7 +17,9 @@ _MIN_REPLICATES_FOR_BOOTSTRAP_CI = 3
+ 
+ def _describe(objects: pd.DataFrame) -> dict:
+     eligible = objects[objects.morphology_eligible.astype(bool)]
+-    result = {"n_detected": len(objects), "n_included": len(eligible), "n_excluded": len(objects) - len(eligible)}
++    # Counts are int; medians, totals and fractions are float (nan when empty).
++    result: dict[str, int | float] = {"n_detected": len(objects), "n_included": len(eligible),
++                                      "n_excluded": len(objects) - len(eligible)}
+     for metric in MORPHOLOGY:
+         result[f"median_{metric}"] = float(eligible[metric].median()) if len(eligible) else np.nan
+     result["total_volume_um3"] = float(eligible.volume_um3.sum())
+diff --git a/src/organoid_analysis/visualization/volume_viewer/viewer_payload.py b/src/organoid_analysis/visualization/volume_viewer/viewer_payload.py
+index 192e7e8..e05bb16 100644
+--- a/src/organoid_analysis/visualization/volume_viewer/viewer_payload.py
++++ b/src/organoid_analysis/visualization/volume_viewer/viewer_payload.py
+@@ -272,14 +272,14 @@ def build_viewer_payload(
+     if render_mode == "surface":
+         if segmentation_mask is None:
+             raise ValueError("segmentation_mask is required for render_mode='surface'")
+-        mask = np.asarray(segmentation_mask)
+-        if mask.shape != np.asarray(volumes[0]).shape:
++        surface_mask = np.asarray(segmentation_mask)
++        if surface_mask.shape != np.asarray(volumes[0]).shape:
+             raise ValueError(
+-                f"segmentation_mask shape {mask.shape} must match volume "
++                f"segmentation_mask shape {surface_mask.shape} must match volume "
+                 f"{np.asarray(volumes[0]).shape}"
+             )
+         spacing_zyx = (spacing[2], spacing[1], spacing[0])  # (z, y, x) for skimage
+-        surface = build_surface_payload(mask, spacing_zyx, level=surface_level)
++        surface = build_surface_payload(surface_mask, spacing_zyx, level=surface_level)
+         return ViewerSpec(
+             dims=(0, 0, 0),
+             spacing=spacing,
+diff --git a/src/organoid_analysis/web_interface/multilevel_results.py b/src/organoid_analysis/web_interface/multilevel_results.py
+index 5b08222..9f09c88 100644
+--- a/src/organoid_analysis/web_interface/multilevel_results.py
++++ b/src/organoid_analysis/web_interface/multilevel_results.py
+@@ -176,7 +176,8 @@ def _load_exported_labels(root: Path) -> tuple[dict[str, np.ndarray], tuple[floa
+         spacings.append(spacing)
+     if not all(np.allclose(spacings[0], value) for value in spacings[1:]):
+         raise ValueError("Exported label-mask spacing is inconsistent")
+-    return masks, tuple(float(value) for value in spacings[0])
++    z, y, x = (float(value) for value in spacings[0])
++    return masks, (z, y, x)
+ 
+ 
+ def _render_label_slice(level: str, labels: np.ndarray, table: pd.DataFrame) -> None:
+diff --git a/src/organoid_analysis/web_interface/organoid_workspace.py b/src/organoid_analysis/web_interface/organoid_workspace.py
+index be7ec88..8560e89 100644
+--- a/src/organoid_analysis/web_interface/organoid_workspace.py
++++ b/src/organoid_analysis/web_interface/organoid_workspace.py
+@@ -108,13 +108,14 @@ def main() -> None:
+     )
+ 
+     with tab_preview:
+-        if HAS_VTK:
++        # config is None exactly when HAS_VTK is false (see above).
++        if config is not None:
+             _render_preview(config)
+         else:
+             st.error("vtk.js viewer unavailable; cannot render the preview tab.")
+ 
+     with tab_results:
+-        if HAS_VTK:
++        if config is not None:
+             _render_results(config)
+         else:
+             st.info("Run a segmentation (needs the vtk viewer) for results to appear here.")
+diff --git a/src/organoid_analysis/workflows/multilevel_measurement_workflow.py b/src/organoid_analysis/workflows/multilevel_measurement_workflow.py
+index edc9818..40bf63b 100644
+--- a/src/organoid_analysis/workflows/multilevel_measurement_workflow.py
++++ b/src/organoid_analysis/workflows/multilevel_measurement_workflow.py
+@@ -7,6 +7,7 @@ from dataclasses import dataclass
+ import numpy as np
+ import pandas as pd
+ 
++from organoid_analysis.quantification.features import SURFACE_AREA_METHOD
+ from organoid_analysis.quantification.multilevel_relationships.config import Multilevel3DConfig
+ from organoid_analysis.quantification.multilevel_relationships.hierarchy import (
+     assign_parents_by_overlap,
+@@ -231,7 +232,8 @@ def analyze_multilevel_3d(
+     elapsed = time.perf_counter() - started
+     summary = {"status": "complete", "input_shape_zyx": list(organoid_labels.shape), "spacing_zyx_um": list(spacing),
+                "organoid_count": int(len(organoids)), "cell_count": int(len(cells)), "nucleus_count": int(len(nuclei)),
+-               "topology_edge_count": int(len(edges)), "runtime_seconds": elapsed, "config": cfg.as_dict()}
++               "topology_edge_count": int(len(edges)), "runtime_seconds": elapsed, "config": cfg.as_dict(),
++               "surface_area_method": dict(SURFACE_AREA_METHOD)}
+     if metadata:
+         summary["metadata"] = {key: value for key, value in metadata.items() if value not in (None, "")}
+     return Multilevel3DResult(organoids, cells, nuclei, edges, qc_flags, summary)
+diff --git a/src/organoid_analysis/workflows/organoid_measurement_workflow.py b/src/organoid_analysis/workflows/organoid_measurement_workflow.py
+index 3ae343c..739da42 100644
+--- a/src/organoid_analysis/workflows/organoid_measurement_workflow.py
++++ b/src/organoid_analysis/workflows/organoid_measurement_workflow.py
+@@ -30,6 +30,7 @@ from organoid_analysis.phenotyping.viability import calibrate, classify
+ from organoid_analysis.quantification.features import (
+     GEOMETRY_COLUMNS,
+     MARKER_COLUMNS,
++    SURFACE_AREA_METHOD,
+     measure_instances,
+ )
+ from organoid_analysis.result_export.report import (
+@@ -130,16 +131,21 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
+     (out / "config.resolved.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
+     design.to_csv(out / "manifest.resolved.csv", index=False)
+     origin = "synthetic_phantom" if synthetic else "user_images_unvalidated"
+-    provenance = {"pipeline_version": __version__, "git_commit": git_commit_hash(), "started_utc": datetime.now(UTC).isoformat(),
++    # JSON provenance is heterogeneous; the two growing members are typed
++    # locals referenced (not copied) by the record.
++    input_files: list[dict[str, object]] = []
++    sample_metadata: dict[str, dict] = {}
++    provenance: dict[str, object] = {"pipeline_version": __version__, "git_commit": git_commit_hash(), "started_utc": datetime.now(UTC).isoformat(),
+                   "data_origin": origin, "python": sys.version, "platform": platform.platform(),
+                   "manifest": str(manifest_path), "manifest_sha256": sha256(manifest_path),
+                   "configuration": cfg, "status": "incomplete",
+                   "source_code_sha256": source_code_hashes(),
+                   "packages": {package: importlib.metadata.version(package) for package in ["numpy", "scipy", "scikit-image", "tifffile", "pandas", "matplotlib", "PyYAML"]},
+-                  "input_files": [], "sample_metadata": {}}
++                  "surface_area_method": dict(SURFACE_AREA_METHOD),
++                  "input_files": input_files, "sample_metadata": sample_metadata}
+     paths = sorted({row[field] for row in design.to_dict("records") for field in PATH_FIELDS if row[field]})
+     for path in paths:
+-        provenance["input_files"].append({"path": path, "sha256": sha256(path), "size_bytes": Path(path).stat().st_size})
++        input_files.append({"path": path, "sha256": sha256(path), "size_bytes": Path(path).stat().st_size})
+     rows, sample_rows, failures, qc_rows = [], [], [], []
+     validation_matches, validation_metrics = [], []
+     for position, row in enumerate(design.to_dict("records"), start=1):
+@@ -166,7 +172,7 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
+                                 "segmentation_qc_reference": segmentation_qc["reference_method"],
+                                 "segmentation_qc_flags": segmentation_qc["qc_flags"],
+                                 "spacing_z_um": sample.spacing[0], "spacing_y_um": sample.spacing[1], "spacing_x_um": sample.spacing[2]})
+-            provenance["sample_metadata"][row["sample_id"]] = sample.metadata
++            sample_metadata[row["sample_id"]] = sample.metadata
+             print(f'[{position}/{len(design)}] {row["sample_id"]}: {len(features)} objects; {sum(f["morphology_eligible"] for f in features)} pass geometry QC',flush=True)
+         except Exception as error:
+             failure = {"sample_id": row["sample_id"], "error_type": type(error).__name__, "message": str(error)}
+diff --git a/tests/microscopy_io/test_io.py b/tests/microscopy_io/test_io.py
+index 45c8646..98fd424 100644
+--- a/tests/microscopy_io/test_io.py
++++ b/tests/microscopy_io/test_io.py
+@@ -98,6 +98,24 @@ def test_separate_paths_cannot_reuse_the_segmentation_channel_for_viability(tmp_
+         load_sample(row,load_config())
+ 
+ 
++def test_channel_grid_verification_distinguishes_shape_only_from_metadata_checked(tmp_path):
++    ome={'axes':'ZYX','PhysicalSizeZ':2.,'PhysicalSizeY':1.,'PhysicalSizeX':1.}
++    primary=tmp_path/'structure.ome.tif'
++    tifffile.imwrite(primary,np.zeros((7,12,12),np.uint16),ome=True,photometric='minisblack',metadata=ome)
++    uncalibrated=tmp_path/'calcein.tif'
++    tifffile.imwrite(uncalibrated,np.ones((7,12,12),np.uint16),photometric='minisblack')
++    calibrated=tmp_path/'pi.ome.tif'
++    tifffile.imwrite(calibrated,np.full((7,12,12),2,np.uint16),ome=True,photometric='minisblack',metadata=ome)
++    row={'image_path':str(primary),'calcein_path':str(uncalibrated),'calcein_axes':'ZYX',
++         'pi_path':str(calibrated),'time_index':'','series_index':''}
++    sample=load_sample(row,load_config())
++    # Equal shape alone is accepted but must not be recorded as a verified grid.
++    assert sample.metadata['channel_grid_verification']=={
++        'structure':'same_file_as_primary',
++        'calcein':'shape_only_no_spacing_metadata',
++        'pi':'spacing_metadata_matches_primary'}
++
++
+ def test_shared_multichannel_source_is_decoded_once_per_sample(tmp_path, monkeypatch):
+     p=tmp_path/'channels.ome.tif'
+     image=np.zeros((3,7,12,12),np.uint16)
+diff --git a/tests/quantification/test_geometry.py b/tests/quantification/test_geometry.py
+index f420d86..e668cbd 100644
+--- a/tests/quantification/test_geometry.py
++++ b/tests/quantification/test_geometry.py
+@@ -3,22 +3,51 @@ import pytest
+ 
+ from organoid_analysis.config import load_config
+ from organoid_analysis.microscopy_io.tiff_contract import Sample
+-from organoid_analysis.quantification.features import geometry, measure_instances
++from organoid_analysis.quantification.features import (
++    SURFACE_AREA_METHOD,
++    geometry,
++    measure_instances,
++)
+ from organoid_analysis.segmentation.watershed_instances import SegmentationResult
+ 
++# REGRESSION tolerance, not the scientific acceptance criterion. SCIENTIFIC_SPEC
++# section 9 requires <5% area error for analytical shapes, and this production
++# estimator FAILS it (docs/evidence/2026-09-11-measurement-vv). The 15% bound
++# only detects an unintended change in the estimator's known terracing bias;
++# passing it is not evidence of surface accuracy.
++SURFACE_REGRESSION_TOLERANCE=.15
++
++
++def _reference_sphere():
++    z,y,x=np.indices((25,49,49))
++    return ((z-12)*2)**2+(y-24)**2+(x-24)**2<=18.**2
++
+ 
+ def test_anisotropic_sphere_agrees_with_analytic_geometry():
+     spacing=(2.,1.,1.)
+-    z,y,x=np.indices((25,49,49))
+     radius=18.
+-    mask=((z-12)*2)**2+(y-24)**2+(x-24)**2<=radius**2
+-    measured,_=geometry(mask,spacing)
++    measured,_=geometry(_reference_sphere(),spacing)
+     assert abs(measured['volume_um3']/(4*np.pi*radius**3/3)-1)<.025
+     # Unsmooth voxel marching cubes has a discretization bias; do not assert perfect spheres.
+-    assert abs(measured['surface_area_um2']/(4*np.pi*radius**2)-1)<.15
++    assert abs(measured['surface_area_um2']/(4*np.pi*radius**2)-1)<SURFACE_REGRESSION_TOLERANCE
+     assert .85<measured['sphericity']<1.04
+ 
+ 
++def test_surface_estimator_version_lock():
++    """Change detector for the versioned production surface estimator.
++
++    The expected value is the area recorded for this exact phantom in
++    docs/evidence/2026-09-11/analytical-geometry.json and reproduced in
++    docs/evidence/2026-09-11-measurement-vv. It is NOT an accuracy oracle: the
++    analytical area is 4*pi*18**2 = 4071.5 um2 (+11.7% bias). If this fails, the
++    estimator changed: bump SURFACE_AREA_METHOD['method_version'] and repeat the
++    surface V&V rather than editing this number.
++    """
++    measured,_=geometry(_reference_sphere(),(2.,1.,1.))
++    assert SURFACE_AREA_METHOD['method_version']=='marching_cubes_binary_lewiner_v1'
++    assert measured['surface_area_um2']==pytest.approx(4549.28466796875,rel=1e-6)
++
++
+ def test_units_scale_volume_area_and_not_sphericity():
+     mask=np.ones((9,13,17),bool)
+     first,_=geometry(mask,(2.,.7,.8))
+diff --git a/tests/quantification/test_mask_feature_semantics.py b/tests/quantification/test_mask_feature_semantics.py
+index 92d95b0..7bf880b 100644
+--- a/tests/quantification/test_mask_feature_semantics.py
++++ b/tests/quantification/test_mask_feature_semantics.py
+@@ -57,7 +57,9 @@ def test_small_volumes_keep_precision_and_missing_solidity_has_qc():
+     result = extract_mask_features(mask, (.01, .01, .01)).loc[3]
+     assert result.volume_um3 == pytest.approx(1e-6, rel=1e-12)
+     assert np.isnan(result.solidity)
+-    assert result.qc_flags == "solidity_not_estimable"
++    # A single voxel's discretized sphericity (~2.79) also exceeds the shared
++    # review limit (feature schema 2.1); the value itself is not clipped.
++    assert result.qc_flags == "solidity_not_estimable;sphericity_above_geometric_range"
+     assert result.qc_status == "review"
+ 
+ 
+@@ -79,3 +81,14 @@ def test_empty_result_retains_download_schema():
+     assert result.empty and list(result.columns) == FEATURE_COLUMNS
+     assert result.index.name == "Label"
+     assert pd.read_csv(io.StringIO(result.to_csv())).columns.tolist() == ["Label", *FEATURE_COLUMNS]
++
++
++def test_discretized_sphericity_above_review_limit_is_flagged_not_clipped():
++    # A single voxel has sphericity ~2.79 (> 1 is impossible for a continuous
++    # solid). The Web route must flag it like the classical route, not clip it.
++    mask = np.zeros((5, 5, 5), np.uint8)
++    mask[2, 2, 2] = 1
++    result = extract_mask_features(mask).loc[1]
++    assert result["sphericity"] > 2.5
++    assert "sphericity_above_geometric_range" in result["qc_flags"].split(";")
++    assert result["qc_status"] == "review"
+diff --git a/tests/workflows/test_mask_feature_bundle.py b/tests/workflows/test_mask_feature_bundle.py
+index f42074b..0bcd8bc 100644
+--- a/tests/workflows/test_mask_feature_bundle.py
++++ b/tests/workflows/test_mask_feature_bundle.py
+@@ -36,6 +36,9 @@ def test_feature_bundle_preserves_values_ids_calibration_and_lineage(object_type
+     assert meta["calibration_status"] == "provided_not_independently_verified"
+     assert meta["spacing_xyz_um"] == [.01, .01, .03]
+     assert meta["segmentation_provenance"]["nuclei_input"]["sha256"] == "source-file-digest"
++    # The exported surface values are tied to a versioned estimator definition.
++    assert meta["surface_area_method"]["method_version"] == "marching_cubes_binary_lewiner_v1"
++    assert meta["surface_area_method"]["isosurface_level"] == 0.5
+     header = {"shape_zyx": [7, 7, 7], "dtype": mask.dtype.str, "order": "C"}
+     assert meta["selected_mask"]["array_sha256"] == hashlib.sha256(json.dumps(header, sort_keys=True).encode("ascii") + mask.tobytes()).hexdigest()
+ 

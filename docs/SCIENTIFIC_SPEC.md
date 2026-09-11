@@ -264,3 +264,22 @@ mask hashes and available run lineage. Default/unknown calibration is explicit,
 not upgraded to verified metadata. These changes do not resolve the surface
 accuracy criterion, establish segmentation accuracy, or validate biological
 statistics. No statistical model or biological threshold changed.
+
+## 15. Measurement validation update — 2026-09-11
+
+The §9 criteria (<1% volume, <5% area for analytical shapes) are **unchanged**
+and have now been evaluated systematically. The evaluation used 188 phantoms
+across sphere, ellipsoid and cylinder shapes, 4 spacings up to anisotropy 3,
+seeded orientations, and resolution ratio ρ = smallest semi-axis / largest
+spacing.
+
+- **Area:** the production estimator fails in every ρ stratum (worst 18.74%).
+- **Volume:** voxel-count volume passes for ρ≥12 (worst 0.53%) and fails below
+  it (2.57% for 6≤ρ<12, 2.74% for 3≤ρ<6, 18.3% for ρ<3).
+
+The earlier volume PASS came from a single large sphere and holds only for
+large objects. No intended-use restriction (for example a minimum ρ) has been
+adopted; that is a decision for the project owner. `surface_area_um2` keeps
+its historical definition, now versioned as `marching_cubes_binary_lewiner_v1`
+in provenance. Details:
+[validation update](VALIDATION_UPDATE_2026-09-11.md).

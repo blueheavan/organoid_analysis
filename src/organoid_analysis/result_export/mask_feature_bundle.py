@@ -14,6 +14,7 @@ import pandas as pd
 from organoid_analysis import __version__
 from organoid_analysis.microscopy_io.tiff_contract import git_commit_hash, source_code_hashes
 from organoid_analysis.microscopy_io.voxel_spacing import validate_voxel_spacing_xyz
+from organoid_analysis.quantification.features import SURFACE_AREA_METHOD
 from organoid_analysis.quantification.mask_features import FEATURE_SCHEMA_VERSION, validate_mask
 
 
@@ -67,7 +68,9 @@ def build_mask_feature_bundle(
         ),
         "coordinates": "array-local voxel centers; origin ZYX=(0,0,0); micrometres",
         "surface_method": "skimage Lewiner marching cubes; level=0.5; native spacing; step_size=1; zero padding",
-        "surface_accuracy_status": "NOT ASSESSED for this mask; existing analytical <5% criterion fails",
+        "surface_area_method": dict(SURFACE_AREA_METHOD),
+        "surface_accuracy_status": ("NOT ASSESSED for this mask; the estimator fails the analytical <5% criterion "
+                                    "(docs/evidence/2026-09-11-measurement-vv)"),
         "axis_columns": {"major_axis_um": "largest moment-equivalent diameter", "minor_axis_um": "intermediate diameter (legacy name)", "least_axis_um": "smallest diameter"},
         "legacy_aliases": {"equivalent_disk_um": "equivalent_sphere_diameter_um"},
         "qc_policy": "All objects retained; review flags do not imply biological abnormality or validated accuracy",

@@ -159,8 +159,9 @@ def ome_spacing(xml: str | None, series_index: int = 0, time_index: int | None =
     positions = {}
     for plane in pixel.findall("{*}Plane"):
         if int(plane.get("TheT", "0")) == (time_index or 0) and int(plane.get("TheC", "0")) == 0:
-            if plane.get("PositionZ") is not None:
-                positions[int(plane.get("TheZ", "0"))] = to_um(float(plane.get("PositionZ")), plane.get("PositionZUnit", "reference frame"))
+            position_z = plane.get("PositionZ")
+            if position_z is not None:
+                positions[int(plane.get("TheZ", "0"))] = to_um(float(position_z), plane.get("PositionZUnit", "reference frame"))
     validate_z_positions(positions, values[0])
     if any(value is None for value in values):
         return None
@@ -201,13 +202,17 @@ def load_sample(row: dict, cfg: dict) -> Sample:
     # Cache each distinct series once per sample instead of decoding it per role.
     loaded = {main_key: (main, metadata_spacing, source_axes)}
     explicit = [row.get(f"spacing_{axis}_um", "") for axis in "zyx"]
-    spacing = tuple(float(x) for x in explicit) if all(explicit) else metadata_spacing
+    spacing = (float(explicit[0]), float(explicit[1]), float(explicit[2])) if all(explicit) else metadata_spacing
     if spacing is None:
         raise ValueError("Physical spacing is missing: provide OME metadata or all spacing_*_um columns")
     if metadata_spacing and all(explicit) and not np.allclose(spacing, metadata_spacing, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
         raise ValueError(f"Manifest spacing {spacing} conflicts with OME spacing {metadata_spacing}; correct the source metadata or manifest")
     volumes = {}
-    channel_sources = {}
+    channel_sources: dict[str, tuple[str, int, int, int]] = {}
+    # A separate TIFF without spacing metadata can only be matched by array
+    # shape; record that its physical grid was not verified instead of letting
+    # it look equivalent to a metadata-checked channel.
+    channel_grid: dict[str, str] = {}
     for role in ["structure", "calcein", "pi", "probability", "labels"]:
         separate = row.get(f"{role}_path", "")
         if separate:
@@ -218,9 +223,11 @@ def load_sample(row: dict, cfg: dict) -> Sample:
             index = int(row.get(f"{role}_channel") or 0)
             if other_spacing and not np.allclose(spacing, other_spacing, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
                 raise ValueError(f"{role} TIFF spacing differs from the primary image")
+            grid_status = "spacing_metadata_matches_primary" if other_spacing else "shape_only_no_spacing_metadata"
         else:
             index = cfg["channels"].get(role)
             volume = main
+            grid_status = "same_file_as_primary"
         if index is None:
             volumes[role] = None
             continue
@@ -235,6 +242,7 @@ def load_sample(row: dict, cfg: dict) -> Sample:
         volumes[role] = volume[index]
         if volumes[role].shape != main.shape[1:]:
             raise ValueError(f"{role} stack shape differs from primary image; register/resample channels first")
+        channel_grid[role] = grid_status
     if volumes["structure"] is None:
         raise ValueError("Supply a structure channel or structure_path, including when importing labels")
     if cfg["segmentation"]["method"] == "probability" and volumes["probability"] is None:
@@ -242,7 +250,8 @@ def load_sample(row: dict, cfg: dict) -> Sample:
     if cfg["segmentation"]["method"] == "labels" and volumes["labels"] is None:
         raise ValueError("labels mode requires a labels_path column")
     metadata = {"input_axes": source_axes, "shape_zyx": list(main.shape[1:]),
-                "spacing_source": "manifest" if all(explicit) else "OME", "spacing_zyx_um": list(spacing)}
+                "spacing_source": "manifest" if all(explicit) else "OME", "spacing_zyx_um": list(spacing),
+                "channel_grid_verification": channel_grid}
     return Sample(volumes["structure"], volumes["calcein"], volumes["pi"], volumes["probability"], volumes["labels"], spacing, metadata)
 
 

@@ -36,6 +36,9 @@ def test_feature_bundle_preserves_values_ids_calibration_and_lineage(object_type
     assert meta["calibration_status"] == "provided_not_independently_verified"
     assert meta["spacing_xyz_um"] == [.01, .01, .03]
     assert meta["segmentation_provenance"]["nuclei_input"]["sha256"] == "source-file-digest"
+    # The exported surface values are tied to a versioned estimator definition.
+    assert meta["surface_area_method"]["method_version"] == "marching_cubes_binary_lewiner_v1"
+    assert meta["surface_area_method"]["isosurface_level"] == 0.5
     header = {"shape_zyx": [7, 7, 7], "dtype": mask.dtype.str, "order": "C"}
     assert meta["selected_mask"]["array_sha256"] == hashlib.sha256(json.dumps(header, sort_keys=True).encode("ascii") + mask.tobytes()).hexdigest()
 

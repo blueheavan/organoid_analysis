@@ -272,14 +272,14 @@ def build_viewer_payload(
     if render_mode == "surface":
         if segmentation_mask is None:
             raise ValueError("segmentation_mask is required for render_mode='surface'")
-        mask = np.asarray(segmentation_mask)
-        if mask.shape != np.asarray(volumes[0]).shape:
+        surface_mask = np.asarray(segmentation_mask)
+        if surface_mask.shape != np.asarray(volumes[0]).shape:
             raise ValueError(
-                f"segmentation_mask shape {mask.shape} must match volume "
+                f"segmentation_mask shape {surface_mask.shape} must match volume "
                 f"{np.asarray(volumes[0]).shape}"
             )
         spacing_zyx = (spacing[2], spacing[1], spacing[0])  # (z, y, x) for skimage
-        surface = build_surface_payload(mask, spacing_zyx, level=surface_level)
+        surface = build_surface_payload(surface_mask, spacing_zyx, level=surface_level)
         return ViewerSpec(
             dims=(0, 0, 0),
             spacing=spacing,

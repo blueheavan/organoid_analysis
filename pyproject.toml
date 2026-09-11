@@ -116,6 +116,11 @@ typecheck = "mypy src/organoid_analysis"
 # and mypy currently has a large pre-existing backlog (unrelated to any one
 # change) that would otherwise hide whether lint/test/check ever ran.
 ci = { depends-on = ["lint", "test", "check", "typecheck"] }
+# `ci` is the ENGINEERING regression gate only. Scientific acceptance
+# (analytical accuracy, segmentation, assay, study design) is a separate gate
+# that exits nonzero until every item has PASS evidence; it is intentionally
+# not part of `ci`. See docs/VALIDATION_UPDATE_2026-09-11.md.
+science-gate = "python scripts/scientific_validation_gate.py"
 web = "python scripts/streamlit_run.py src/organoid_analysis/web_interface/organoid_workspace.py"
 # --- data management ---
 data = "bash scripts/download_data.sh"

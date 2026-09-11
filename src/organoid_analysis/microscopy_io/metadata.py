@@ -294,7 +294,7 @@ def parse_axes(axes: str | None) -> dict[str, int]:
     return {ch: i for i, ch in enumerate(axes)}
 
 
-def classify_axes(axes: str | None) -> dict[str, int]:
+def classify_axes(axes: str | None) -> dict[str, int | None]:
     """Return which axis indices are Z, C, T, Y, X given the axes string.
 
     This is the semantic resolution used by the reader to decide how to

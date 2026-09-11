@@ -1,0 +1,82 @@
+{
+  "large_volume": {
+    "shape_zyx": [
+      64,
+      1024,
+      1024
+    ],
+    "dtype": "uint32",
+    "array_mb": 256.0,
+    "n_objects_placed": 3000,
+    "n_rows": 3000,
+    "seconds": 6.808569208020344,
+    "peak_rss_mb_before": 134.484375,
+    "peak_rss_mb_after": 2584.0,
+    "all_rows_finite_volume": true
+  },
+  "sparse_uint32_ids": {
+    "input_ids": [
+      1,
+      2147483655,
+      4294967294
+    ],
+    "output_ids": [
+      1,
+      2147483655,
+      4294967294
+    ],
+    "preserved": true
+  },
+  "uint16_vs_uint32_identical": true,
+  "extreme_anisotropy_25x": {
+    "spacing_xyz_um": [
+      0.1,
+      0.1,
+      2.5
+    ],
+    "n_z_slices_with_object": 9,
+    "area_rel_err": 0.2640450051394998,
+    "volume_rel_err": -0.015748032620734986,
+    "qc_flags": "",
+    "warning_emitted": false
+  },
+  "degenerate_objects": [
+    {
+      "Label": 1,
+      "volume_um3": 1.0,
+      "surface_area_um2": 1.7320507764816284,
+      "sphericity": 2.792052015861155,
+      "solidity": NaN,
+      "qc_flags": "solidity_not_estimable"
+    },
+    {
+      "Label": 2,
+      "volume_um3": 9.0,
+      "surface_area_um2": 21.045757293701172,
+      "sphericity": 0.9942171258164075,
+      "solidity": NaN,
+      "qc_flags": "solidity_not_estimable"
+    },
+    {
+      "Label": 3,
+      "volume_um3": 5.0,
+      "surface_area_um2": 13.045759201049805,
+      "sphericity": 1.0839138592305022,
+      "solidity": NaN,
+      "qc_flags": "solidity_not_estimable"
+    }
+  ],
+  "empty_mask_rows": 0,
+  "export_bytes_identical": true,
+  "export_surface_area_method": {
+    "estimator": "marching_cubes_binary",
+    "method_version": "marching_cubes_binary_lewiner_v1",
+    "implementation": "skimage.measure.marching_cubes (Lewiner) + skimage.measure.mesh_surface_area",
+    "input": "binary measurement support, zero-padded by one voxel",
+    "isosurface_level": 0.5,
+    "spacing": "native physical ZYX voxel spacing",
+    "step_size": 1,
+    "smoothing": "none"
+  }
+}
+exit=0

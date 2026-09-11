@@ -1,0 +1,1 @@
+Invalid: tests/test_scientific_validation_gate.py loaded the gate script without registering it in sys.modules, so @dataclass raised AttributeError (2 test failures). Fixed in the test harness; rerun is in ../final/.
