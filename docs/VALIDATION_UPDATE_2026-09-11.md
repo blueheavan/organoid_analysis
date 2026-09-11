@@ -283,8 +283,10 @@ Remaining, by cause:
 - **Scientific validation gate:** `pixi run science-gate`. It covers analytical
   surface (SG-1), analytical volume (SG-2), segmentation (SG-3), assay (SG-4),
   statistics and study design (SG-5), and acquisition (SG-6). It exits nonzero
-  until every item has PASS evidence. It re-measures the reference sphere, so
-  evidence becomes stale if the estimator changes. It is intentionally **not**
+  until every item has PASS evidence. *(Superseded later on 2026-09-11. The original
+  single reference-sphere staleness check was replaced by a sealed evidence
+  manifest. CI was split into a required regression job and a mypy ratchet.
+  See [VALIDATION_RECORDS.md](VALIDATION_RECORDS.md).)* It is intentionally **not**
   part of `ci` or the GitHub workflow.
 - The 15% sphere assertion remains as `SURFACE_REGRESSION_TOLERANCE`. The
   <5% criterion lives only in the specification and the science gate.

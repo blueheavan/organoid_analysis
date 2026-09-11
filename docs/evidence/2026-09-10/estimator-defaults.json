@@ -103,7 +103,8 @@
     "max_depth": 5,
     "max_leaves": null,
     "min_child_weight": null,
-    "missing": NaN,
+    "missing": null,
+    "missing_non_finite": "NaN",
     "monotone_constraints": null,
     "multi_strategy": null,
     "n_estimators": 100,
@@ -135,7 +136,8 @@
     "copy": true,
     "fill_value": null,
     "keep_empty_features": true,
-    "missing_values": NaN,
+    "missing_values": null,
+    "missing_values_non_finite": "NaN",
     "strategy": "mean"
   },
   "scaler": {

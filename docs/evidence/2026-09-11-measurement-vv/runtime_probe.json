@@ -46,7 +46,8 @@
       "volume_um3": 1.0,
       "surface_area_um2": 1.7320507764816284,
       "sphericity": 2.792052015861155,
-      "solidity": NaN,
+      "solidity": null,
+      "solidity_non_finite": "NaN",
       "qc_flags": "solidity_not_estimable"
     },
     {
@@ -54,7 +55,8 @@
       "volume_um3": 9.0,
       "surface_area_um2": 21.045757293701172,
       "sphericity": 0.9942171258164075,
-      "solidity": NaN,
+      "solidity": null,
+      "solidity_non_finite": "NaN",
       "qc_flags": "solidity_not_estimable"
     },
     {
@@ -62,7 +64,8 @@
       "volume_um3": 5.0,
       "surface_area_um2": 13.045759201049805,
       "sphericity": 1.0839138592305022,
-      "solidity": NaN,
+      "solidity": null,
+      "solidity_non_finite": "NaN",
       "qc_flags": "solidity_not_estimable"
     }
   ],

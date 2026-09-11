@@ -193,5 +193,6 @@ require. It reports no result, and SG-3 remains INSUFFICIENT EVIDENCE.
 
 Two gates are now separate. The regression tolerance in `test_geometry.py`
 (15%) and the new estimator version-lock test belong to the engineering gate
-(`pixi run ci`). The scientific acceptance items are reported by
+(`pixi run regression`; `pixi run ci` adds the mypy debt ratchet). The scientific acceptance items are
+verified against a sealed evidence record (docs/VALIDATION_RECORDS.md) and reported by
 `pixi run science-gate`.

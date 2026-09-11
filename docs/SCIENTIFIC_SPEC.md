@@ -1,7 +1,7 @@
 # Scientific Specification — Organoid Pipeline
 
-Version: 1.0.0
-Date: 2026-09-02
+Version: 1.3.0
+Date: 2026-09-11
 Classification: S3 (Inferential) for the pipeline as a whole, because `src/organoid_analysis/statistics/inference.py`'s condition-comparison hypothesis testing (linear mixed-effects model + Benjamini-Hochberg FDR-corrected pairwise contrasts; `cfg["stats"]["enabled"]` defaults to `true`) is exactly the "hypothesis testing, differential analysis" example category the S3 rubric names. Core measurement/QC (morphology, hierarchy, topology, viability-state gating) is S2 (Analytical) on its own; see docs/ALGORITHM_DECISIONS.md D11 for the S3 component's method, validation status, and known small-sample-inference limitation. The bundled exploratory UI tutorial workflows (`src/organoid_analysis/statistics/exploration.py`: trained classifiers, clustering) are also S3-shaped but are explicitly out of scope of this specification's measurement claims (see docs/PARAMETERS.md, "Exploratory statistics/ML parameters").
 
 ## 1. Scientific Objective and Question
@@ -207,6 +207,8 @@ Classification: S3 (Inferential) for the pipeline as a whole, because `src/organ
 | 1.0.0 | 2026-09-02 | Initial scientific specification |
 | 1.1.0 | 2026-09-03 | Reclassified S2→S3: `stats.py`'s default-on hypothesis testing (D11) was shipped without updating this document's classification/scope/"does NOT claim" sections; corrected per an independent scientific-software audit. |
 | 1.1.1 | 2026-09-08 | §10 item 6 ("Statistical summaries") still read "No inferential tests are provided," left over from before the 1.1.0 S2→S3 reclassification and directly contradicting §1's Scope (which correctly describes the default-on LMM/BH-FDR hypothesis tests). Corrected to describe those tests' exploratory status consistently with §1. |
+| 1.2.0 | 2026-09-10 | Added §13 (current implementation audit; governing qualification of the intended use). No criterion changed. |
+| 1.3.0 | 2026-09-11 | Added §14 (scoped workflow revision) and §15 (measurement validation update). §9 criteria unchanged. The header, which still read 1.0.0 / 2026-09-02, now matches this history. |
 
 ## 12. References
 

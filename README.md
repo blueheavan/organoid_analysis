@@ -1,6 +1,6 @@
 # Organoid Pipeline — 3D 类器官分析
 
-> **Current local release assessment (2026-09-11): NOT READY FOR THE SPECIFIED RESEARCH USE.** The [measurement validation update](docs/VALIDATION_UPDATE_2026-09-11.md) gives separate engineering and scientific verdicts. The production surface estimator fails the analytical <5% criterion across 188 phantoms, and voxel volume fails <1% for objects under 12 coarse voxels per radius. Segmentation, assay and study-design validity lack qualifying evidence. `pixi run ci` is the engineering gate; `pixi run science-gate` reports the scientific items and does not pass. Earlier records: [workflow optimization](docs/WORKFLOW_OPTIMIZATION_2026-09-11.md) and [full audit](docs/VALIDATION_REPORT.md).
+> **Current local release assessment (2026-09-11): NOT READY FOR THE SPECIFIED RESEARCH USE.** The [measurement validation update](docs/VALIDATION_UPDATE_2026-09-11.md) gives separate engineering and scientific verdicts. The production surface estimator fails the analytical <5% criterion across 188 phantoms, and voxel volume fails <1% for objects under 12 coarse voxels per radius. Segmentation, assay and study-design validity lack qualifying evidence. `pixi run regression` is the required engineering gate (`pixi run ci` adds the mypy debt ratchet). `pixi run science-gate` verifies the sealed [validation record](docs/VALIDATION_RECORDS.md), reports the scientific items and does not pass. Earlier records: [workflow optimization](docs/WORKFLOW_OPTIMIZATION_2026-09-11.md) and [full audit](docs/VALIDATION_REPORT.md).
 
 用于 3D 显微镜 Z-stack 的本地类器官分析工具，提供 Cellpose 3D 分割、可审计的多层级测量、结果浏览与表格统计。项目面向 macOS Apple Silicon，使用 Pixi 管理运行环境。
 
@@ -65,7 +65,7 @@ pixi run web
 results/segmentation_output/run-*/
 ```
 
-在 **Segmentation results** 中选择 **Object layer** 可切换核/细胞。默认基于原始标签体素测量；勾选 **Measure filled outer envelopes** 后，体积、表面积、质心、主轴与 solidity 都基于填孔后的包络。历史网页的默认体积曾包含孔洞，新结果采用 feature schema `2.0`，比较历史结果时须明确测量定义。
+在 **Segmentation results** 中选择 **Object layer** 可切换核/细胞。默认基于原始标签体素测量；勾选 **Measure filled outer envelopes** 后，体积、表面积、质心、主轴与 solidity 都基于填孔后的包络。历史网页的默认体积曾包含孔洞，新结果采用 feature schema `2.1`（2.1 仅在 2.0 基础上新增 `sphericity_above_geometric_range` 复核标记，数值定义不变），比较历史结果时须明确测量定义。
 
 **Download feature CSV + provenance** 导出 `features.csv` 和 `measurement_provenance.json`，保留对象 ID、完整数值精度、QC、体素间距及其来源、选中掩膜的哈希与可用的分割运行信息。`qc_status=not_flagged` 仅表示未触发当前规则，汇总仍包含有 QC 标记的对象。采用默认体素间距时会显示警告，导出会标记 `assumed_or_unknown`；发表前须核实采集标定与实验重复结构。
 

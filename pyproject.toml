@@ -111,16 +111,22 @@ smoke = "python scripts/smoke_segmentation.py"
 test = "python -m pytest -v"
 test-render = "python -m pytest -v -m render"
 lint = "ruff check src tests scripts"
+# Full mypy with the unchanged configuration; exits 1 while the documented
+# typing debt exists. CI runs the ratchet below instead of this raw count.
 typecheck = "mypy src/organoid_analysis"
-# typecheck runs last: pixi's depends-on chain stops at the first failure,
-# and mypy currently has a large pre-existing backlog (unrelated to any one
-# change) that would otherwise hide whether lint/test/check ever ran.
-ci = { depends-on = ["lint", "test", "check", "typecheck"] }
-# `ci` is the ENGINEERING regression gate only. Scientific acceptance
+# Fails on any NEW mypy error signature and requires `--update` to lock in
+# reductions (scripts/typecheck_debt_baseline.json never grows).
+typecheck-ratchet = "python scripts/typecheck_ratchet.py"
+# Required engineering regression gate: checks with a clean expected baseline.
+regression = { depends-on = ["lint", "test", "check"] }
+ci = { depends-on = ["regression", "typecheck-ratchet"] }
+# `regression`/`ci` are ENGINEERING gates only. Scientific acceptance
 # (analytical accuracy, segmentation, assay, study design) is a separate gate
-# that exits nonzero until every item has PASS evidence; it is intentionally
-# not part of `ci`. See docs/VALIDATION_UPDATE_2026-09-11.md.
+# that exits nonzero until every item has PASS evidence from a verified,
+# canonical validation record; it is intentionally not part of `ci`.
+# See docs/VALIDATION_RECORDS.md.
 science-gate = "python scripts/scientific_validation_gate.py"
+validation-record = "python scripts/record_analytical_geometry_validation.py"
 web = "python scripts/streamlit_run.py src/organoid_analysis/web_interface/organoid_workspace.py"
 # --- data management ---
 data = "bash scripts/download_data.sh"

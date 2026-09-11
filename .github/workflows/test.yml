@@ -1,16 +1,42 @@
 name: test
 
-# The pixi environment only targets osx-arm64 (Apple Silicon), so this
-# workflow runs exclusively on the arm64 macOS runner GitHub provides.
+# The pixi environment only targets osx-arm64 (Apple Silicon), so these jobs
+# run exclusively on the arm64 macOS runner GitHub provides.
+#
+# Two independent jobs, so known typing debt cannot hide a regression:
+#   engineering-regression  lint + tests + notebook check. Expected green; mark
+#                           it REQUIRED in branch protection.
+#   typecheck-debt          full mypy through a ratchet: fails only on NEW error
+#                           signatures or on reductions not yet locked into
+#                           scripts/typecheck_debt_baseline.json.
+# The scientific gate (`pixi run science-gate`) is deliberately not run here:
+# it exits nonzero until the scientific items have PASS evidence.
 on:
   push:
     branches: [main]
   pull_request:
 
 jobs:
-  test:
+  engineering-regression:
     runs-on: macos-14
     timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: the evidence-integrity tests verify that recorded
+          # source hashes are the content of the validated source commit.
+          fetch-depth: 0
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+
+      - name: Lint, tests (incl. evidence-integrity tests), notebook check
+        run: pixi run regression
+
+  typecheck-debt:
+    runs-on: macos-14
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -18,12 +44,5 @@ jobs:
         with:
           cache: true
 
-      # `ci` runs lint, test, check, then typecheck (in that order -- pixi's
-      # depends-on chain stops at the first failure, and mypy currently has a
-      # large pre-existing backlog unrelated to any one change, so it runs
-      # last to keep lint/test/check's pass/fail signal visible regardless).
-      # This is expected to fail on the typecheck step until that backlog is
-      # paid down as its own tracked effort; treat a failure here as "check
-      # which step failed," not as "nothing was verified."
-      - name: Run lint, tests, notebook check, and typecheck
-        run: pixi run ci
+      - name: Full mypy, ratcheted against the recorded debt baseline
+        run: pixi run typecheck-ratchet

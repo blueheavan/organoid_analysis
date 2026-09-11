@@ -1,0 +1,261 @@
+{
+  "schema": "organoid-analysis/strict-json-conversion/1",
+  "policy": "Evidence JSON is strict RFC 8259 JSON. Non-finite numbers are written as null with a sibling '<key>_non_finite' marker ('NaN', 'Infinity' or '-Infinity'); list elements are recorded here.",
+  "conversions": [
+    {
+      "path": "docs/evidence/2026-09-10/estimator-defaults.json",
+      "original_sha256": "ffcab86c39da40523d23d95257e21c75f191070169c25390b08c05931a890551",
+      "original_retrievable_with": "git show 9e9ff9793f9d6c2427250a9f9eb9a09e74e3f062:docs/evidence/2026-09-10/estimator-defaults.json",
+      "original_matches_that_commit": true,
+      "converted_sha256": "376ade5e3518d16f8129d4e5712290679ce50b5afa07619aee5a43cd90b23c93",
+      "replacements": [
+        {
+          "pointer": "/XGB/missing",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/imputer/missing_values",
+          "original": "NaN"
+        }
+      ]
+    },
+    {
+      "path": "docs/evidence/2026-09-11-measurement-vv/runtime_probe.json",
+      "original_sha256": "dbaae3766ffe2d64984f46997be85737ba5efe09f311d64a2e7007529b5c976f",
+      "original_retrievable_with": "git show 5143be4001a5f5430b1ef46cb8c887aca3ba45de:docs/evidence/2026-09-11-measurement-vv/runtime_probe.json",
+      "original_matches_that_commit": true,
+      "converted_sha256": "a2a3ba31eb4367ee78188903f76a697258efae775877a6c123ea900d1682aa34",
+      "replacements": [
+        {
+          "pointer": "/degenerate_objects/0/solidity",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/degenerate_objects/1/solidity",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/degenerate_objects/2/solidity",
+          "original": "NaN"
+        }
+      ]
+    },
+    {
+      "path": "docs/evidence/2026-09-11-measurement-vv/surface_vv_dev_summary.json",
+      "original_sha256": "bf19740bb99f2855e32eba9a76e7da7ea82819405f317828124b062ffe0c07a9",
+      "original_retrievable_with": "git show 5143be4001a5f5430b1ef46cb8c887aca3ba45de:docs/evidence/2026-09-11-measurement-vv/surface_vv_dev_summary.json",
+      "original_matches_that_commit": true,
+      "converted_sha256": "09bae6e3f549a373c33c02ea23e00643b4f6c23e558cba1d7d9a5603ce65f352",
+      "replacements": [
+        {
+          "pointer": "/area/overall/1/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/overall/3/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape/3/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape/4/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape/5/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape/9/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape/10/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape/11/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/rho_stratum/7/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/rho_stratum/15/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing/5/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing/6/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing/7/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing/13/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing/14/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing/15/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/anisotropy/5/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/anisotropy/6/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/anisotropy/7/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/anisotropy/13/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/anisotropy/14/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/anisotropy/15/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/15/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/19/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/23/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/39/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/43/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/mean_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/median_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/mean_abs",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/median_abs",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/min_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/shape_x_rho/47/max_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/21/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/25/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/29/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/mean_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/median_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/mean_abs",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/median_abs",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/min_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/51/max_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/mean_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/median_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/mean_abs",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/median_abs",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/max_abs",
+          "original": "Infinity"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/min_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/55/max_signed",
+          "original": "NaN"
+        },
+        {
+          "pointer": "/area/spacing_x_rho/59/max_abs",
+          "original": "Infinity"
+        }
+      ]
+    }
+  ]
+}

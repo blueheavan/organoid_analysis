@@ -1,0 +1,5 @@
+{
+  "contract_id": "analytical-geometry/1",
+  "manifest": "docs/evidence/2026-09-11-analytical-geometry-record/evidence_manifest.json",
+  "note": "Selects the record the scientific gate verifies. Not hashed by any record; it can only choose among records that verify against the current repository."
+}
