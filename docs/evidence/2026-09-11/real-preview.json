@@ -1,0 +1,35 @@
+{
+  "path": "data/images/Human-Colon-Organoids-C1.tif",
+  "file_sha256": "6eb44c9da1ae69f165bbca3c2d100138d1d733f5ce5642d1ebe36ee54cfd7970",
+  "shape_zyx": [
+    16,
+    512,
+    512
+  ],
+  "spacing_xyz_um": [
+    0.24420000566544012,
+    0.24420000566544012,
+    2.0
+  ],
+  "preview_shape_zyx": [
+    16,
+    107,
+    107
+  ],
+  "preview_spacing_xyz_um": [
+    1.1772283291984897,
+    1.1772283291984897,
+    2.0
+  ],
+  "center_extent_xyz_um": [
+    124.7862028950399,
+    124.7862028950399,
+    30.0
+  ],
+  "array_budget_bytes": 1000000,
+  "estimated_array_payload_bytes": 981866,
+  "source_array_sha256": "101afae411eea248f391cea0f7ec868ed213bbf5114f90cf8f1eff190409b6a6",
+  "source_unchanged": true,
+  "runtime_status": "PASS",
+  "segmentation_accuracy": "NOT ASSESSED"
+}

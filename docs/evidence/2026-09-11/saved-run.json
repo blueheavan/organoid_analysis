@@ -1,0 +1,17 @@
+{
+  "run": "results/segmentation_output/run-20260910-092826-672784",
+  "mask_sha256": "a89840ce42e866458e5d1807c6d1f0ff8bc96bfa3860322155310d97d3197608",
+  "shape_zyx": [
+    32,
+    128,
+    144
+  ],
+  "n_objects": 6,
+  "n_review_objects": 0,
+  "summed_raw_volume_um3": 62622.0,
+  "counted_raw_volume_um3": 62622.0,
+  "bundle_sha256": "13ea194b780be54d599de444d61650dadadeec92e5b6367ff5f3dc2503a44f71",
+  "runtime_status": "PASS",
+  "input_domain": "Existing saved segmentation; biological or synthetic origin not independently qualified",
+  "biological_accuracy": "NOT ASSESSED"
+}

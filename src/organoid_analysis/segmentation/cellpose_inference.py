@@ -22,6 +22,11 @@ from organoid_analysis.microscopy_io import (
     read_axes,
     validate_voxel_spacing_xyz,
 )
+from organoid_analysis.microscopy_io.resampling import (
+    isotropic_xy_scale,
+    resampled_spacing_xyz,
+    xy_downsample_shape,
+)
 from organoid_analysis.microscopy_io.tiff_contract import git_commit_hash, source_code_hashes
 from organoid_analysis.microscopy_io.tiff_contract import sha256 as _hash_file
 from organoid_analysis.segmentation.paths import SEGMENTATION_OUTPUT_DIR, detect_torch_acceleration
@@ -232,21 +237,19 @@ def segment_stacks(
         on_progress(0.0)
 
     downsample = config.xy_downsample
-    if not 0 < downsample <= 1.0:
-        raise ValueError("xy_downsample must be in (0, 1], with 1.0 meaning full resolution.")
-    if any(round(size * downsample) < 2 for size in nuclei.shape[1:]):
-        raise ValueError("xy_downsample would leave fewer than two XY pixels")
+    working_shape = xy_downsample_shape(nuclei.shape, downsample)
+    effective_scale = isotropic_xy_scale(nuclei.shape, working_shape)
     work_nuclei = nuclei
     if downsample < 1.0:
         from scipy import ndimage
 
         factors = (1.0, downsample, downsample)
-        work_nuclei = ndimage.zoom(nuclei, factors, order=1)
+        work_nuclei = ndimage.zoom(nuclei, factors, order=1, output=np.float32, grid_mode=False)
 
     common = {
         "z_axis": 0,
         "do_3D": config.model_type in _3D_CAPABLE,
-        "anisotropy": config.anisotropy * downsample,
+        "anisotropy": config.anisotropy * effective_scale,
         "flow3D_smooth": config.flow3d_smooth,
         "batch_size": config.batch_size,
     }
@@ -265,7 +268,7 @@ def segment_stacks(
             nuclei_masks = _validated_mask(
                 model.eval(
                     work_nuclei,
-                    diameter=config.nuclei_diameter * downsample,
+                    diameter=config.nuclei_diameter * effective_scale,
                     flow_threshold=config.nuclei_flow_threshold,
                     cellprob_threshold=config.nuclei_cellprob_threshold,
                     **common,
@@ -284,7 +287,10 @@ def segment_stacks(
             # derived from `cells`, which this `if` has already narrowed to
             # non-None, using the exact same downsample/factors as
             # `work_nuclei` above -- no behavior change from the prior code.
-            work_cells = ndimage.zoom(cells, factors, order=1) if downsample < 1.0 else cells
+            work_cells = (
+                ndimage.zoom(cells, factors, order=1, output=np.float32, grid_mode=False)
+                if downsample < 1.0 else cells
+            )
             cell_input = np.stack((work_cells, work_nuclei), axis=-1)
             restore = _wrap_run_3d(on_progress, 0.55, 1.0)
             try:
@@ -292,7 +298,7 @@ def segment_stacks(
                     model.eval(
                         cell_input,
                         channel_axis=-1,
-                        diameter=config.cell_diameter * downsample,
+                        diameter=config.cell_diameter * effective_scale,
                         flow_threshold=config.cell_flow_threshold,
                         cellprob_threshold=config.cell_cellprob_threshold,
                         **common,
@@ -348,7 +354,7 @@ def _upsample_masks(masks: np.ndarray, full_shape: tuple[int, ...]) -> np.ndarra
     # scipy is untyped, so ndimage.zoom(...).astype(...) resolves to Any;
     # np.asarray only fixes that static view -- .astype() already returns a
     # real ndarray at runtime, so this changes no value or dtype.
-    return np.asarray(ndimage.zoom(masks, factors, order=0, mode="nearest").astype(np.uint32))
+    return np.asarray(ndimage.zoom(masks, factors, order=0, mode="nearest", grid_mode=False).astype(np.uint32))
 
 
 def _wrap_run_3d(
@@ -468,6 +474,9 @@ def build_provenance(
             "dtype": cell_dtype or "unavailable",
             "shape": list(input_shape),
         }
+    working_shape = xy_downsample_shape(input_shape, config.xy_downsample)
+    working_spacing = resampled_spacing_xyz(input_shape, working_shape, (x_um, y_um, z_um))
+    effective_scale = isotropic_xy_scale(input_shape, working_shape)
     return {
         "pipeline_version": __version__,
         "git_commit": git_commit_hash(),
@@ -491,6 +500,19 @@ def build_provenance(
         "spacing_um": {"x": x_um, "y": y_um, "z": z_um},
         "xy_spacing_source": config.xy_spacing_source,
         "anisotropy_source": config.anisotropy_source,
+        "resampling": {
+            "grid_convention": "voxel_centers_grid_mode_false",
+            "requested_xy_factor": config.xy_downsample,
+            "working_shape_zyx": list(working_shape),
+            "working_spacing_xyz_um": list(working_spacing),
+            "effective_xy_scale": effective_scale,
+            "working_nuclei_diameter_px": config.nuclei_diameter * effective_scale,
+            "working_cell_diameter_px": config.cell_diameter * effective_scale,
+            "working_anisotropy": config.anisotropy * effective_scale,
+            "intensity_interpolation_order": 1 if config.xy_downsample < 1 else None,
+            "intensity_resampling_dtype": "float32" if config.xy_downsample < 1 else None,
+            "label_interpolation_order": 0 if config.xy_downsample < 1 else None,
+        },
     }
 
 

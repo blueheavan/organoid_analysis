@@ -26,10 +26,12 @@ import os
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 import hashlib
+import json
 import queue
 import tempfile
 import threading
 import time
+from dataclasses import asdict
 from pathlib import Path
 from typing import TypedDict
 
@@ -47,11 +49,17 @@ from organoid_analysis.microscopy_io import (  # noqa: E402
     isotropic_xy_size_um,
     resolve_spacing_source,
 )
+from organoid_analysis.microscopy_io.resampling import (
+    isotropic_xy_scale,
+    resampled_spacing_xyz,
+    xy_downsample_shape,
+)
 from organoid_analysis.quantification.mask_features import (  # noqa: E402
     count_mask_objects,
     extract_mask_features,
     summarize_features,
 )
+from organoid_analysis.result_export.mask_feature_bundle import build_mask_feature_bundle
 from organoid_analysis.segmentation.cellpose_inference import (  # noqa: E402
     SegmentationConfig,
     config_spacing,
@@ -165,22 +173,34 @@ def _fit_viewer_payload_budget(
     """
     if not volumes:
         return volumes, mask, spacing
-    z, y, x = volumes[0].shape
+    source_shape = volumes[0].shape
+    if len(source_shape) != 3 or any(v.shape != source_shape for v in volumes) or (mask is not None and mask.shape != source_shape):
+        raise ValueError("All preview channels and labels must share one ZYX grid")
+    z, y, x = source_shape
     n_arrays = len(volumes) + (1 if mask is not None else 0)
     estimated_bytes = z * y * x * 4 * n_arrays * 1.34
     if estimated_bytes <= _VIEWER_PAYLOAD_BUDGET_BYTES:
         return volumes, mask, spacing
-    factor = max(0.1, min(1.0, (_VIEWER_PAYLOAD_BUDGET_BYTES / estimated_bytes) ** 0.5))
+    max_xy_pixels = int(_VIEWER_PAYLOAD_BUDGET_BYTES / (z * 4 * n_arrays * 1.34))
+    if max_xy_pixels < 4 or min(y, x) < 2:
+        raise ValueError("Preview exceeds the browser budget even at two XY pixels; select a smaller Z-stack")
+    factor = (max_xy_pixels / (y * x)) ** 0.5
+    target_y = max(2, min(y, int(y * factor)))
+    target_x = max(2, min(x, int(x * factor)))
+    if target_y * target_x > max_xy_pixels:
+        if target_y == 2:
+            target_x = max_xy_pixels // 2
+        else:
+            target_y = max_xy_pixels // target_x
     from scipy import ndimage
 
-    zoom_xy = (1.0, factor, factor)
+    zoom_xy = (1.0, target_y / y, target_x / x)
     volumes = [
-        ndimage.zoom(v, zoom_xy, order=1).astype(np.float32, copy=False) for v in volumes
+        ndimage.zoom(v, zoom_xy, order=1, output=np.float32, grid_mode=False) for v in volumes
     ]
     if mask is not None:
-        mask = ndimage.zoom(mask, zoom_xy, order=0).astype(mask.dtype, copy=False)
-    sx, sy, sz = spacing
-    spacing = (sx / factor, sy / factor, sz)
+        mask = ndimage.zoom(mask, zoom_xy, order=0, grid_mode=False)
+    spacing = resampled_spacing_xyz(source_shape, volumes[0].shape, spacing)
     return volumes, mask, spacing
 
 
@@ -311,7 +331,7 @@ def render_preview_tab(config: SegmentationConfig) -> None:
             st.session_state["input_key"] = input_key
             for key in ("nuclei_masks", "cell_masks", "segmentation_result",
                         "segmentation_config", "orig_nuclei", "orig_cells",
-                        "features", "summary", "feature_key"):
+                        "features", "summary", "feature_key", "feature_bundle"):
                 st.session_state.pop(key, None)
 
         # Store originals so the results / analysis tabs can show the
@@ -333,8 +353,12 @@ def render_preview_tab(config: SegmentationConfig) -> None:
             vols = [nuclei]
             channels = [ChannelConfig(lut="cyan", opacity=0.9, name="Nuclei")]
 
-        preview_vols, _, preview_spacing = _fit_viewer_payload_budget(vols, None, spacing)
-        st_volume_viewer(preview_vols, spacing_um=preview_spacing, channels=channels, height=620)
+        try:
+            preview_vols, _, preview_spacing = _fit_viewer_payload_budget(vols, None, spacing)
+        except ValueError as error:
+            st.warning(f"3D preview unavailable: {error}")
+        else:
+            st_volume_viewer(preview_vols, spacing_um=preview_spacing, channels=channels, height=620)
         st.caption(
             "Intensity preview. Set segmentation parameters in the sidebar and run below."
         )
@@ -440,6 +464,12 @@ def _run_segmentation(
     *, nuclei_digest: str, nuclei_channel: int,
     cells_digest: str | None, cells_channel: int | None,
 ) -> None:
+    try:
+        working_shape = xy_downsample_shape(nuclei.shape, config.xy_downsample)
+        isotropic_xy_scale(nuclei.shape, working_shape)
+    except ValueError as error:
+        st.error(str(error))
+        return
     task: _ProgressState = {"start": time.monotonic(), "frac": 0.0, "estimated": None}
     result_queue: queue.Queue = queue.Queue()
 
@@ -504,7 +534,7 @@ def _run_segmentation(
         st.session_state["cell_masks"] = cell_masks
     else:
         st.session_state.pop("cell_masks", None)
-    for key in ("features", "summary", "feature_key"):
+    for key in ("features", "summary", "feature_key", "feature_bundle"):
         st.session_state.pop(key, None)
     msg = f"Finished: {result.nuclei_count} nuclei detected"
     if cell_masks is not None:
@@ -535,6 +565,23 @@ def render_results_tab(config: SegmentationConfig) -> None:
         with metric_cols[1]:
             st.metric("Cells detected", result.cell_count if result is not None else count_mask_objects(cell_masks))
 
+    layer = st.selectbox(
+        "Object layer", ["Nuclei", "Cells"] if cell_masks is not None else ["Nuclei"],
+        key="feature_object_layer",
+    )
+    selected_masks = cell_masks if layer == "Cells" and cell_masks is not None else nuclei_masks
+    object_type = "cell" if layer == "Cells" else "nucleus"
+    fill_holes = st.checkbox(
+        "Measure filled outer envelopes", value=False, key="feature_fill_holes",
+        help="Default: measure the raw label voxels. Filling enclosed holes changes volume, surface, centroid, axes and solidity together.",
+    )
+    st.caption(
+        f"Measuring {layer.lower()} · {'filled outer envelope' if fill_holes else 'raw label voxels'} · "
+        f"voxel size XYZ = {spacing} µm. All objects are retained with review flags."
+    )
+    if "default" in (result_config.xy_spacing_source, result_config.anisotropy_source):
+        st.warning("Physical measurements use assumed voxel spacing. Verify the acquisition calibration before using them in a publication.")
+
     # Use the original intensity image (if stored) so the overlay is meaningful;
     # fall back to the mask values when originals are unavailable.
     orig_nuclei = st.session_state.get("orig_nuclei")
@@ -553,24 +600,28 @@ def render_results_tab(config: SegmentationConfig) -> None:
             vols = [orig_nuclei]
             chs = [ChannelConfig(lut="cyan", opacity=0.9, name="Nuclei")]
     else:
-        vols = [nuclei_masks.astype(np.float32, copy=False)]
+        vols = [selected_masks.astype(np.float32, copy=False)]
         chs = [ChannelConfig(lut="gray", opacity=0.5, name="Mask")]
 
-    preview_vols, preview_mask, preview_spacing = _fit_viewer_payload_budget(vols, nuclei_masks, spacing)
-    st_volume_viewer(
-        preview_vols,
-        spacing_um=preview_spacing,
-        channels=chs,
-        render_mode="volume",
-        mask_overlay=preview_mask,
-        mask_overlay_alpha=0.6,
-        height=620,
-    )
-    if preview_vols[0].shape != nuclei_masks.shape:
-        st.caption(
-            f"3D preview downsampled to {preview_vols[0].shape} for browser display "
-            f"(full resolution {nuclei_masks.shape} used for all measurements below)."
+    try:
+        preview_vols, preview_mask, preview_spacing = _fit_viewer_payload_budget(vols, selected_masks, spacing)
+    except ValueError as error:
+        st.warning(f"3D preview unavailable: {error}")
+    else:
+        st_volume_viewer(
+            preview_vols,
+            spacing_um=preview_spacing,
+            channels=chs,
+            render_mode="volume",
+            mask_overlay=preview_mask,
+            mask_overlay_alpha=0.6,
+            height=620,
         )
+        if preview_vols[0].shape != nuclei_masks.shape:
+            st.caption(
+                f"3D preview downsampled to {preview_vols[0].shape} for browser display "
+                f"(full resolution {nuclei_masks.shape} used for all measurements below)."
+            )
     st.caption("Colored contours = object boundaries; translucent shell = 3D surface.")
     with st.expander("How to review this segmentation", expanded=False):
         st.markdown(
@@ -586,9 +637,30 @@ def render_results_tab(config: SegmentationConfig) -> None:
         feature_key = (
             str(result.run_directory) if result is not None else id(nuclei_masks),
             tuple(spacing),
+            object_type,
+            id(selected_masks),
+            fill_holes,
+            result_config,
         )
         if st.session_state.get("feature_key") != feature_key:
-            st.session_state["features"] = extract_mask_features(nuclei_masks, spacing_um=spacing)
+            features = extract_mask_features(selected_masks, spacing_um=spacing, fill_holes=fill_holes)
+            segmentation_provenance = None
+            if result is not None:
+                provenance_path = result.run_directory / "provenance.json"
+                if provenance_path.is_file():
+                    try:
+                        segmentation_provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+                        if not isinstance(segmentation_provenance, dict):
+                            raise ValueError("Run provenance must be a JSON object")
+                    except (OSError, ValueError):
+                        segmentation_provenance = None
+                        st.warning("Saved run provenance could not be read; the download will mark it unavailable.")
+            st.session_state["feature_bundle"] = build_mask_feature_bundle(
+                selected_masks, features, spacing_um=spacing, object_type=object_type,
+                fill_holes=fill_holes, segmentation_config=asdict(result_config),
+                segmentation_provenance=segmentation_provenance,
+            )
+            st.session_state["features"] = features
             st.session_state["feature_key"] = feature_key
         features = st.session_state["features"]
         st.session_state["features"] = features
@@ -596,6 +668,15 @@ def render_results_tab(config: SegmentationConfig) -> None:
             st.warning("No objects found in the mask.")
         else:
             st.dataframe(features.reset_index(), use_container_width=True)
+            reviewed = int(features["qc_status"].eq("review").sum())
+            if reviewed:
+                st.warning(f"{reviewed} objects need review; consult qc_flags before interpretation. Summaries include these objects.")
+
+        st.download_button(
+            "Download feature CSV + provenance", data=st.session_state["feature_bundle"],
+            file_name=f"{object_type}_{'envelope' if fill_holes else 'raw'}_features.zip",
+            mime="application/zip",
+        )
 
     summary = summarize_features(features)
     st.session_state["summary"] = summary
@@ -625,12 +706,12 @@ def render_analysis_tab() -> None:
     with st.expander("What these feature statistics mean", expanded=True):
         st.markdown(
             "This tab summarizes labels from the current uploaded image only. It is descriptive and does "
-            "not compare treatments or estimate viability. **Volume** is the hole-filled mask volume in "
+            "not compare treatments or estimate viability. **Volume** uses the selected raw-label or filled-envelope geometry in "
             "µm³; **surface area** is a marching-cubes estimate in µm²; **sphericity** compares the mask "
             "with an equal-volume sphere; **solidity** compares the labeled object with its convex hull; "
             "and principal axes describe a moment-equivalent ellipsoid. Values depend on the entered voxel "
-            "spacing and mask quality. Border-clipped, merged, or split labels should be excluded upstream "
-            "rather than interpreted as unusual biology."
+            "spacing and mask quality. QC flags remain in the exported table and these summaries include "
+            "flagged objects; define and document study-specific exclusions before group analysis."
         )
 
     numeric = features.select_dtypes(include=[np.number])

@@ -163,3 +163,14 @@ The §VR-4 instruction to document bias does **not** waive SCIENTIFIC_SPEC §9's
 | A10 Real research validity | Expert/orthogonal assay reference independent of development; independent biological unit | Representative normal/low-signal/saturated/aniso/dense/hollow acquisitions; actual donor/well/batch design; qualified labels/assay | Required minimum N and precision are NOT ASSESSED because intended experiment/reference uncertainty is unavailable. Do not declare PASS from object count or one crop. |
 
 Sample size for deterministic mathematical fixtures is the number of explicitly exercised cases, not an estimate of population accuracy; statistical confidence intervals are inapplicable to exact arithmetic. For real biological performance the missing N/precision/reference qualification leads to INSUFFICIENT EVIDENCE. Any future calibration or acceptance change must be predeclared and evaluated on held-out independent units.
+
+## 2026-09-11 scoped workflow optimization
+
+[O1–O7](evidence/2026-09-11/PLAN.md) predeclare raw/envelope geometry, precision,
+QC, effective resampling scales, preview budget, feature exports and interface
+verification. They do not relax A9's surface accuracy requirement or replace
+A10's qualified biological evidence. Historical A3 tests asserting requested
+scale are updated to the independently derived center-grid scale; interpolation
+coordinates, fractional intensities and unsupported rectangular grids are tested
+explicitly. The [scoped report](WORKFLOW_OPTIMIZATION_2026-09-11.md) separates
+these new contract checks from the broader unresolved research-readiness items.

@@ -1,0 +1,8 @@
+docs/evidence/2026-09-10/artifact_check.py
+docs/evidence/2026-09-10/parameter_registry.py
+docs/evidence/2026-09-10/audit_probe.py
+docs/evidence/2026-09-10/capture_snapshot.py
+✨ Pixi task (lint): ruff check src tests scripts
+All checks passed!
+✨ Pixi task (check): python scripts/validate_notebooks.py
+No notebooks found; notebook validation not applicable.

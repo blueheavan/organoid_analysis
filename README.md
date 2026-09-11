@@ -1,6 +1,6 @@
 # Organoid Pipeline — 3D 类器官分析
 
-> **Current local release assessment (2026-09-10): NOT READY FOR THE SPECIFIED RESEARCH USE.** The full audit found a failed surface-accuracy specification and missing project-specific segmentation, threshold and inferential validation. Engineering and controlled-test results are bounded separately in [the validation report](docs/VALIDATION_REPORT.md).
+> **Current local release assessment (2026-09-11): NOT READY FOR THE SPECIFIED RESEARCH USE.** Surface-accuracy and project-specific segmentation, threshold and inferential validation remain unresolved. The [workflow optimization record](docs/WORKFLOW_OPTIMIZATION_2026-09-11.md) covers the latest calibration, measurement and export repairs; [the full audit](docs/VALIDATION_REPORT.md) documents the broader evidence limits.
 
 用于 3D 显微镜 Z-stack 的本地类器官分析工具，提供 Cellpose 3D 分割、可审计的多层级测量、结果浏览与表格统计。项目面向 macOS Apple Silicon，使用 Pixi 管理运行环境。
 
@@ -55,7 +55,7 @@ pixi run web
 
 1. **Upload & preview**：上传并检查 nucleus Z-stack；如需 cell mask，也上传已配准的 cell/cytoplasm Z-stack。
 2. **Segmentation results**：执行 Cellpose 3D 分割，查看 mask overlay 和对象结果。
-3. **Object features**：查看分割 mask 的对象级描述性特征。
+3. **Object features**：选择核或细胞，查看原始 3D mask 的对象级特征、边界/碎片 QC，并下载完整精度 CSV 与测量溯源 JSON。
 4. **3D Analysis results**：恢复保存的 segmentation，或读取完整多层级分析结果。
 5. **Statistical analysis (Excel)**：使用现有表格进行探索性统计。
 
@@ -64,6 +64,12 @@ pixi run web
 ```text
 results/segmentation_output/run-*/
 ```
+
+在 **Segmentation results** 中选择 **Object layer** 可切换核/细胞。默认基于原始标签体素测量；勾选 **Measure filled outer envelopes** 后，体积、表面积、质心、主轴与 solidity 都基于填孔后的包络。历史网页的默认体积曾包含孔洞，新结果采用 feature schema `2.0`，比较历史结果时须明确测量定义。
+
+**Download feature CSV + provenance** 导出 `features.csv` 和 `measurement_provenance.json`，保留对象 ID、完整数值精度、QC、体素间距及其来源、选中掩膜的哈希与可用的分割运行信息。`qc_status=not_flagged` 仅表示未触发当前规则，汇总仍包含有 QC 标记的对象。采用默认体素间距时会显示警告，导出会标记 `assumed_or_unknown`；发表前须核实采集标定与实验重复结构。
+
+预览缩小时保持实际体素中心坐标范围，原始数组继续用于定量。Cellpose 降采样按实际网格调整直径与 Z/XY 比例；若非方形图像取整后产生不一致的 X/Y 尺度，会提示改用 **Full resolution**。加速分割与全分辨率分割的生物学等价性尚未验证。
 
 刷新页面或关闭浏览器后，可在 **3D Analysis results** 使用 **Restore saved Cellpose segmentation** 恢复 nuclei/cell masks。没有 cell mask 的历史分割不能用于多层级分析，因为不能由 nucleus、MIP 或投影图推断 cell labels。
 

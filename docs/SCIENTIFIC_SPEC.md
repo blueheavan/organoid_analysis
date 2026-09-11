@@ -180,7 +180,7 @@ Classification: S3 (Inferential) for the pipeline as a whole, because `src/organ
 
 ### Known limitations
 1. **Segmentation accuracy:** Depends on image quality, staining, and organoid density. No claim of general accuracy without independent validation.
-2. **Envelope geometry:** Measures outer envelope, not internal structure. Enclosed lumens are filled by default.
+2. **Envelope geometry:** Classical organoid analysis fills enclosed lumens by default. Multilevel and Web object features measure raw labels by default; the Web offers an explicit filled-envelope option. These are distinct measurement definitions.
 3. **Sphericity bias:** Voxel discretization can produce values >1.0. Values >1.05 are flagged but not corrected.
 4. **Intensity measurements:** Raw intensities are not normalized across experiments. Cross-experiment comparison requires separate normalization.
 5. **Viability states:** Calcein/PI states describe signal patterns, not cell viability fraction. States are not validated against independent viability assays.
@@ -225,7 +225,7 @@ The preceding intended research use is retained, **not validated by its presence
 | Read (S1–S2: identity and units) | `microscopy_io/tiff_contract.py` reads manifest-driven CZYX with ≥3 planes, OME or explicit calibration. `zstack_reader.py` reads first series into ZYX/CZYX with ImageJ/TIFF/OME calibration; time selection explicit in API, multi-time upload rejected by Web. Cellpose legacy QYX/IYX fallback assumes a grayscale Z-stack and leaves spacing unknown. | Exact identity/units/time/channel tests; acquisition grid qualification; corrupted/unknown metadata rejection. |
 | Inspect (S2 if it guides selection) | Web preview uses a separate display payload with percentile contrast and possible uint8/downsampling. Native VTK, browser vtk.js and 2D orthogonal views are distinct rendering paths. | Axis/spacing and raw-data preservation tests; actual renderer checks; browser upload and visual performance assessed separately. |
 | Segment (S2) | Classical structural watershed/probability/imported labels and Web Cellpose cell/nucleus masks are separate routes. Cellpose alone does not produce a qualified organoid envelope. | Qualified independent 3D annotations, object-level detection/overlap and acquisition strata; parameter calibration and held-out sensitivity. |
-| Quantify (S2) | Classical geometry measures filled organoid envelopes and eligibility-filtered summaries. Web object features measure filled size/axes but raw centroid/solidity and no classical eligibility exclusion. `analyze-3d` accepts registered organoid/cell/nucleus labels and measures raw voxels, with review flags but no automatic aggregate exclusion. | Analytic volumes/moments/contact; surface accuracy; raw/envelope semantics; intensity/registration/saturation qualification. |
+| Quantify (S2) | Classical geometry measures filled organoid envelopes and eligibility-filtered summaries. Since 2026-09-11 Web feature schema 2.0 measures raw nucleus/cell labels by default; optional envelopes use one support for all geometry metrics, with full precision and review flags. `analyze-3d` measures raw registered labels. Web/multilevel summaries retain flagged objects. | Analytic volumes/moments/contact; surface accuracy; raw/envelope semantics; intensity/registration/saturation qualification. |
 | Infer/explore (S3) | `statistics/inference.py` fits object-level LMM or clustered OLS; `aggregation.py` reports equal-well replicate summaries; `exploration.py` supplies row-level tests/classifiers/clustering. | Correct independent units/design, residual assumptions, type-I error/CI coverage, multiplicity family, group-aware validation. |
 | Export (S1–S2) | CLI CSV/JSON/OME; multilevel Parquet/JSON/OME; Cellpose ZIP/OME/summary/provenance. Missing data are not evidence of zero effects or successful tests. | ID/unit round trips, complete/incomplete outputs, source/config/model/input traceability. |
 
@@ -242,3 +242,25 @@ The earlier list of supported stains does not establish that a nuclear channel o
 Analytical voxel solids and hand-counted label relationships qualify numerical arithmetic only. The demo generator is project-owned and shares signal assumptions with viability classification; it is not independent assay validation. The local real files are identified by hashes, but acquisition provenance, stain identity, annotator protocol, blinding, adjudication, inter-annotator agreement and biological sample independence are unavailable. The model smoke test measures executability on one crop, not accuracy.
 
 For biological segmentation/viability/statistical claims, required N, precision target and operating strata must come from the actual experiment and qualified reference uncertainty. No defensible universal N or error target can be inferred here; status is INSUFFICIENT EVIDENCE. Clinical/decision-critical intended use is absent; S4 decision-risk and regulatory conformity assessment are NOT APPLICABLE to this audit.
+
+## 14. Scoped workflow revision — 2026-09-11
+
+S2 changes and predeclared acceptance are in [the optimization plan](evidence/2026-09-11/PLAN.md).
+The measurement unit is the selected nucleus/cell instance in one field; no
+experimental independence is inferred. Web `volume_um3`, centroid, surface,
+solidity and axes now share either raw-label support (default) or explicitly
+filled support. `voxel_count` and `segmented_volume_um3` always retain raw-label
+counts/volume; `filled_voxel_count` records the added voxels. Border contact,
+face-disconnected fragments, envelopes enclosing another instance and undefined
+solidity are review flags, with no automatic exclusion. Sparse labels retain
+their identities. The retained legacy `minor_axis_um` column means the
+intermediate diameter, and `least_axis_um` means the smallest diameter;
+`equivalent_disk_um` is an alias of `equivalent_sphere_diameter_um`.
+
+Preview and Cellpose resampling use SciPy's center-grid coordinate convention.
+Diameter/anisotropy follow actual rounded grid dimensions; Cellpose rejects
+unequal effective X/Y scales. Feature bundles record spacing origins, source and
+mask hashes and available run lineage. Default/unknown calibration is explicit,
+not upgraded to verified metadata. These changes do not resolve the surface
+accuracy criterion, establish segmentation accuracy, or validate biological
+statistics. No statistical model or biological threshold changed.

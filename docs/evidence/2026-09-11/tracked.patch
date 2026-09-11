@@ -1,0 +1,897 @@
+diff --git a/README.md b/README.md
+index af74450..2030e01 100644
+--- a/README.md
++++ b/README.md
+@@ -1,6 +1,6 @@
+ # Organoid Pipeline — 3D 类器官分析
+ 
+-> **Current local release assessment (2026-09-10): NOT READY FOR THE SPECIFIED RESEARCH USE.** The full audit found a failed surface-accuracy specification and missing project-specific segmentation, threshold and inferential validation. Engineering and controlled-test results are bounded separately in [the validation report](docs/VALIDATION_REPORT.md).
++> **Current local release assessment (2026-09-11): NOT READY FOR THE SPECIFIED RESEARCH USE.** Surface-accuracy and project-specific segmentation, threshold and inferential validation remain unresolved. The [workflow optimization record](docs/WORKFLOW_OPTIMIZATION_2026-09-11.md) covers the latest calibration, measurement and export repairs; [the full audit](docs/VALIDATION_REPORT.md) documents the broader evidence limits.
+ 
+ 用于 3D 显微镜 Z-stack 的本地类器官分析工具，提供 Cellpose 3D 分割、可审计的多层级测量、结果浏览与表格统计。项目面向 macOS Apple Silicon，使用 Pixi 管理运行环境。
+ 
+@@ -55,7 +55,7 @@ pixi run web
+ 
+ 1. **Upload & preview**：上传并检查 nucleus Z-stack；如需 cell mask，也上传已配准的 cell/cytoplasm Z-stack。
+ 2. **Segmentation results**：执行 Cellpose 3D 分割，查看 mask overlay 和对象结果。
+-3. **Object features**：查看分割 mask 的对象级描述性特征。
++3. **Object features**：选择核或细胞，查看原始 3D mask 的对象级特征、边界/碎片 QC，并下载完整精度 CSV 与测量溯源 JSON。
+ 4. **3D Analysis results**：恢复保存的 segmentation，或读取完整多层级分析结果。
+ 5. **Statistical analysis (Excel)**：使用现有表格进行探索性统计。
+ 
+@@ -65,6 +65,12 @@ pixi run web
+ results/segmentation_output/run-*/
+ ```
+ 
++在 **Segmentation results** 中选择 **Object layer** 可切换核/细胞。默认基于原始标签体素测量；勾选 **Measure filled outer envelopes** 后，体积、表面积、质心、主轴与 solidity 都基于填孔后的包络。历史网页的默认体积曾包含孔洞，新结果采用 feature schema `2.0`，比较历史结果时须明确测量定义。
++
++**Download feature CSV + provenance** 导出 `features.csv` 和 `measurement_provenance.json`，保留对象 ID、完整数值精度、QC、体素间距及其来源、选中掩膜的哈希与可用的分割运行信息。`qc_status=not_flagged` 仅表示未触发当前规则，汇总仍包含有 QC 标记的对象。采用默认体素间距时会显示警告，导出会标记 `assumed_or_unknown`；发表前须核实采集标定与实验重复结构。
++
++预览缩小时保持实际体素中心坐标范围，原始数组继续用于定量。Cellpose 降采样按实际网格调整直径与 Z/XY 比例；若非方形图像取整后产生不一致的 X/Y 尺度，会提示改用 **Full resolution**。加速分割与全分辨率分割的生物学等价性尚未验证。
++
+ 刷新页面或关闭浏览器后，可在 **3D Analysis results** 使用 **Restore saved Cellpose segmentation** 恢复 nuclei/cell masks。没有 cell mask 的历史分割不能用于多层级分析，因为不能由 nucleus、MIP 或投影图推断 cell labels。
+ 
+ ### 多层级 3D 分析
+diff --git a/docs/ALGORITHM_DECISIONS.md b/docs/ALGORITHM_DECISIONS.md
+index f71915e..8a6bd5a 100644
+--- a/docs/ALGORITHM_DECISIONS.md
++++ b/docs/ALGORITHM_DECISIONS.md
+@@ -14,7 +14,7 @@ This record describes the current implementation; it does not retrospectively ju
+ 
+ `quantification/features.py::surface_mesh` uses scikit-image 0.26.0's **Lewiner** implementation (the installed default), level 0.5, step 1, padded zero exterior and `allow_degenerate=False`. Lorensen–Cline is historical background, not the exact implementation. [Official method documentation](https://scikit-image.org/docs/stable/api/skimage.measure.html#skimage.measure.marching_cubes) identifies the algorithm and axis-ordered spacing. Origin `PUBLISHED_METHOD`; basis `ESTABLISHED`; implementation evidence `PARTIAL`; suitability for the specification's <5% surface error is `NOT SUPPORTED` / `FAIL`: the radius-18 µm sphere at (2,1,1) µm has 11.7347% area error. Sphericity is the dimensionless isoperimetric expression; it is not clipped. Changing smoothing, surface estimator or tolerance requires a new scientific decision and validation, so none was changed.
+ 
+-Classical organoid and Web object-feature geometry fill enclosed holes; multilevel geometry uses raw label voxels. These are different estimands. Classical `cells` reports raw cell volume plus envelope geometry; Web centroids/solidity use raw regionprops despite envelope size/axes. Those differences must be retained in interpretation. Border padding closes truncated objects computationally, not biologically. `mask_features` does not apply the classical eligibility filter. Alternative surface estimators and acquisition-dependent bias correction are NOT ASSESSED.
++Classical organoid geometry fills enclosed holes; multilevel geometry uses raw label voxels. Since 2026-09-11 Web feature schema 2.0 uses raw labels by default and offers an explicit envelope option: centroid and solidity now use the same support as volume/surface/axes. The earlier Web mixed-support behavior is corrected, with full numeric precision. Classical `cells` still reports raw cell volume plus envelope geometry. Border padding closes truncated objects computationally, not biologically. Web QC retains all rows and does not apply the classical eligibility filter. Alternative surface estimators and acquisition-dependent bias correction are NOT ASSESSED.
+ 
+ ## D4. Face-contact topology
+ 
+@@ -62,7 +62,9 @@ Volume is log10 transformed; contrasts have effects, SE, t-based CIs and within-
+ 
+ Two readers remain: `tiff_contract.py` (manifest/CLI, CZYX, OME spacing or explicit calibration) and `zstack_reader.py` (Web, ImageJ/TIFF/OME spacing, ZYX/CZYX). They are **not behaviorally identical**: the former does not infer ImageJ calibration; the latter has no UI time selector and rejects multi-time uploads. The Cellpose adapter alone allows metadata-free QYX/IYX as a legacy Z-stack interpretation, recorded without spacing. Time/series indices must be explicit valid integers. Unknown units, complex quantitative intensities, nonuniform/nonmonotonic Z, conflicting complete spacings and label export overflow reject. Only C=0 plane positions are checked; incomplete per-plane metadata, origins/directions and independent-channel registration remain NOT ASSESSED.
+ 
+-Preview percentile normalization, uint8 packing, stride downsampling, mesh coarsening and rendering operate on display payloads; raw source arrays feed segmentation/measurement. [SciPy zoom documentation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.zoom.html) distinguishes center-grid and full-pixel geometry: the current Cellpose downsample adapter scales diameter/anisotropy by the requested factor while rounded array sizes and center-grid resampling can differ. Downsampled scientific equivalence is NOT ASSESSED, especially for small/odd XY sizes. No interpolation method was changed.
++Preview percentile normalization, uint8 packing, stride downsampling, mesh coarsening and rendering operate on display payloads; raw source arrays feed segmentation/measurement. [SciPy zoom documentation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.zoom.html) defines center-grid geometry: resampling length N to M changes spacing by (N-1)/(M-1). Since 2026-09-11 the Cellpose adapter scales diameter/anisotropy by its reciprocal, using the actual rounded shape. Unequal rational X/Y scales reject before model execution because Cellpose accepts one XY anisotropy; full resolution remains available. Preview represents separate X/Y spacings and honors its array budget without a hard minimum 0.1 factor. Singleton collapse is rejected when rescaling would erase the center-span definition.
++
++The existing linear-intensity / nearest-label center-grid interpolation was retained; downsampled intensities now use float32 output so integer inputs do not round interpolated values. Changing to full-pixel geometry or an unrecorded crop would alter the coordinate mapping and was not selected. Basis ESTABLISHED for the grid arithmetic, Origin SOFTWARE_OR_MODEL_DEFAULT for SciPy's grid convention; controlled verification is recorded in [the optimization report](WORKFLOW_OPTIMIZATION_2026-09-11.md). Actual model-output equivalence, anti-aliasing/parameter sensitivity and biological accuracy remain NOT ASSESSED. Valid coordinate scaling does not establish segmentation equivalence.
+ 
+ ## D13. Actual Cellpose 4.2.1.1 model route
+ 
+diff --git a/docs/PARAMETERS.md b/docs/PARAMETERS.md
+index 7318584..48c8ec5 100644
+--- a/docs/PARAMETERS.md
++++ b/docs/PARAMETERS.md
+@@ -117,7 +117,11 @@ All scientific values/defaults are unchanged. Input-domain validation now reject
+ | `exploration.RandomForest_multi_cluster` | `"200 trees; max_depth=15; seed=42; multiclass balanced"` | rule | HEURISTIC / HEURISTIC | Predicts object/cluster labels, not biological validity | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+ | `exploration.KMeans` | `"n_init=10; seed=42; k from silhouette max in 2..8 by helper"` | rule | HEURISTIC / HEURISTIC | Data-derived clustering; circular ANOVA not independent inference | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+ | `exploration.shape_quantiles` | `[25, 75]` | percentiles | HEURISTIC / HEURISTIC | Dataset-relative Rod/Disk/Sphere labels; not calibrated morphotypes | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+-| `mask_features.rounding` | `4` | decimal places | HEURISTIC / HEURISTIC | Rounds exported quantitative values, so not bit-identical to canonical geometry | No unless API/config exposed | INSUFFICIENT EVIDENCE |
++| `mask_features.rounding` | None in calculations; CSV uses 17 significant digits | digits | SOFTWARE_OR_MODEL_DEFAULT / ESTABLISHED | Retains binary64 values; presentation formatting does not alter data | No | PASS for controlled precision round trips; not biological accuracy |
++| `mask_features.fill_holes` | `false`; explicit `true` for envelope | boolean | HEURISTIC / CONTEXT_DEPENDENT | All geometry uses selected support; raw volume/count retained separately | Yes, API/Web | PARTIAL; hand-counted semantics verified, biological suitability unassessed |
++| `mask_features.fragment_connectivity` | 6 face neighbors | adjacency rule | SOFTWARE_OR_MODEL_DEFAULT / CONTEXT_DEPENDENT | Disconnected label fragments are flagged; rows retained | No | PARTIAL; operational QC, not a calibrated exclusion rule |
++| `cellpose.effective_xy_scale` | `(M-1)/(N-1)` using actual grid lengths; unequal X/Y ratios reject | dimensionless | SOFTWARE_OR_MODEL_DEFAULT / ESTABLISHED | Corrects diameter and anisotropy for center-grid interpolation | Derived | PASS for coordinate/adapter contracts; model equivalence NOT ASSESSED |
++| `cellpose.resampling_dtype` | float32 for downsampled intensities | numeric representation | SOFTWARE_OR_MODEL_DEFAULT / CONTEXT_DEPENDENT | Preserves fractional interpolation of typical microscopy integer intensities | No | PARTIAL; ramp verified, extreme dynamic range not assessed |
+ | `surface.level_padding_step` | `[0.5, 1, 1]` | level; voxel; step | HEURISTIC / HEURISTIC | Defines discrete surface; existing <5% specification fails | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+ | `preview.mesh_step` | `2` | voxels | HEURISTIC / HEURISTIC | Display only; measurement step remains 1 | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+ | `label_export.max_id` | `4294967295` | ID | HEURISTIC / HEURISTIC | OME uint32 export range; overflow rejects | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+diff --git a/docs/REPRODUCIBILITY.md b/docs/REPRODUCIBILITY.md
+index f7bd8d0..3578611 100644
+--- a/docs/REPRODUCIBILITY.md
++++ b/docs/REPRODUCIBILITY.md
+@@ -1,4 +1,21 @@
+-# Local reproducibility record — 2026-09-10
++# Local reproducibility record
++
++## Scoped workflow update — 2026-09-11
++
++Started from clean `657204d8d8be2e547063272fd139161f59dc62be`; changes remain
++uncommitted. [Current snapshot](evidence/2026-09-11/snapshot.json) records the
++tracked patch hash, source/lock/package identities and relevant untracked files.
++[The scoped report](WORKFLOW_OPTIMIZATION_2026-09-11.md) identifies the executed
++336-pass default suite, remaining typecheck errors and bounded runtime probes.
++The optional local real TIFF and saved-mask fixture have their own hashes;
++neither qualifies biological accuracy. No new model inference, renderer suite
++or distribution installation is claimed for this update.
++
++Reproduce probes/source capture with
++`pixi run python docs/evidence/2026-09-11/capture_evidence.py`.
++Use `--snapshot-only` to refresh source identity without rerunning the probes.
++
++## Historical full audit — 2026-09-10
+ 
+ The tested source starts at commit `ab6ee90db936de2a0888b9600ddf62f1729b4a1e` with a **dirty** worktree. [Initial status](evidence/2026-09-10/initial-status.txt) identifies pre-existing uncommitted edits; the audit preserved and revalidated them. No commit, push or release publication was performed.
+ 
+diff --git a/docs/SCIENTIFIC_SPEC.md b/docs/SCIENTIFIC_SPEC.md
+index f467eab..d8a5bb0 100644
+--- a/docs/SCIENTIFIC_SPEC.md
++++ b/docs/SCIENTIFIC_SPEC.md
+@@ -180,7 +180,7 @@ Classification: S3 (Inferential) for the pipeline as a whole, because `src/organ
+ 
+ ### Known limitations
+ 1. **Segmentation accuracy:** Depends on image quality, staining, and organoid density. No claim of general accuracy without independent validation.
+-2. **Envelope geometry:** Measures outer envelope, not internal structure. Enclosed lumens are filled by default.
++2. **Envelope geometry:** Classical organoid analysis fills enclosed lumens by default. Multilevel and Web object features measure raw labels by default; the Web offers an explicit filled-envelope option. These are distinct measurement definitions.
+ 3. **Sphericity bias:** Voxel discretization can produce values >1.0. Values >1.05 are flagged but not corrected.
+ 4. **Intensity measurements:** Raw intensities are not normalized across experiments. Cross-experiment comparison requires separate normalization.
+ 5. **Viability states:** Calcein/PI states describe signal patterns, not cell viability fraction. States are not validated against independent viability assays.
+@@ -225,7 +225,7 @@ The preceding intended research use is retained, **not validated by its presence
+ | Read (S1–S2: identity and units) | `microscopy_io/tiff_contract.py` reads manifest-driven CZYX with ≥3 planes, OME or explicit calibration. `zstack_reader.py` reads first series into ZYX/CZYX with ImageJ/TIFF/OME calibration; time selection explicit in API, multi-time upload rejected by Web. Cellpose legacy QYX/IYX fallback assumes a grayscale Z-stack and leaves spacing unknown. | Exact identity/units/time/channel tests; acquisition grid qualification; corrupted/unknown metadata rejection. |
+ | Inspect (S2 if it guides selection) | Web preview uses a separate display payload with percentile contrast and possible uint8/downsampling. Native VTK, browser vtk.js and 2D orthogonal views are distinct rendering paths. | Axis/spacing and raw-data preservation tests; actual renderer checks; browser upload and visual performance assessed separately. |
+ | Segment (S2) | Classical structural watershed/probability/imported labels and Web Cellpose cell/nucleus masks are separate routes. Cellpose alone does not produce a qualified organoid envelope. | Qualified independent 3D annotations, object-level detection/overlap and acquisition strata; parameter calibration and held-out sensitivity. |
+-| Quantify (S2) | Classical geometry measures filled organoid envelopes and eligibility-filtered summaries. Web object features measure filled size/axes but raw centroid/solidity and no classical eligibility exclusion. `analyze-3d` accepts registered organoid/cell/nucleus labels and measures raw voxels, with review flags but no automatic aggregate exclusion. | Analytic volumes/moments/contact; surface accuracy; raw/envelope semantics; intensity/registration/saturation qualification. |
++| Quantify (S2) | Classical geometry measures filled organoid envelopes and eligibility-filtered summaries. Since 2026-09-11 Web feature schema 2.0 measures raw nucleus/cell labels by default; optional envelopes use one support for all geometry metrics, with full precision and review flags. `analyze-3d` measures raw registered labels. Web/multilevel summaries retain flagged objects. | Analytic volumes/moments/contact; surface accuracy; raw/envelope semantics; intensity/registration/saturation qualification. |
+ | Infer/explore (S3) | `statistics/inference.py` fits object-level LMM or clustered OLS; `aggregation.py` reports equal-well replicate summaries; `exploration.py` supplies row-level tests/classifiers/clustering. | Correct independent units/design, residual assumptions, type-I error/CI coverage, multiplicity family, group-aware validation. |
+ | Export (S1–S2) | CLI CSV/JSON/OME; multilevel Parquet/JSON/OME; Cellpose ZIP/OME/summary/provenance. Missing data are not evidence of zero effects or successful tests. | ID/unit round trips, complete/incomplete outputs, source/config/model/input traceability. |
+ 
+@@ -242,3 +242,25 @@ The earlier list of supported stains does not establish that a nuclear channel o
+ Analytical voxel solids and hand-counted label relationships qualify numerical arithmetic only. The demo generator is project-owned and shares signal assumptions with viability classification; it is not independent assay validation. The local real files are identified by hashes, but acquisition provenance, stain identity, annotator protocol, blinding, adjudication, inter-annotator agreement and biological sample independence are unavailable. The model smoke test measures executability on one crop, not accuracy.
+ 
+ For biological segmentation/viability/statistical claims, required N, precision target and operating strata must come from the actual experiment and qualified reference uncertainty. No defensible universal N or error target can be inferred here; status is INSUFFICIENT EVIDENCE. Clinical/decision-critical intended use is absent; S4 decision-risk and regulatory conformity assessment are NOT APPLICABLE to this audit.
++
++## 14. Scoped workflow revision — 2026-09-11
++
++S2 changes and predeclared acceptance are in [the optimization plan](evidence/2026-09-11/PLAN.md).
++The measurement unit is the selected nucleus/cell instance in one field; no
++experimental independence is inferred. Web `volume_um3`, centroid, surface,
++solidity and axes now share either raw-label support (default) or explicitly
++filled support. `voxel_count` and `segmented_volume_um3` always retain raw-label
++counts/volume; `filled_voxel_count` records the added voxels. Border contact,
++face-disconnected fragments, envelopes enclosing another instance and undefined
++solidity are review flags, with no automatic exclusion. Sparse labels retain
++their identities. The retained legacy `minor_axis_um` column means the
++intermediate diameter, and `least_axis_um` means the smallest diameter;
++`equivalent_disk_um` is an alias of `equivalent_sphere_diameter_um`.
++
++Preview and Cellpose resampling use SciPy's center-grid coordinate convention.
++Diameter/anisotropy follow actual rounded grid dimensions; Cellpose rejects
++unequal effective X/Y scales. Feature bundles record spacing origins, source and
++mask hashes and available run lineage. Default/unknown calibration is explicit,
++not upgraded to verified metadata. These changes do not resolve the surface
++accuracy criterion, establish segmentation accuracy, or validate biological
++statistics. No statistical model or biological threshold changed.
+diff --git a/docs/VALIDATION_PLAN.md b/docs/VALIDATION_PLAN.md
+index 12e44a5..c811bd9 100644
+--- a/docs/VALIDATION_PLAN.md
++++ b/docs/VALIDATION_PLAN.md
+@@ -163,3 +163,14 @@ The §VR-4 instruction to document bias does **not** waive SCIENTIFIC_SPEC §9's
+ | A10 Real research validity | Expert/orthogonal assay reference independent of development; independent biological unit | Representative normal/low-signal/saturated/aniso/dense/hollow acquisitions; actual donor/well/batch design; qualified labels/assay | Required minimum N and precision are NOT ASSESSED because intended experiment/reference uncertainty is unavailable. Do not declare PASS from object count or one crop. |
+ 
+ Sample size for deterministic mathematical fixtures is the number of explicitly exercised cases, not an estimate of population accuracy; statistical confidence intervals are inapplicable to exact arithmetic. For real biological performance the missing N/precision/reference qualification leads to INSUFFICIENT EVIDENCE. Any future calibration or acceptance change must be predeclared and evaluated on held-out independent units.
++
++## 2026-09-11 scoped workflow optimization
++
++[O1–O7](evidence/2026-09-11/PLAN.md) predeclare raw/envelope geometry, precision,
++QC, effective resampling scales, preview budget, feature exports and interface
++verification. They do not relax A9's surface accuracy requirement or replace
++A10's qualified biological evidence. Historical A3 tests asserting requested
++scale are updated to the independently derived center-grid scale; interpolation
++coordinates, fractional intensities and unsupported rectangular grids are tested
++explicitly. The [scoped report](WORKFLOW_OPTIMIZATION_2026-09-11.md) separates
++these new contract checks from the broader unresolved research-readiness items.
+diff --git a/docs/VALIDATION_REPORT.md b/docs/VALIDATION_REPORT.md
+index 269b54d..edd60df 100644
+--- a/docs/VALIDATION_REPORT.md
++++ b/docs/VALIDATION_REPORT.md
+@@ -1,5 +1,12 @@
+ # Full scientific workflow audit and release assessment — 2026-09-10
+ 
++Latest scoped update: [2026-09-11 workflow optimization](WORKFLOW_OPTIMIZATION_2026-09-11.md)
++corrects Web measurement support/precision and rounded-grid resampling, adds QC
++and traceable feature downloads, and records fresh engineering checks. The
++2026-09-10 execution counts and source-state statements below are historical;
++the broader surface-accuracy and biological/inferential evidence limitations
++remain unresolved.
++
+ **Overall verdict: NOT READY FOR THE SPECIFIED RESEARCH USE.**
+ 
+ Scope: the current local repository's research workflow, **Z-stack input → preview/inspection → segmentation → quantitative features → analysis/statistics → export**, including classical CLI, Cellpose/Web, multilevel labels and exploratory statistics. This supersedes previous local readiness claims. The intended use and original accuracy criteria were retained. A documented core surface-accuracy criterion fails; representative biological and inferential evidence is insufficient. Passing software tests is not a positive scientific release verdict.
+diff --git a/src/organoid_analysis/quantification/mask_features.py b/src/organoid_analysis/quantification/mask_features.py
+index fb27f35..89f881d 100644
+--- a/src/organoid_analysis/quantification/mask_features.py
++++ b/src/organoid_analysis/quantification/mask_features.py
+@@ -7,13 +7,14 @@ generic statistical helpers can operate on data measured directly from a
+ user's own segmentation rather than only pre-exported Excel tables.
+ 
+ Features are computed with physical spacing so magnitudes are in real units.
+-Geometry (volume, surface area, sphericity, principal-axis diameters) is
+-delegated to ``analysis.features.geometry`` so the UI metrics are bit-for-bit
+-consistent with the canonical analysis pipeline instead of a duplicated
+-implementation:
++Geometry is delegated to ``quantification.features.geometry``. The default
++support is the raw label, as in multilevel analysis; optional hole filling
++uses the filled support consistently for every geometry feature. Exported
++values retain floating-point precision; rounding belongs in presentation:
+   * volume_um3       — object volume in cubic microns
+   * surface_area_um2 — isosurface area in square microns (marching cubes)
+-  * equivalent_disk  — diameter (µm) of the sphere of equal volume
++  * equivalent_sphere_diameter_um — diameter of the sphere of equal volume
++    (equivalent_disk_um is retained as a legacy alias)
+   * sphericity       — ratio to the minimal possible surface for a volume
+                       (not clamped; may slightly exceed 1 on discretized voxels)
+   * major_axis_um / minor_axis_um / least_axis_um — principal-axis diameters
+@@ -27,13 +28,26 @@ so they are easy to unit test.
+ 
+ from __future__ import annotations
+ 
++from collections.abc import Sequence
+ from dataclasses import dataclass
+ 
+ import numpy as np
+ import pandas as pd
+ 
+ from organoid_analysis.microscopy_io import validate_voxel_spacing_xyz
+-from organoid_analysis.quantification.labels import compact_instance_labels
++from organoid_analysis.quantification.labels import (
++    bbox_touches_volume_boundary,
++    compact_instance_labels,
++)
++
++FEATURE_SCHEMA_VERSION = "2.0"
++FEATURE_COLUMNS = [
++    "volume_um3", "surface_area_um2", "equivalent_disk_um", "equivalent_sphere_diameter_um",
++    "sphericity", "solidity", "major_axis_um", "minor_axis_um", "least_axis_um", "elongation",
++    "centroid_z_um", "centroid_y_um", "centroid_x_um", "voxel_count", "segmented_volume_um3",
++    "filled_voxel_count", "measurement_basis", "touches_image_border", "fragmented_object",
++    "connected_component_count", "qc_status", "qc_flags",
++]
+ 
+ 
+ @dataclass(frozen=True)
+@@ -49,7 +63,7 @@ class MaskSummary:
+     mean_solidity: float
+ 
+ 
+-def _physical_spacing_zyx(spacing_um) -> tuple[float, float, float]:
++def _physical_spacing_zyx(spacing_um: Sequence[float]) -> tuple[float, float, float]:
+     """Return (z, y, x) element spacing from the (x, y, z) API convention."""
+     sx, sy, sz = validate_voxel_spacing_xyz(spacing_um)
+     return (sz, sy, sx)
+@@ -86,16 +100,23 @@ def count_mask_objects(mask: np.ndarray) -> int:
+     return int(np.count_nonzero(values))
+ 
+ 
+-def extract_mask_features(mask: np.ndarray, spacing_um=(1.0, 1.0, 1.0)) -> pd.DataFrame:
++def extract_mask_features(
++    mask: np.ndarray, spacing_um: Sequence[float] = (1.0, 1.0, 1.0), *, fill_holes: bool = False,
++) -> pd.DataFrame:
+     """Return a per-object feature DataFrame for the labeled ``mask``.
+ 
+     The background label ``0`` is ignored. Output rows are indexed by object
+-    label and only include labels that appear in the mask.
++    label and only include labels that appear in the mask. ``fill_holes=True``
++    explicitly selects the outer-envelope estimand. QC flags retain all rows.
+     """
++    from scipy import ndimage as ndi
+     from skimage import measure
+ 
+     from organoid_analysis.quantification.features import geometry as _geometry
++    from organoid_analysis.quantification.features import outer_envelope
+ 
++    if not isinstance(fill_holes, bool):
++        raise ValueError("fill_holes must be a boolean")
+     labels = validate_mask(mask)
+     spacing_zyx = _physical_spacing_zyx(spacing_um)
+ 
+@@ -103,48 +124,74 @@ def extract_mask_features(mask: np.ndarray, spacing_um=(1.0, 1.0, 1.0)) -> pd.Da
+     props = measure.regionprops(compact, spacing=spacing_zyx)
+     rows = []
+     for p in props:
+-        # Geometry (volume/surface/sphericity/axes) is computed by the canonical
+-        # analysis pipeline on the filled envelope so the UI and the pipeline
+-        # agree exactly; centroids come from regionprops (full-image coords).
+         # Crop to the object's bounding box first: geometry() takes an origin
+         # offset precisely so callers don't have to run marching cubes etc. on
+         # a full-volume array per object (this was previously O(n_objects x
+         # volume) and made "Object features" slow to populate on real masks).
+         binary = np.ascontiguousarray(compact[p.slice] == p.label, dtype=np.uint8)
++        support = outer_envelope(binary) if fill_holes else binary.astype(bool, copy=False)
+         origin_zyx = tuple(s.start for s in p.slice)
+-        g, _ = _geometry(binary, spacing_zyx, origin_zyx=origin_zyx)
++        g, _ = _geometry(support, spacing_zyx, origin_zyx=origin_zyx, fill_holes=False)
+         volume = g["volume_um3"]
+         surface = g["surface_area_um2"]
+         major = g["principal_axis_major_um"]
+         minor = g["principal_axis_intermediate_um"]
+         least = g["principal_axis_minor_um"]
+         sphericity = g["sphericity"]
+-        # regionprops.centroid is ordered (z, y, x).
+-        cz, cy, cx = (float(v) for v in p.centroid)
+-        solidity = float(p.solidity) if p.solidity is not None else 0.0
+-        eq_disk = (6.0 * volume / np.pi) ** (1.0 / 3.0)
+-        elongation = 1.0 - (least / major) if major > 0 else 0.0
++        flags = []
++        touches = bbox_touches_volume_boundary(p.slice, labels.shape)
++        components = int(ndi.label(binary, structure=ndi.generate_binary_structure(3, 1))[1])
++        if touches:
++            flags.append("border_truncated")
++        if components > 1:
++            flags.append("fragmented_object")
++        if fill_holes and np.any(support & (compact[p.slice] != 0) & (compact[p.slice] != p.label)):
++            flags.append("encloses_other_instance")
++        # skimage's 3D hull needs non-coplanar voxel centers. Keep undefined
++        # solidity missing with QC instead of exporting infinity or zero.
++        points = np.argwhere(support)
++        if len(points) < 4 or np.linalg.matrix_rank(points - points[0]) < 3:
++            solidity = np.nan
++        else:
++            shape_prop = measure.regionprops(support.astype(np.uint8))[0] if fill_holes else p
++            solidity = float(shape_prop.solidity)
++        if not np.isfinite(solidity):
++            flags.append("solidity_not_estimable")
++        eq_disk = g["equivalent_diameter_um"]
++        elongation = 1.0 - least / major
++        voxel_count = int(np.count_nonzero(binary))
+         rows.append(
+             {
+                 "Label": source_ids[int(p.label)],
+-                "volume_um3": round(volume, 4),
+-                "surface_area_um2": round(surface, 4),
+-                "equivalent_disk_um": round(eq_disk, 4),
+-                "sphericity": round(sphericity, 4),
+-                "solidity": round(solidity, 4),
+-                "major_axis_um": round(major, 4),
+-                "minor_axis_um": round(minor, 4),
+-                "least_axis_um": round(least, 4),
+-                "elongation": round(elongation, 4),
+-                "centroid_z_um": round(cz, 4),
+-                "centroid_y_um": round(cy, 4),
+-                "centroid_x_um": round(cx, 4),
++                "volume_um3": volume,
++                "surface_area_um2": surface,
++                "equivalent_disk_um": eq_disk,
++                "equivalent_sphere_diameter_um": eq_disk,
++                "sphericity": sphericity,
++                "solidity": solidity,
++                "major_axis_um": major,
++                "minor_axis_um": minor,
++                "least_axis_um": least,
++                "elongation": elongation,
++                "centroid_z_um": g["centroid_z_um"],
++                "centroid_y_um": g["centroid_y_um"],
++                "centroid_x_um": g["centroid_x_um"],
++                "voxel_count": voxel_count,
++                "segmented_volume_um3": float(voxel_count * np.prod(spacing_zyx)),
++                "filled_voxel_count": int(np.count_nonzero(support)) - voxel_count,
++                "measurement_basis": "filled_envelope" if fill_holes else "raw_label",
++                "touches_image_border": touches,
++                "fragmented_object": components > 1,
++                "connected_component_count": components,
++                "qc_status": "review" if flags else "not_flagged",
++                "qc_flags": ";".join(flags),
+             }
+         )
+-    feature_df = pd.DataFrame(rows)
+-    if feature_df.empty:
+-        return feature_df
+-    return feature_df.set_index("Label")
++    feature_df = pd.DataFrame(rows, columns=["Label", *FEATURE_COLUMNS]).set_index("Label")
++    feature_df.attrs["feature_schema_version"] = FEATURE_SCHEMA_VERSION
++    feature_df.attrs["spacing_xyz_um"] = spacing_zyx[::-1]
++    feature_df.attrs["measurement_basis"] = "filled_envelope" if fill_holes else "raw_label"
++    return feature_df
+ 
+ 
+ def summarize_features(features: pd.DataFrame) -> MaskSummary:
+@@ -172,9 +219,11 @@ def summarize_features(features: pd.DataFrame) -> MaskSummary:
+     )
+ 
+ 
+-def summarize_mask(mask: np.ndarray, spacing_um=(1.0, 1.0, 1.0)) -> MaskSummary:
++def summarize_mask(
++    mask: np.ndarray, spacing_um: Sequence[float] = (1.0, 1.0, 1.0), *, fill_holes: bool = False,
++) -> MaskSummary:
+     """Extract and aggregate features in one convenience call."""
+-    return summarize_features(extract_mask_features(mask, spacing_um=spacing_um))
++    return summarize_features(extract_mask_features(mask, spacing_um=spacing_um, fill_holes=fill_holes))
+ 
+ 
+ def mask_to_binary(mask: np.ndarray) -> np.ndarray:
+diff --git a/src/organoid_analysis/segmentation/cellpose_inference.py b/src/organoid_analysis/segmentation/cellpose_inference.py
+index 34817c9..f5c6c66 100644
+--- a/src/organoid_analysis/segmentation/cellpose_inference.py
++++ b/src/organoid_analysis/segmentation/cellpose_inference.py
+@@ -22,6 +22,11 @@ from organoid_analysis.microscopy_io import (
+     read_axes,
+     validate_voxel_spacing_xyz,
+ )
++from organoid_analysis.microscopy_io.resampling import (
++    isotropic_xy_scale,
++    resampled_spacing_xyz,
++    xy_downsample_shape,
++)
+ from organoid_analysis.microscopy_io.tiff_contract import git_commit_hash, source_code_hashes
+ from organoid_analysis.microscopy_io.tiff_contract import sha256 as _hash_file
+ from organoid_analysis.segmentation.paths import SEGMENTATION_OUTPUT_DIR, detect_torch_acceleration
+@@ -232,21 +237,19 @@ def segment_stacks(
+         on_progress(0.0)
+ 
+     downsample = config.xy_downsample
+-    if not 0 < downsample <= 1.0:
+-        raise ValueError("xy_downsample must be in (0, 1], with 1.0 meaning full resolution.")
+-    if any(round(size * downsample) < 2 for size in nuclei.shape[1:]):
+-        raise ValueError("xy_downsample would leave fewer than two XY pixels")
++    working_shape = xy_downsample_shape(nuclei.shape, downsample)
++    effective_scale = isotropic_xy_scale(nuclei.shape, working_shape)
+     work_nuclei = nuclei
+     if downsample < 1.0:
+         from scipy import ndimage
+ 
+         factors = (1.0, downsample, downsample)
+-        work_nuclei = ndimage.zoom(nuclei, factors, order=1)
++        work_nuclei = ndimage.zoom(nuclei, factors, order=1, output=np.float32, grid_mode=False)
+ 
+     common = {
+         "z_axis": 0,
+         "do_3D": config.model_type in _3D_CAPABLE,
+-        "anisotropy": config.anisotropy * downsample,
++        "anisotropy": config.anisotropy * effective_scale,
+         "flow3D_smooth": config.flow3d_smooth,
+         "batch_size": config.batch_size,
+     }
+@@ -265,7 +268,7 @@ def segment_stacks(
+             nuclei_masks = _validated_mask(
+                 model.eval(
+                     work_nuclei,
+-                    diameter=config.nuclei_diameter * downsample,
++                    diameter=config.nuclei_diameter * effective_scale,
+                     flow_threshold=config.nuclei_flow_threshold,
+                     cellprob_threshold=config.nuclei_cellprob_threshold,
+                     **common,
+@@ -284,7 +287,10 @@ def segment_stacks(
+             # derived from `cells`, which this `if` has already narrowed to
+             # non-None, using the exact same downsample/factors as
+             # `work_nuclei` above -- no behavior change from the prior code.
+-            work_cells = ndimage.zoom(cells, factors, order=1) if downsample < 1.0 else cells
++            work_cells = (
++                ndimage.zoom(cells, factors, order=1, output=np.float32, grid_mode=False)
++                if downsample < 1.0 else cells
++            )
+             cell_input = np.stack((work_cells, work_nuclei), axis=-1)
+             restore = _wrap_run_3d(on_progress, 0.55, 1.0)
+             try:
+@@ -292,7 +298,7 @@ def segment_stacks(
+                     model.eval(
+                         cell_input,
+                         channel_axis=-1,
+-                        diameter=config.cell_diameter * downsample,
++                        diameter=config.cell_diameter * effective_scale,
+                         flow_threshold=config.cell_flow_threshold,
+                         cellprob_threshold=config.cell_cellprob_threshold,
+                         **common,
+@@ -348,7 +354,7 @@ def _upsample_masks(masks: np.ndarray, full_shape: tuple[int, ...]) -> np.ndarra
+     # scipy is untyped, so ndimage.zoom(...).astype(...) resolves to Any;
+     # np.asarray only fixes that static view -- .astype() already returns a
+     # real ndarray at runtime, so this changes no value or dtype.
+-    return np.asarray(ndimage.zoom(masks, factors, order=0, mode="nearest").astype(np.uint32))
++    return np.asarray(ndimage.zoom(masks, factors, order=0, mode="nearest", grid_mode=False).astype(np.uint32))
+ 
+ 
+ def _wrap_run_3d(
+@@ -468,6 +474,9 @@ def build_provenance(
+             "dtype": cell_dtype or "unavailable",
+             "shape": list(input_shape),
+         }
++    working_shape = xy_downsample_shape(input_shape, config.xy_downsample)
++    working_spacing = resampled_spacing_xyz(input_shape, working_shape, (x_um, y_um, z_um))
++    effective_scale = isotropic_xy_scale(input_shape, working_shape)
+     return {
+         "pipeline_version": __version__,
+         "git_commit": git_commit_hash(),
+@@ -491,6 +500,19 @@ def build_provenance(
+         "spacing_um": {"x": x_um, "y": y_um, "z": z_um},
+         "xy_spacing_source": config.xy_spacing_source,
+         "anisotropy_source": config.anisotropy_source,
++        "resampling": {
++            "grid_convention": "voxel_centers_grid_mode_false",
++            "requested_xy_factor": config.xy_downsample,
++            "working_shape_zyx": list(working_shape),
++            "working_spacing_xyz_um": list(working_spacing),
++            "effective_xy_scale": effective_scale,
++            "working_nuclei_diameter_px": config.nuclei_diameter * effective_scale,
++            "working_cell_diameter_px": config.cell_diameter * effective_scale,
++            "working_anisotropy": config.anisotropy * effective_scale,
++            "intensity_interpolation_order": 1 if config.xy_downsample < 1 else None,
++            "intensity_resampling_dtype": "float32" if config.xy_downsample < 1 else None,
++            "label_interpolation_order": 0 if config.xy_downsample < 1 else None,
++        },
+     }
+ 
+ 
+diff --git a/src/organoid_analysis/web_interface/segmentation_workspace.py b/src/organoid_analysis/web_interface/segmentation_workspace.py
+index 768fa6f..90d9290 100644
+--- a/src/organoid_analysis/web_interface/segmentation_workspace.py
++++ b/src/organoid_analysis/web_interface/segmentation_workspace.py
+@@ -26,10 +26,12 @@ import os
+ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+ 
+ import hashlib
++import json
+ import queue
+ import tempfile
+ import threading
+ import time
++from dataclasses import asdict
+ from pathlib import Path
+ from typing import TypedDict
+ 
+@@ -47,11 +49,17 @@ from organoid_analysis.microscopy_io import (  # noqa: E402
+     isotropic_xy_size_um,
+     resolve_spacing_source,
+ )
++from organoid_analysis.microscopy_io.resampling import (
++    isotropic_xy_scale,
++    resampled_spacing_xyz,
++    xy_downsample_shape,
++)
+ from organoid_analysis.quantification.mask_features import (  # noqa: E402
+     count_mask_objects,
+     extract_mask_features,
+     summarize_features,
+ )
++from organoid_analysis.result_export.mask_feature_bundle import build_mask_feature_bundle
+ from organoid_analysis.segmentation.cellpose_inference import (  # noqa: E402
+     SegmentationConfig,
+     config_spacing,
+@@ -165,22 +173,34 @@ def _fit_viewer_payload_budget(
+     """
+     if not volumes:
+         return volumes, mask, spacing
+-    z, y, x = volumes[0].shape
++    source_shape = volumes[0].shape
++    if len(source_shape) != 3 or any(v.shape != source_shape for v in volumes) or (mask is not None and mask.shape != source_shape):
++        raise ValueError("All preview channels and labels must share one ZYX grid")
++    z, y, x = source_shape
+     n_arrays = len(volumes) + (1 if mask is not None else 0)
+     estimated_bytes = z * y * x * 4 * n_arrays * 1.34
+     if estimated_bytes <= _VIEWER_PAYLOAD_BUDGET_BYTES:
+         return volumes, mask, spacing
+-    factor = max(0.1, min(1.0, (_VIEWER_PAYLOAD_BUDGET_BYTES / estimated_bytes) ** 0.5))
++    max_xy_pixels = int(_VIEWER_PAYLOAD_BUDGET_BYTES / (z * 4 * n_arrays * 1.34))
++    if max_xy_pixels < 4 or min(y, x) < 2:
++        raise ValueError("Preview exceeds the browser budget even at two XY pixels; select a smaller Z-stack")
++    factor = (max_xy_pixels / (y * x)) ** 0.5
++    target_y = max(2, min(y, int(y * factor)))
++    target_x = max(2, min(x, int(x * factor)))
++    if target_y * target_x > max_xy_pixels:
++        if target_y == 2:
++            target_x = max_xy_pixels // 2
++        else:
++            target_y = max_xy_pixels // target_x
+     from scipy import ndimage
+ 
+-    zoom_xy = (1.0, factor, factor)
++    zoom_xy = (1.0, target_y / y, target_x / x)
+     volumes = [
+-        ndimage.zoom(v, zoom_xy, order=1).astype(np.float32, copy=False) for v in volumes
++        ndimage.zoom(v, zoom_xy, order=1, output=np.float32, grid_mode=False) for v in volumes
+     ]
+     if mask is not None:
+-        mask = ndimage.zoom(mask, zoom_xy, order=0).astype(mask.dtype, copy=False)
+-    sx, sy, sz = spacing
+-    spacing = (sx / factor, sy / factor, sz)
++        mask = ndimage.zoom(mask, zoom_xy, order=0, grid_mode=False)
++    spacing = resampled_spacing_xyz(source_shape, volumes[0].shape, spacing)
+     return volumes, mask, spacing
+ 
+ 
+@@ -311,7 +331,7 @@ def render_preview_tab(config: SegmentationConfig) -> None:
+             st.session_state["input_key"] = input_key
+             for key in ("nuclei_masks", "cell_masks", "segmentation_result",
+                         "segmentation_config", "orig_nuclei", "orig_cells",
+-                        "features", "summary", "feature_key"):
++                        "features", "summary", "feature_key", "feature_bundle"):
+                 st.session_state.pop(key, None)
+ 
+         # Store originals so the results / analysis tabs can show the
+@@ -333,8 +353,12 @@ def render_preview_tab(config: SegmentationConfig) -> None:
+             vols = [nuclei]
+             channels = [ChannelConfig(lut="cyan", opacity=0.9, name="Nuclei")]
+ 
+-        preview_vols, _, preview_spacing = _fit_viewer_payload_budget(vols, None, spacing)
+-        st_volume_viewer(preview_vols, spacing_um=preview_spacing, channels=channels, height=620)
++        try:
++            preview_vols, _, preview_spacing = _fit_viewer_payload_budget(vols, None, spacing)
++        except ValueError as error:
++            st.warning(f"3D preview unavailable: {error}")
++        else:
++            st_volume_viewer(preview_vols, spacing_um=preview_spacing, channels=channels, height=620)
+         st.caption(
+             "Intensity preview. Set segmentation parameters in the sidebar and run below."
+         )
+@@ -440,6 +464,12 @@ def _run_segmentation(
+     *, nuclei_digest: str, nuclei_channel: int,
+     cells_digest: str | None, cells_channel: int | None,
+ ) -> None:
++    try:
++        working_shape = xy_downsample_shape(nuclei.shape, config.xy_downsample)
++        isotropic_xy_scale(nuclei.shape, working_shape)
++    except ValueError as error:
++        st.error(str(error))
++        return
+     task: _ProgressState = {"start": time.monotonic(), "frac": 0.0, "estimated": None}
+     result_queue: queue.Queue = queue.Queue()
+ 
+@@ -504,7 +534,7 @@ def _run_segmentation(
+         st.session_state["cell_masks"] = cell_masks
+     else:
+         st.session_state.pop("cell_masks", None)
+-    for key in ("features", "summary", "feature_key"):
++    for key in ("features", "summary", "feature_key", "feature_bundle"):
+         st.session_state.pop(key, None)
+     msg = f"Finished: {result.nuclei_count} nuclei detected"
+     if cell_masks is not None:
+@@ -535,6 +565,23 @@ def render_results_tab(config: SegmentationConfig) -> None:
+         with metric_cols[1]:
+             st.metric("Cells detected", result.cell_count if result is not None else count_mask_objects(cell_masks))
+ 
++    layer = st.selectbox(
++        "Object layer", ["Nuclei", "Cells"] if cell_masks is not None else ["Nuclei"],
++        key="feature_object_layer",
++    )
++    selected_masks = cell_masks if layer == "Cells" and cell_masks is not None else nuclei_masks
++    object_type = "cell" if layer == "Cells" else "nucleus"
++    fill_holes = st.checkbox(
++        "Measure filled outer envelopes", value=False, key="feature_fill_holes",
++        help="Default: measure the raw label voxels. Filling enclosed holes changes volume, surface, centroid, axes and solidity together.",
++    )
++    st.caption(
++        f"Measuring {layer.lower()} · {'filled outer envelope' if fill_holes else 'raw label voxels'} · "
++        f"voxel size XYZ = {spacing} µm. All objects are retained with review flags."
++    )
++    if "default" in (result_config.xy_spacing_source, result_config.anisotropy_source):
++        st.warning("Physical measurements use assumed voxel spacing. Verify the acquisition calibration before using them in a publication.")
++
+     # Use the original intensity image (if stored) so the overlay is meaningful;
+     # fall back to the mask values when originals are unavailable.
+     orig_nuclei = st.session_state.get("orig_nuclei")
+@@ -553,24 +600,28 @@ def render_results_tab(config: SegmentationConfig) -> None:
+             vols = [orig_nuclei]
+             chs = [ChannelConfig(lut="cyan", opacity=0.9, name="Nuclei")]
+     else:
+-        vols = [nuclei_masks.astype(np.float32, copy=False)]
++        vols = [selected_masks.astype(np.float32, copy=False)]
+         chs = [ChannelConfig(lut="gray", opacity=0.5, name="Mask")]
+ 
+-    preview_vols, preview_mask, preview_spacing = _fit_viewer_payload_budget(vols, nuclei_masks, spacing)
+-    st_volume_viewer(
+-        preview_vols,
+-        spacing_um=preview_spacing,
+-        channels=chs,
+-        render_mode="volume",
+-        mask_overlay=preview_mask,
+-        mask_overlay_alpha=0.6,
+-        height=620,
+-    )
+-    if preview_vols[0].shape != nuclei_masks.shape:
+-        st.caption(
+-            f"3D preview downsampled to {preview_vols[0].shape} for browser display "
+-            f"(full resolution {nuclei_masks.shape} used for all measurements below)."
++    try:
++        preview_vols, preview_mask, preview_spacing = _fit_viewer_payload_budget(vols, selected_masks, spacing)
++    except ValueError as error:
++        st.warning(f"3D preview unavailable: {error}")
++    else:
++        st_volume_viewer(
++            preview_vols,
++            spacing_um=preview_spacing,
++            channels=chs,
++            render_mode="volume",
++            mask_overlay=preview_mask,
++            mask_overlay_alpha=0.6,
++            height=620,
+         )
++        if preview_vols[0].shape != nuclei_masks.shape:
++            st.caption(
++                f"3D preview downsampled to {preview_vols[0].shape} for browser display "
++                f"(full resolution {nuclei_masks.shape} used for all measurements below)."
++            )
+     st.caption("Colored contours = object boundaries; translucent shell = 3D surface.")
+     with st.expander("How to review this segmentation", expanded=False):
+         st.markdown(
+@@ -586,9 +637,30 @@ def render_results_tab(config: SegmentationConfig) -> None:
+         feature_key = (
+             str(result.run_directory) if result is not None else id(nuclei_masks),
+             tuple(spacing),
++            object_type,
++            id(selected_masks),
++            fill_holes,
++            result_config,
+         )
+         if st.session_state.get("feature_key") != feature_key:
+-            st.session_state["features"] = extract_mask_features(nuclei_masks, spacing_um=spacing)
++            features = extract_mask_features(selected_masks, spacing_um=spacing, fill_holes=fill_holes)
++            segmentation_provenance = None
++            if result is not None:
++                provenance_path = result.run_directory / "provenance.json"
++                if provenance_path.is_file():
++                    try:
++                        segmentation_provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
++                        if not isinstance(segmentation_provenance, dict):
++                            raise ValueError("Run provenance must be a JSON object")
++                    except (OSError, ValueError):
++                        segmentation_provenance = None
++                        st.warning("Saved run provenance could not be read; the download will mark it unavailable.")
++            st.session_state["feature_bundle"] = build_mask_feature_bundle(
++                selected_masks, features, spacing_um=spacing, object_type=object_type,
++                fill_holes=fill_holes, segmentation_config=asdict(result_config),
++                segmentation_provenance=segmentation_provenance,
++            )
++            st.session_state["features"] = features
+             st.session_state["feature_key"] = feature_key
+         features = st.session_state["features"]
+         st.session_state["features"] = features
+@@ -596,6 +668,15 @@ def render_results_tab(config: SegmentationConfig) -> None:
+             st.warning("No objects found in the mask.")
+         else:
+             st.dataframe(features.reset_index(), use_container_width=True)
++            reviewed = int(features["qc_status"].eq("review").sum())
++            if reviewed:
++                st.warning(f"{reviewed} objects need review; consult qc_flags before interpretation. Summaries include these objects.")
++
++        st.download_button(
++            "Download feature CSV + provenance", data=st.session_state["feature_bundle"],
++            file_name=f"{object_type}_{'envelope' if fill_holes else 'raw'}_features.zip",
++            mime="application/zip",
++        )
+ 
+     summary = summarize_features(features)
+     st.session_state["summary"] = summary
+@@ -625,12 +706,12 @@ def render_analysis_tab() -> None:
+     with st.expander("What these feature statistics mean", expanded=True):
+         st.markdown(
+             "This tab summarizes labels from the current uploaded image only. It is descriptive and does "
+-            "not compare treatments or estimate viability. **Volume** is the hole-filled mask volume in "
++            "not compare treatments or estimate viability. **Volume** uses the selected raw-label or filled-envelope geometry in "
+             "µm³; **surface area** is a marching-cubes estimate in µm²; **sphericity** compares the mask "
+             "with an equal-volume sphere; **solidity** compares the labeled object with its convex hull; "
+             "and principal axes describe a moment-equivalent ellipsoid. Values depend on the entered voxel "
+-            "spacing and mask quality. Border-clipped, merged, or split labels should be excluded upstream "
+-            "rather than interpreted as unusual biology."
++            "spacing and mask quality. QC flags remain in the exported table and these summaries include "
++            "flagged objects; define and document study-specific exclusions before group analysis."
+         )
+ 
+     numeric = features.select_dtypes(include=[np.number])
+diff --git a/tests/segmentation/test_inference_contract_regressions.py b/tests/segmentation/test_inference_contract_regressions.py
+index 99f820e..3e10351 100644
+--- a/tests/segmentation/test_inference_contract_regressions.py
++++ b/tests/segmentation/test_inference_contract_regressions.py
+@@ -24,9 +24,11 @@ def test_working_diameter_and_anisotropy_use_same_xy_scale(factor):
+     model = RecordingModel()
+     config = SegmentationConfig(nuclei_diameter=32, cell_diameter=48, anisotropy=4, xy_downsample=factor)
+     nuclei, cells = segment_stacks(model, image, image, config)
+-    assert model.calls[0][1]['diameter'] == 32 * factor
+-    assert model.calls[1][1]['diameter'] == 48 * factor
+-    assert all(call[1]['anisotropy'] == 4 * factor for call in model.calls)
++    # SciPy's center-grid span is N-1, so 16 -> 8 pixels scales by 7/15.
++    effective_scale = (round(16 * factor) - 1) / 15
++    assert model.calls[0][1]['diameter'] == 32 * effective_scale
++    assert model.calls[1][1]['diameter'] == 48 * effective_scale
++    assert all(call[1]['anisotropy'] == 4 * effective_scale for call in model.calls)
+     assert model.calls[0][0] == (4, int(16 * factor), int(16 * factor))
+     assert nuclei.shape == cells.shape == image.shape
+ 
+@@ -40,6 +42,37 @@ def test_invalid_nuclei_only_input_rejected_before_model(image):
+     assert not model.calls
+ 
+ 
++def test_unequal_rounded_xy_scales_reject_before_inference():
++    model = RecordingModel()
++    with pytest.raises(ValueError, match="full XY resolution"):
++        segment_stacks(model, np.zeros((3, 11, 17)), None, SegmentationConfig(xy_downsample=.5))
++    assert not model.calls
++
++
++def test_interpolation_keeps_fractional_intensities_and_sparse_labels(monkeypatch):
++    from organoid_analysis.segmentation import cellpose_inference
++
++    monkeypatch.setattr(cellpose_inference, "_wrap_run_3d", lambda *args: lambda: None)
++    ramp = np.broadcast_to(np.arange(17, dtype=np.uint16), (3, 17, 17)).copy()
++    before = ramp.copy()
++
++    class RampModel:
++        def eval(self, image, **kwargs):
++            np.testing.assert_allclose(image[0, 0], np.linspace(0, 16, 8), atol=1e-6)
++            assert image.dtype == np.float32
++            assert kwargs["diameter"] == 30 * 7 / 16
++            result = np.zeros(image.shape, np.uint32)
++            result[:, :, 4:] = 2**24 + 19
++            return (result,)
++
++    labels, cells = segment_stacks(RampModel(), ramp, None, SegmentationConfig(xy_downsample=.5))
++    assert cells is None
++    assert labels.shape == ramp.shape
++    assert set(np.unique(labels)) == {0, 2**24 + 19}
++    assert np.all(labels[:, :, 0] == 0) and np.all(labels[:, :, -1] == 2**24 + 19)
++    np.testing.assert_array_equal(ramp, before)
++
++
+ @pytest.mark.parametrize('key,value', [('anisotropy', -1), ('xy_spacing_um', np.nan),
+                                       ('nuclei_diameter', 0), ('model_type', 'unknown'),
+                                       ('batch_size', 0), ('xy_downsample', .01)])
+diff --git a/tests/web_interface/test_segmentation_workspace.py b/tests/web_interface/test_segmentation_workspace.py
+index ef8df1e..198bf31 100644
+--- a/tests/web_interface/test_segmentation_workspace.py
++++ b/tests/web_interface/test_segmentation_workspace.py
+@@ -9,6 +9,13 @@ as "from metadata" for a sample it was never measured on.
+ 
+ from __future__ import annotations
+ 
++import io
++import json
++import zipfile
++
++import numpy as np
++import pytest
++
+ from organoid_analysis.web_interface.segmentation_workspace import resolve_auto_suggestion
+ 
+ 
+@@ -55,3 +62,68 @@ def test_switching_channel_on_the_same_tiff_does_not_inherit_the_suggestion():
+     }
+     resolved_for_channel_1 = resolve_auto_suggestion(suggestion_from_channel_0, ("digestSame", 1))
+     assert resolved_for_channel_1 == {}
++
++
++@pytest.mark.parametrize("budget", [2000, 150])
++def test_preview_budget_preserves_center_extent_and_raw_labels(monkeypatch, budget):
++    from organoid_analysis.web_interface import segmentation_workspace as workspace
++
++    monkeypatch.setattr(workspace, "_VIEWER_PAYLOAD_BUDGET_BYTES", budget)
++    volume = np.broadcast_to(np.arange(71, dtype=np.uint16), (3, 53, 71)).copy()
++    mask = np.zeros(volume.shape, np.uint32)
++    mask[:, :, 35:] = 2**24 + 7
++    originals = volume.copy(), mask.copy()
++    images, labels, spacing = workspace._fit_viewer_payload_budget([volume], mask, (.2, .3, 1.))
++    actual_bytes = np.prod(images[0].shape) * 4 * 2 * 1.34
++    assert actual_bytes <= budget
++    assert images[0].shape == labels.shape
++    np.testing.assert_allclose((np.array(images[0].shape[::-1]) - 1) * spacing, [14., 15.6, 2.], rtol=1e-12)
++    np.testing.assert_allclose(images[0][0, 0], np.linspace(0, 70, images[0].shape[2]), atol=1e-6)
++    assert set(np.unique(labels)) == {0, 2**24 + 7}
++    np.testing.assert_array_equal(volume, originals[0])
++    np.testing.assert_array_equal(mask, originals[1])
++
++
++def test_impossible_preview_budget_and_misaligned_channels_reject(monkeypatch):
++    from organoid_analysis.web_interface import segmentation_workspace as workspace
++
++    monkeypatch.setattr(workspace, "_VIEWER_PAYLOAD_BUDGET_BYTES", 10)
++    with pytest.raises(ValueError, match="budget"):
++        workspace._fit_viewer_payload_budget([np.ones((3, 8, 8))], None, (1, 1, 1))
++    with pytest.raises(ValueError, match="one ZYX grid"):
++        workspace._fit_viewer_payload_budget([np.ones((3, 8, 8))], np.ones((3, 7, 8)), (1, 1, 1))
++
++
++def test_layer_and_geometry_selection_refresh_features_and_download(monkeypatch):
++    from streamlit.testing.v1 import AppTest
++
++    from organoid_analysis.web_interface import segmentation_workspace as workspace
++
++    monkeypatch.setattr(workspace, "st_volume_viewer", lambda *args, **kwargs: None)
++    app = AppTest.from_string('''
++import numpy as np
++import streamlit as st
++from organoid_analysis.segmentation.cellpose_inference import SegmentationConfig
++from organoid_analysis.web_interface.segmentation_workspace import render_results_tab, render_analysis_tab
++if "nuclei_masks" not in st.session_state:
++    nuclei = np.zeros((9, 9, 9), np.uint32)
++    nuclei[2:5, 2:5, 2:5] = 10
++    cells = np.zeros_like(nuclei)
++    cells[1:8, 1:8, 1:8] = 70
++    cells[3, 3, 3] = 0
++    st.session_state["nuclei_masks"] = nuclei
++    st.session_state["cell_masks"] = cells
++render_results_tab(SegmentationConfig(xy_spacing_um=1., anisotropy=1., xy_spacing_source="user_override", anisotropy_source="user_override"))
++render_analysis_tab()
++''').run(timeout=30)
++    assert not app.exception
++    assert app.session_state["features"].volume_um3.tolist() == [27.]
++    app.selectbox(key="feature_object_layer").select("Cells").run()
++    assert not app.exception
++    assert app.session_state["features"].volume_um3.tolist() == [342.]
++    app.checkbox(key="feature_fill_holes").check().run()
++    assert not app.exception
++    assert app.session_state["features"].volume_um3.tolist() == [343.]
++    with zipfile.ZipFile(io.BytesIO(app.session_state["feature_bundle"])) as archive:
++        meta = json.loads(archive.read("measurement_provenance.json"))
++    assert meta["object_type"] == "cell" and meta["measurement_basis"] == "filled_envelope"

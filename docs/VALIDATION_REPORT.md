@@ -1,5 +1,12 @@
 # Full scientific workflow audit and release assessment — 2026-09-10
 
+Latest scoped update: [2026-09-11 workflow optimization](WORKFLOW_OPTIMIZATION_2026-09-11.md)
+corrects Web measurement support/precision and rounded-grid resampling, adds QC
+and traceable feature downloads, and records fresh engineering checks. The
+2026-09-10 execution counts and source-state statements below are historical;
+the broader surface-accuracy and biological/inferential evidence limitations
+remain unresolved.
+
 **Overall verdict: NOT READY FOR THE SPECIFIED RESEARCH USE.**
 
 Scope: the current local repository's research workflow, **Z-stack input → preview/inspection → segmentation → quantitative features → analysis/statistics → export**, including classical CLI, Cellpose/Web, multilevel labels and exploratory statistics. This supersedes previous local readiness claims. The intended use and original accuracy criteria were retained. A documented core surface-accuracy criterion fails; representative biological and inferential evidence is insufficient. Passing software tests is not a positive scientific release verdict.

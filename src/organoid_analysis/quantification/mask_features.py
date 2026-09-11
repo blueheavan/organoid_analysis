@@ -7,13 +7,14 @@ generic statistical helpers can operate on data measured directly from a
 user's own segmentation rather than only pre-exported Excel tables.
 
 Features are computed with physical spacing so magnitudes are in real units.
-Geometry (volume, surface area, sphericity, principal-axis diameters) is
-delegated to ``analysis.features.geometry`` so the UI metrics are bit-for-bit
-consistent with the canonical analysis pipeline instead of a duplicated
-implementation:
+Geometry is delegated to ``quantification.features.geometry``. The default
+support is the raw label, as in multilevel analysis; optional hole filling
+uses the filled support consistently for every geometry feature. Exported
+values retain floating-point precision; rounding belongs in presentation:
   * volume_um3       — object volume in cubic microns
   * surface_area_um2 — isosurface area in square microns (marching cubes)
-  * equivalent_disk  — diameter (µm) of the sphere of equal volume
+  * equivalent_sphere_diameter_um — diameter of the sphere of equal volume
+    (equivalent_disk_um is retained as a legacy alias)
   * sphericity       — ratio to the minimal possible surface for a volume
                       (not clamped; may slightly exceed 1 on discretized voxels)
   * major_axis_um / minor_axis_um / least_axis_um — principal-axis diameters
@@ -27,13 +28,26 @@ so they are easy to unit test.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
 
 from organoid_analysis.microscopy_io import validate_voxel_spacing_xyz
-from organoid_analysis.quantification.labels import compact_instance_labels
+from organoid_analysis.quantification.labels import (
+    bbox_touches_volume_boundary,
+    compact_instance_labels,
+)
+
+FEATURE_SCHEMA_VERSION = "2.0"
+FEATURE_COLUMNS = [
+    "volume_um3", "surface_area_um2", "equivalent_disk_um", "equivalent_sphere_diameter_um",
+    "sphericity", "solidity", "major_axis_um", "minor_axis_um", "least_axis_um", "elongation",
+    "centroid_z_um", "centroid_y_um", "centroid_x_um", "voxel_count", "segmented_volume_um3",
+    "filled_voxel_count", "measurement_basis", "touches_image_border", "fragmented_object",
+    "connected_component_count", "qc_status", "qc_flags",
+]
 
 
 @dataclass(frozen=True)
@@ -49,7 +63,7 @@ class MaskSummary:
     mean_solidity: float
 
 
-def _physical_spacing_zyx(spacing_um) -> tuple[float, float, float]:
+def _physical_spacing_zyx(spacing_um: Sequence[float]) -> tuple[float, float, float]:
     """Return (z, y, x) element spacing from the (x, y, z) API convention."""
     sx, sy, sz = validate_voxel_spacing_xyz(spacing_um)
     return (sz, sy, sx)
@@ -86,16 +100,23 @@ def count_mask_objects(mask: np.ndarray) -> int:
     return int(np.count_nonzero(values))
 
 
-def extract_mask_features(mask: np.ndarray, spacing_um=(1.0, 1.0, 1.0)) -> pd.DataFrame:
+def extract_mask_features(
+    mask: np.ndarray, spacing_um: Sequence[float] = (1.0, 1.0, 1.0), *, fill_holes: bool = False,
+) -> pd.DataFrame:
     """Return a per-object feature DataFrame for the labeled ``mask``.
 
     The background label ``0`` is ignored. Output rows are indexed by object
-    label and only include labels that appear in the mask.
+    label and only include labels that appear in the mask. ``fill_holes=True``
+    explicitly selects the outer-envelope estimand. QC flags retain all rows.
     """
+    from scipy import ndimage as ndi
     from skimage import measure
 
     from organoid_analysis.quantification.features import geometry as _geometry
+    from organoid_analysis.quantification.features import outer_envelope
 
+    if not isinstance(fill_holes, bool):
+        raise ValueError("fill_holes must be a boolean")
     labels = validate_mask(mask)
     spacing_zyx = _physical_spacing_zyx(spacing_um)
 
@@ -103,48 +124,74 @@ def extract_mask_features(mask: np.ndarray, spacing_um=(1.0, 1.0, 1.0)) -> pd.Da
     props = measure.regionprops(compact, spacing=spacing_zyx)
     rows = []
     for p in props:
-        # Geometry (volume/surface/sphericity/axes) is computed by the canonical
-        # analysis pipeline on the filled envelope so the UI and the pipeline
-        # agree exactly; centroids come from regionprops (full-image coords).
         # Crop to the object's bounding box first: geometry() takes an origin
         # offset precisely so callers don't have to run marching cubes etc. on
         # a full-volume array per object (this was previously O(n_objects x
         # volume) and made "Object features" slow to populate on real masks).
         binary = np.ascontiguousarray(compact[p.slice] == p.label, dtype=np.uint8)
+        support = outer_envelope(binary) if fill_holes else binary.astype(bool, copy=False)
         origin_zyx = tuple(s.start for s in p.slice)
-        g, _ = _geometry(binary, spacing_zyx, origin_zyx=origin_zyx)
+        g, _ = _geometry(support, spacing_zyx, origin_zyx=origin_zyx, fill_holes=False)
         volume = g["volume_um3"]
         surface = g["surface_area_um2"]
         major = g["principal_axis_major_um"]
         minor = g["principal_axis_intermediate_um"]
         least = g["principal_axis_minor_um"]
         sphericity = g["sphericity"]
-        # regionprops.centroid is ordered (z, y, x).
-        cz, cy, cx = (float(v) for v in p.centroid)
-        solidity = float(p.solidity) if p.solidity is not None else 0.0
-        eq_disk = (6.0 * volume / np.pi) ** (1.0 / 3.0)
-        elongation = 1.0 - (least / major) if major > 0 else 0.0
+        flags = []
+        touches = bbox_touches_volume_boundary(p.slice, labels.shape)
+        components = int(ndi.label(binary, structure=ndi.generate_binary_structure(3, 1))[1])
+        if touches:
+            flags.append("border_truncated")
+        if components > 1:
+            flags.append("fragmented_object")
+        if fill_holes and np.any(support & (compact[p.slice] != 0) & (compact[p.slice] != p.label)):
+            flags.append("encloses_other_instance")
+        # skimage's 3D hull needs non-coplanar voxel centers. Keep undefined
+        # solidity missing with QC instead of exporting infinity or zero.
+        points = np.argwhere(support)
+        if len(points) < 4 or np.linalg.matrix_rank(points - points[0]) < 3:
+            solidity = np.nan
+        else:
+            shape_prop = measure.regionprops(support.astype(np.uint8))[0] if fill_holes else p
+            solidity = float(shape_prop.solidity)
+        if not np.isfinite(solidity):
+            flags.append("solidity_not_estimable")
+        eq_disk = g["equivalent_diameter_um"]
+        elongation = 1.0 - least / major
+        voxel_count = int(np.count_nonzero(binary))
         rows.append(
             {
                 "Label": source_ids[int(p.label)],
-                "volume_um3": round(volume, 4),
-                "surface_area_um2": round(surface, 4),
-                "equivalent_disk_um": round(eq_disk, 4),
-                "sphericity": round(sphericity, 4),
-                "solidity": round(solidity, 4),
-                "major_axis_um": round(major, 4),
-                "minor_axis_um": round(minor, 4),
-                "least_axis_um": round(least, 4),
-                "elongation": round(elongation, 4),
-                "centroid_z_um": round(cz, 4),
-                "centroid_y_um": round(cy, 4),
-                "centroid_x_um": round(cx, 4),
+                "volume_um3": volume,
+                "surface_area_um2": surface,
+                "equivalent_disk_um": eq_disk,
+                "equivalent_sphere_diameter_um": eq_disk,
+                "sphericity": sphericity,
+                "solidity": solidity,
+                "major_axis_um": major,
+                "minor_axis_um": minor,
+                "least_axis_um": least,
+                "elongation": elongation,
+                "centroid_z_um": g["centroid_z_um"],
+                "centroid_y_um": g["centroid_y_um"],
+                "centroid_x_um": g["centroid_x_um"],
+                "voxel_count": voxel_count,
+                "segmented_volume_um3": float(voxel_count * np.prod(spacing_zyx)),
+                "filled_voxel_count": int(np.count_nonzero(support)) - voxel_count,
+                "measurement_basis": "filled_envelope" if fill_holes else "raw_label",
+                "touches_image_border": touches,
+                "fragmented_object": components > 1,
+                "connected_component_count": components,
+                "qc_status": "review" if flags else "not_flagged",
+                "qc_flags": ";".join(flags),
             }
         )
-    feature_df = pd.DataFrame(rows)
-    if feature_df.empty:
-        return feature_df
-    return feature_df.set_index("Label")
+    feature_df = pd.DataFrame(rows, columns=["Label", *FEATURE_COLUMNS]).set_index("Label")
+    feature_df.attrs["feature_schema_version"] = FEATURE_SCHEMA_VERSION
+    feature_df.attrs["spacing_xyz_um"] = spacing_zyx[::-1]
+    feature_df.attrs["measurement_basis"] = "filled_envelope" if fill_holes else "raw_label"
+    return feature_df
 
 
 def summarize_features(features: pd.DataFrame) -> MaskSummary:
@@ -172,9 +219,11 @@ def summarize_features(features: pd.DataFrame) -> MaskSummary:
     )
 
 
-def summarize_mask(mask: np.ndarray, spacing_um=(1.0, 1.0, 1.0)) -> MaskSummary:
+def summarize_mask(
+    mask: np.ndarray, spacing_um: Sequence[float] = (1.0, 1.0, 1.0), *, fill_holes: bool = False,
+) -> MaskSummary:
     """Extract and aggregate features in one convenience call."""
-    return summarize_features(extract_mask_features(mask, spacing_um=spacing_um))
+    return summarize_features(extract_mask_features(mask, spacing_um=spacing_um, fill_holes=fill_holes))
 
 
 def mask_to_binary(mask: np.ndarray) -> np.ndarray:

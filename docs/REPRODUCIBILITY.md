@@ -1,4 +1,21 @@
-# Local reproducibility record — 2026-09-10
+# Local reproducibility record
+
+## Scoped workflow update — 2026-09-11
+
+Started from clean `657204d8d8be2e547063272fd139161f59dc62be`; changes remain
+uncommitted. [Current snapshot](evidence/2026-09-11/snapshot.json) records the
+tracked patch hash, source/lock/package identities and relevant untracked files.
+[The scoped report](WORKFLOW_OPTIMIZATION_2026-09-11.md) identifies the executed
+336-pass default suite, remaining typecheck errors and bounded runtime probes.
+The optional local real TIFF and saved-mask fixture have their own hashes;
+neither qualifies biological accuracy. No new model inference, renderer suite
+or distribution installation is claimed for this update.
+
+Reproduce probes/source capture with
+`pixi run python docs/evidence/2026-09-11/capture_evidence.py`.
+Use `--snapshot-only` to refresh source identity without rerunning the probes.
+
+## Historical full audit — 2026-09-10
 
 The tested source starts at commit `ab6ee90db936de2a0888b9600ddf62f1729b4a1e` with a **dirty** worktree. [Initial status](evidence/2026-09-10/initial-status.txt) identifies pre-existing uncommitted edits; the audit preserved and revalidated them. No commit, push or release publication was performed.
 
