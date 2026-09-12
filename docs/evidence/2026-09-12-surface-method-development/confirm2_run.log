@@ -1,0 +1,39 @@
+confirm2: 480 cases
+     0/480       0s  sphere    rho=4
+    25/480       8s  sphere    rho=7.5
+    50/480      18s  ellipsoid rho=9.5
+    75/480      31s  ellipsoid rho=13
+   100/480      45s  cylinder  rho=4
+   125/480      59s  cylinder  rho=7.5
+   150/480      82s  box       rho=9.5
+   175/480     110s  box       rho=13
+   200/480     144s  capsule   rho=4
+   225/480     169s  capsule   rho=7.5
+   250/480     200s  torus     rho=9.5
+   275/480     245s  torus     rho=13
+   300/480     290s  sphere    rho=6.5
+   325/480     321s  sphere    rho=8.5
+   350/480     365s  ellipsoid rho=11
+   375/480     444s  ellipsoid rho=15
+   400/480     505s  cylinder  rho=6.5
+   425/480     533s  cylinder  rho=8.5
+   450/480     569s  box       rho=11
+   475/480     628s  box       rho=15
+done 480 cases in 652s -> out/vv_confirm2.csv
+{
+ "verdict": "QUALIFIED",
+ "n_cases_executed": 480,
+ "n_in_scope_and_gated": 96,
+ "worst": {
+  "area_rel_err": 0.0095077904022171,
+  "volume_rel_err": 0.007613374269059,
+  "sphericity_rel_err": 0.0094869197651933
+ },
+ "rules": {
+  "A1_area": true,
+  "A2_volume": true,
+  "A3_sphericity": true,
+  "V1_set_nonempty_all_classes": true,
+  "V2_all_measured": true
+ }
+}

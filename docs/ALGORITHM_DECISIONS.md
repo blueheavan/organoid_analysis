@@ -10,7 +10,53 @@ This record describes the current implementation; it does not retrospectively ju
 
 `workflows/multilevel_measurement_workflow.py` inherits the organoid through the cell and retains direct nucleus–organoid overlap as an audit field. Origin/basis `HEURISTIC`; evidence `PARTIAL`. Tests verify transitivity and mismatch flags. Direct overlap is an alternative definition, not an empirically rejected inferior method. No biological transitivity/assignment performance claim is supported.
 
-## D3. Native-spacing marching-cubes surface
+## D3a. Adopted surface estimator: minimax-weighted lattice transition counts (2026-09-12)
+
+`quantification/surface_crofton.py::measure` is the production surface-area
+estimator, `crofton_minimax_sym_v3`. Area is a weighted count of mask
+transitions along the lattice directions of a radius-`m` stencil (discrete
+Cauchy/Crofton). The weights solve a minimax linear program over plane
+orientations; its optimum `t*` bounds the estimator's response to a planar
+surface element before any measurement is taken. The search is restricted to
+weights constant on the orbits of the signed axis permutations preserving
+`diag(spacing)`; that restriction is **exact** — the objective is invariant
+under the group and convex, so an optimum exists on the invariant subspace —
+which is what made radius 5 solvable (577 free variables reduced to 40 orbits
+at isotropic spacing). The stencil radius is chosen per object to minimise
+`t* + D/rho_in**2`, a two-term a-priori budget: the first term is a proven
+worst-case bound for a planar element, the second an asymptotic model of
+grazing curved elements, so their sum is a validated predictive budget rather
+than a proven bound (it is exceeded by ≈1.3x for exactly lattice-centred
+spheres; see VALIDATION_UPDATE_2026-09-12.md).
+
+Origin `DERIVED`; basis `ESTABLISHED` (integral geometry; the weights carry a
+derivation, not a fit); implementation evidence `CONFIRMED` on an untouched
+confirmation set. Suitability for the specification's <5 % area criterion is
+`SUPPORTED` **within the declared domain only**: ρ_in ≥ 10, anisotropy ≤ 4,
+smooth closed surfaces — worst 0.951 % on 96 untouched in-domain cases, 0.790 %
+on the 40 in-domain cases of the frozen V&V grid. Outside that domain the
+claim is `NOT SUPPORTED`: creased surfaces are excluded at any resolution by
+the plane-response argument, and the unrestricted grid still FAILS at 25.81 %.
+Objects outside the domain are measured and flagged, never refused or silently
+passed.
+
+The minimax optimum is not unique, so the method is the specific frozen weight
+vectors and they ship with the package; an on-demand solve is conforming but
+not evidence-bearing and is reported through `weights_origin`. Changing the
+domain constants, the direction set, the stencil candidates or the weight
+tables voids the qualification and requires a new confirmation run on an unused
+set — editing the version-lock test's number instead is explicitly not the
+remedy.
+
+## D3. Native-spacing marching-cubes surface (SUPERSEDED 2026-09-12)
+
+Superseded by D3a as the production estimator; retained unchanged, reachable
+through `features.legacy_surface_area()` under
+`marching_cubes_binary_lewiner_v1`, so historical `surface_area_um2` values
+stay reproducible, together with the evidence that it fails the §9 criterion.
+It defines no exported column. The description below is the historical record
+of the decision as it stood on 2026-09-11.
+
 
 `quantification/features.py::surface_mesh` uses scikit-image 0.26.0's **Lewiner** implementation (the installed default), level 0.5, step 1, padded zero exterior and `allow_degenerate=False`. Lorensen–Cline is historical background, not the exact implementation. [Official method documentation](https://scikit-image.org/docs/stable/api/skimage.measure.html#skimage.measure.marching_cubes) identifies the algorithm and axis-ordered spacing. Origin `PUBLISHED_METHOD`; basis `ESTABLISHED`; implementation evidence `PARTIAL`; suitability for the specification's <5% surface error is `NOT SUPPORTED` / `FAIL`: the radius-18 µm sphere at (2,1,1) µm has 11.7347% area error. Sphericity is the dimensionless isoperimetric expression; it is not clipped. Changing smoothing, surface estimator or tolerance requires a new scientific decision and validation, so none was changed.
 
@@ -98,6 +144,12 @@ The acceptance rule was the unchanged §9 criterion: **every** case must have
 | E1 σ = 1× | non-estimable in 17 cases | −6.64% | large (ρ≥12) only |
 | E2 | 22.48% | +5.36% | none |
 | E3 | 26.51% | −1.67% | sphere and ellipsoid with ρ≥3; cylinders fail in every stratum, matching the analytical plane response |
+
+**Superseded 2026-09-12 — read D3a.** The conclusion below is the honest
+outcome of round 1 and is kept as the record of it. A round-2 development
+cycle, with the confirmation set still untouched, produced a qualified
+estimator that is now the production default; the replacement rule was met
+within a declared domain rather than unrestrictedly.
 
 No candidate met the predeclared replacement rule. None was better in every
 resolution stratum. E1's outcome depends on σ, which has no analytical

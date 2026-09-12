@@ -1,0 +1,13 @@
+{
+ "common.py": "4af41ecfb9adaec215a50c62f1ded951b4d230f879e181f51c635a287e45c6fd",
+ "common2.py": "1bd8c4f721ab768721a99b2573266c58ef8ba1e4dd52011728cdcb8d9bdbbf0c",
+ "estimators_v2.py": "99a7366dbfab05aca7f6012135d4109a2e3b7ff6c07781c1b0d56a59ce75b9c8",
+ "estimators_v3.py": "27aeec2fab30aafc1b4c0a1b44259e84df1a874f2c2bb6f2e39de6512725b99c",
+ "surface_area_v3.py": "d162478b24a29e8f9731c56dace9fdb0d854193722cbac0a9331f3e3d3537e0c",
+ "step8_dev2_run.py": "047f7f0ead831c816895ee95338352a8b1153abd3c8d67ec7766324565dae288",
+ "step10_confirm2_run.py": "05ca7a7081b39b63ae79ce5afd7bb819a2dfbc3f74c29e8acae76bae28e6baad",
+ "step9_freeze_v3.py": "8a2f353d117afc4e8cb0ebfeb0cb636072b78e7cedf4e662d1d6c068a7e12b6a",
+ "out/FREEZE_RECORD_V3.md": "f09868befadb941307ad33028edb7279be12933a335639b9ef5954687cfda0dd",
+ "out/crofton_weights_v3/": "58cbb59bd3035b834968591a0a66fe103ba21ae19055a69fa73de8b2e9a3a481",
+ "_n_weight_files": 63
+}

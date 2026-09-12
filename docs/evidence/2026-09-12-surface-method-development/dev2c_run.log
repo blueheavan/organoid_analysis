@@ -1,0 +1,8 @@
+dev2c: 126 cases
+     0/126       0s  box       rho=8
+    25/126      12s  box       rho=22
+    50/126      33s  box       rho=11
+    75/126      64s  cylinder  rho=28
+   100/126      98s  cylinder  rho=14
+   125/126     165s  cylinder  rho=34
+done 126 cases in 165s -> out/vv_dev2c.csv

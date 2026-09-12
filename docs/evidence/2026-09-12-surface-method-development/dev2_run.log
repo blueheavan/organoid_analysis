@@ -1,0 +1,33 @@
+dev2: 765 cases
+     0/765       0s  sphere    rho=3
+    25/765       8s  box       rho=5
+    50/765      16s  torus     rho=6
+    75/765      24s  cylinder  rho=8
+   100/765      33s  torus     rho=9
+   125/765      42s  cylinder  rho=12
+   150/765      56s  torus     rho=16
+   175/765      65s  cylinder  rho=5
+   200/765      77s  capsule   rho=6
+   225/765      89s  ellipsoid rho=8
+   250/765     102s  capsule   rho=9
+   275/765     124s  ellipsoid rho=12
+   300/765     154s  capsule   rho=16
+   325/765     173s  ellipsoid rho=5
+   350/765     194s  box       rho=6
+   375/765     217s  sphere    rho=8
+   400/765     242s  box       rho=9
+   425/765     271s  sphere    rho=12
+   450/765     308s  box       rho=16
+   475/765     344s  torus     rho=3
+   500/765     366s  cylinder  rho=6
+   525/765     391s  torus     rho=7
+   550/765     419s  cylinder  rho=9
+   575/765     454s  torus     rho=10
+   600/765     500s  cylinder  rho=16
+   625/765     550s  capsule   rho=3
+   650/765     569s  ellipsoid rho=6
+   675/765     592s  capsule   rho=7
+   700/765     617s  ellipsoid rho=9
+   725/765     645s  capsule   rho=10
+   750/765     680s  ellipsoid rho=16
+done 765 cases in 715s -> out/vv_dev2.csv

@@ -1,0 +1,62 @@
+{
+  "estimator_id": "E0_marching_cubes_binary_v1",
+  "role": "legacy baseline -- preserved, not modified, not deleted",
+  "method_identity": {
+    "estimator": "marching_cubes_binary",
+    "method_version": "marching_cubes_binary_lewiner_v1",
+    "implementation": "skimage.measure.marching_cubes (Lewiner) + skimage.measure.mesh_surface_area",
+    "input": "binary measurement support, zero-padded by one voxel",
+    "isosurface_level": 0.5,
+    "spacing": "native physical ZYX voxel spacing",
+    "step_size": 1,
+    "smoothing": "none"
+  },
+  "production_call_path": "organoid_analysis.quantification.features.geometry -> surface_mesh -> skimage.measure.mesh_surface_area",
+  "production_source_sha256": "272bcb96ab0433593c4312f8d05338f0ca2ba084ceb3a0c843e75380c14408c5",
+  "volume_semantics": "envelope voxel count x prod(spacing); unchanged by this study",
+  "sphericity_semantics": "pi^(1/3) (6V)^(2/3) / A; unclipped; flag above 1.05",
+  "acceptance_criteria_applied": {
+    "surface_abs_rel_error_per_case": 0.05,
+    "volume_abs_rel_error_per_case": 0.01
+  },
+  "current_validation_status": "FAIL (surface); criterion NOT relaxed by this study",
+  "fail_evidence_dev_grid": {
+    "n_cases": 188,
+    "n_nonestimable": 0,
+    "mean_signed": 0.09904615618816064,
+    "median_signed": 0.09717035491197701,
+    "mean_abs": 0.1029869961252312,
+    "median_abs": 0.09936728104234549,
+    "max_abs": 0.18739421939620216,
+    "worst_case": "dev-139-cylinder-size24-sp3x1x1-rot2",
+    "n_cases_failing_5pct": 164,
+    "by_shape_mean_signed": {
+      "cylinder": 0.06876780588771603,
+      "ellipsoid": 0.11009191609632832,
+      "sphere": 0.11956091927325598
+    },
+    "by_rho_stratum_mean_signed": {
+      "large(>=12)": 0.1081793566013354,
+      "medium(6-12)": 0.11046855465708266,
+      "small(3-6)": 0.09679474506324705,
+      "very_small(<3)": 0.07825109559102064
+    }
+  },
+  "reproduction_check_vs_frozen_record": {
+    "frozen_csv": "docs/evidence/2026-09-11-analytical-geometry-record/surface_vv_dev.csv",
+    "n_cases_matched": 188,
+    "max_abs_rel_deviation_area": 4.455791291491096e-10,
+    "max_abs_rel_deviation_volume": 2.220446049250313e-16,
+    "tolerance": 1e-09,
+    "status": "REPRODUCED"
+  },
+  "oracle_self_check_max_rel_diff": 4.440892098500626e-16,
+  "environment": {
+    "python": "3.12.14",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "numpy": "2.5.2",
+    "scipy": "1.17.1",
+    "scikit-image": "0.26.0",
+    "pandas": "2.3.3"
+  }
+}

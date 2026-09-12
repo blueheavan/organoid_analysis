@@ -1,0 +1,146 @@
+{
+  "frozen_at_utc": "2026-09-12T02:46:51+00:00",
+  "confirmation_grid_executed_before_this_record": false,
+  "estimator": {
+    "method_name": "crofton_minimax_adaptive_v2",
+    "scheme": "lp",
+    "m_candidates": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "domain_rho_eff_min": 8.0,
+    "domain_aniso_max": 3.0
+  },
+  "acceptance": {
+    "area": 0.05,
+    "volume": 0.01,
+    "sphericity": 0.05,
+    "rule": "every in-domain case must satisfy all three; one violation = FAIL"
+  },
+  "legacy_estimator_preserved": {
+    "name": "marching_cubes_binary_lewiner_v1",
+    "action": "kept as default; candidate added alongside, never in place of",
+    "evidence": "out/E0_legacy_baseline.json"
+  },
+  "grids": {
+    "dev": {
+      "seed": 20260911,
+      "spacings": [
+        [
+          1.0,
+          1.0,
+          1.0
+        ],
+        [
+          2.0,
+          1.0,
+          1.0
+        ],
+        [
+          3.0,
+          1.0,
+          1.0
+        ],
+        [
+          2.0,
+          0.7,
+          0.7
+        ]
+      ],
+      "sphere_radii": [
+        3,
+        6,
+        12,
+        24,
+        36
+      ],
+      "sphere_offsets": 3,
+      "ellipsoid_scales": [
+        6,
+        12,
+        24,
+        48
+      ],
+      "ellipsoid_ratio": [
+        1.0,
+        0.75,
+        0.5
+      ],
+      "cylinder_radii": [
+        3,
+        6,
+        12,
+        24
+      ],
+      "cylinder_height_ratio": 3.0,
+      "n_rotations": 3
+    },
+    "confirm": {
+      "seed": 424242,
+      "spacings": [
+        [
+          1.5,
+          1.0,
+          1.0
+        ],
+        [
+          2.5,
+          0.8,
+          0.8
+        ],
+        [
+          4.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "sphere_radii": [
+        5,
+        10,
+        20,
+        30
+      ],
+      "sphere_offsets": 2,
+      "ellipsoid_scales": [
+        10,
+        20,
+        40
+      ],
+      "ellipsoid_ratio": [
+        1.0,
+        0.6,
+        0.45
+      ],
+      "cylinder_radii": [
+        5,
+        10,
+        20
+      ],
+      "cylinder_height_ratio": 2.5,
+      "n_rotations": 2
+    }
+  },
+  "sha256": {
+    "common.py": "4af41ecfb9adaec215a50c62f1ded951b4d230f879e181f51c635a287e45c6fd",
+    "estimators_v2.py": "99a7366dbfab05aca7f6012135d4109a2e3b7ff6c07781c1b0d56a59ce75b9c8",
+    "surface_area_v2.py": "107204eba446a483de11b277d715cefa11a0901a3bcfa1f06e8706338d8c60d0",
+    "step6_vv_run.py": "f370434a9cda1ae06f1d0d990920c78e3ec630128b23770f570fe606ef1904e4",
+    "step1_baseline.py": "485f22b2d0c4337c3b9879c416f1e7782c211c16058cac7a48d184a4d3202412",
+    "step2_mechanism.py": "e57fbc762f18e14bbec235da0604f9f6edecf17df1730af139048db0749dc432",
+    "step3_stencil_sweep.py": "b146ba04080fc5aed95eff72add0cffc642a214bc3d742375ef0ce77e7e61480",
+    "step4_dev_explore.py": "a4277b3031e4402c829444a0c062db527417f0044724fda0be031b2ddece48f7",
+    "out/FREEZE_RECORD.md": "8bdeee502a298816ad9adc37d6dd0377689d16bf3f8977582ccd94d4a03d9da4",
+    "out/CANDIDATES.md": "259547aef0438e7c50f3bda9438d076da8e2cd18ea30ebe3d8eb634a6b116dbf",
+    "out/MECHANISM.md": "dfc88a8c064ddfa2271012cdac9d1d8f92f2cb5f649b059ca59c5208dc2a13c7"
+  },
+  "environment": {
+    "python": "3.12.14",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "numpy": "2.5.2",
+    "scipy": "1.17.1",
+    "scikit_image": "0.26.0",
+    "repo_head": "3639bec910337ec623782b657fe62cf1dafc3800"
+  }
+}

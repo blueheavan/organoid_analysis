@@ -1,0 +1,138 @@
+{
+  "M1_lattice_representable_polyhedra": {
+    "per_family": {
+      "1x1x1": {
+        "error_by_rho": {
+          "1.0": -0.32427779833475745,
+          "2.0": -0.15429274241129554,
+          "4.0": -0.07518490155537927,
+          "8.0": -0.03710206349690759,
+          "16.0": -0.01842840512593591,
+          "32.0": -0.009183565775553348
+        },
+        "edge_coefficient_c_in_err_approx_c_over_rho": -0.30319133069780135,
+        "error_at_largest_rho": -0.009183565775553348
+      },
+      "1x1x1 (45deg prism)": {
+        "error_by_rho": {
+          "4.0": 0.052058648486217995,
+          "8.0": 0.02627278120340404,
+          "16.0": 0.013200515389081513,
+          "32.0": 0.006616592928004428
+        },
+        "edge_coefficient_c_in_err_approx_c_over_rho": 0.21033901587338755,
+        "error_at_largest_rho": 0.006616592928004428
+      },
+      "2x0.7x0.7": {
+        "error_by_rho": {
+          "1.0": -0.29663663939502094,
+          "2.0": -0.13622427131629633,
+          "4.0": -0.06508857356016384,
+          "8.0": -0.03178838248673166,
+          "16.0": -0.015705273868827363,
+          "32.0": -0.007805430055751517
+        },
+        "edge_coefficient_c_in_err_approx_c_over_rho": -0.26413411330790143,
+        "error_at_largest_rho": -0.007805430055751517
+      },
+      "3x1x1": {
+        "error_by_rho": {
+          "1.0": -0.2947627476283482,
+          "2.0": -0.13499069213867188,
+          "4.0": -0.06439774377005436,
+          "8.0": -0.0314243861607143,
+          "16.0": -0.015518597194126627,
+          "32.0": -0.007710865565708658
+        },
+        "edge_coefficient_c_in_err_approx_c_over_rho": -0.2614625749133878,
+        "error_at_largest_rho": -0.007710865565708658
+      }
+    },
+    "interpretation": "For polyhedra whose faces are lattice-representable planes the area error is purely an edge/corner artefact (marching cubes chamfers convex edges) and decays as O(1/rho) to ZERO -- halving on every doubling of rho. A convergent regime therefore exists. The sphere does not enter it: its error converges to a non-zero limit. The sphere/ellipsoid error is consequently an orientation-dependent asymptotic bias, not insufficient resolution."
+  },
+  "M2_orientation_response": {
+    "by_spacing": {
+      "1x1x1": {
+        "g_min": 1.0298888795657355,
+        "g_max": 1.12607856404252,
+        "g_solid_angle_mean": 1.0874578153090138,
+        "total_area_rel_err": 0.08745777606964111,
+        "closure_residual": 3.923937264005417e-08
+      },
+      "2x0.7x0.7": {
+        "g_min": 1.0250799948157088,
+        "g_max": 1.2807726568551192,
+        "g_solid_angle_mean": 1.1582558711254625,
+        "total_area_rel_err": 0.158255934715271,
+        "closure_residual": 6.358980852994023e-08
+      },
+      "3x1x1": {
+        "g_min": 1.0233154631668724,
+        "g_max": 1.2869343577776593,
+        "g_solid_angle_mean": 1.1621675592632315,
+        "total_area_rel_err": 0.16216754913330078,
+        "closure_residual": 1.0129930672064802e-08
+      }
+    },
+    "interpretation": "g(n) is the asymptotic area-inflation factor of binary marching cubes for a surface patch of true normal n. It is minimal near lattice-representable normals (M1 shows flat lattice-aligned faces are measured with no asymptotic error at all; the ~1.03 floor here is the finite bin width smearing those measure-zero directions) and maximal near normals far from any short lattice vector. Its solid-angle mean is the irreducible bias of the estimator on a smooth closed surface, and it grows sharply with voxel anisotropy."
+  },
+  "M3_resolution_sweep": {
+    "1x1x1": {
+      "area": {
+        "a_asymptotic": 0.09109932810598725,
+        "b_per_rho": -0.0955334836441154,
+        "rms_residual": 0.007027643369215531
+      },
+      "volume": {
+        "a_asymptotic": 0.0017957597380409646,
+        "b_per_rho": -0.04102065864883113,
+        "rms_residual": 0.006630216539371013
+      },
+      "area_err_at_max_rho": 0.08779044769246624,
+      "volume_err_at_max_rho": -5.818056239137448e-05,
+      "max_rho": 128.0
+    },
+    "2x0.7x0.7": {
+      "area": {
+        "a_asymptotic": 0.16138220493238786,
+        "b_per_rho": -0.061622062748634326,
+        "rms_residual": 0.004881859641785819
+      },
+      "volume": {
+        "a_asymptotic": 0.0013357858824395174,
+        "b_per_rho": -0.0284683920229721,
+        "rms_residual": 0.003949061263417989
+      },
+      "area_err_at_max_rho": 0.15881738249545338,
+      "volume_err_at_max_rho": -8.31562799093651e-06,
+      "max_rho": 64.0
+    },
+    "3x1x1": {
+      "area": {
+        "a_asymptotic": 0.1660826751873015,
+        "b_per_rho": -0.04324253658927256,
+        "rms_residual": 0.005784570287398358
+      },
+      "volume": {
+        "a_asymptotic": 0.0009801306498240228,
+        "b_per_rho": -0.015998515251148843,
+        "rms_residual": 0.0046514482655319
+      },
+      "area_err_at_max_rho": 0.1635483003755643,
+      "volume_err_at_max_rho": -4.753304883697851e-06,
+      "max_rho": 42.666666666666664
+    }
+  },
+  "M4_sphericity_propagation": {
+    "max_abs_deviation_of_propagation_identity": 3.3306690738754696e-16,
+    "mean_sphericity_rel_err": -0.10488525205039083,
+    "mean_sphericity_rel_err_by_shape": {
+      "cylinder": -0.0996479875248289,
+      "ellipsoid": -0.10521574937512157,
+      "sphere": -0.10979201925122206
+    },
+    "sphere_mean_sphericity_est": 0.8902079807487777,
+    "sphere_true_sphericity": 1.0,
+    "n_cases_sphericity_above_1p05": 0
+  }
+}

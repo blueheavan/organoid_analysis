@@ -1,0 +1,38 @@
+{
+  "grid": "dev",
+  "method": "crofton_minimax_adaptive_v2",
+  "n_cases": 188,
+  "n_in_domain": 78,
+  "n_out_of_domain": 110,
+  "checks": {
+    "A1_area": {
+      "criterion": 0.05,
+      "n_violations": 0,
+      "status": "PASS",
+      "worst_case": "dev-039-cylinder-size12-sp1x1x1-rot0",
+      "worst_abs": 0.03490350701359546,
+      "violating_cases": []
+    },
+    "A2_volume": {
+      "criterion": 0.01,
+      "n_violations": 0,
+      "status": "PASS",
+      "worst_case": "dev-019-ellipsoid-size12-sp1x1x1-rot0",
+      "worst_abs": 0.005650019895774183,
+      "violating_cases": []
+    },
+    "A3_sphericity": {
+      "criterion": 0.05,
+      "n_violations": 0,
+      "status": "PASS",
+      "worst_case": "dev-042-cylinder-size12-sp1x1x1-rot3",
+      "worst_abs": 0.035750380861528264,
+      "violating_cases": []
+    }
+  },
+  "verdict": "PASS",
+  "legacy_E0_in_domain_violations": 73,
+  "legacy_E0_worst_abs": 0.18739421939620216,
+  "out_of_domain_worst_area_abs": 0.25898468224575677,
+  "out_of_domain_area_violations": 46
+}

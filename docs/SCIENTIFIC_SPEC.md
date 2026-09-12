@@ -280,8 +280,43 @@ spacing.
   it (2.57% for 6≤ρ<12, 2.74% for 3≤ρ<6, 18.3% for ρ<3).
 
 The earlier volume PASS came from a single large sphere and holds only for
-large objects. No intended-use restriction (for example a minimum ρ) has been
-adopted; that is a decision for the project owner. `surface_area_um2` keeps
+large objects. No intended-use restriction (for example a minimum ρ) had been
+adopted at that date; §16 records the one adopted since. `surface_area_um2` keeps
 its historical definition, now versioned as `marching_cubes_binary_lewiner_v1`
 in provenance. Details:
 [validation update](VALIDATION_UPDATE_2026-09-11.md).
+
+## 16. Measurement validation update — 2026-09-12
+
+The §9 criteria are again **unchanged**. A replacement surface-area estimator
+was developed against a separate development grid, frozen, and confirmed on an
+untouched confirmation set; it is now the production default.
+
+`surface_area_um2` is `crofton_minimax_sym_v3` — weighted lattice transition
+counts with minimax-optimal orbit-symmetric direction weights
+(`quantification.surface_crofton`). Its accuracy claim is **domain-restricted**
+and the restriction is part of the claim:
+
+- **Qualified:** ρ_in ≥ 10, anisotropy ≤ 4, smooth closed surfaces. Worst area
+  error 0.951 % on 96 untouched confirmation cases; 0.790 % on the 40 in-domain
+  cases of the frozen V&V grid above, where the superseded estimator's worst
+  was 17.85 %.
+- **NOT QUALIFIED:** surfaces with dihedral creases, at any resolution;
+  objects below ρ_in 10; anisotropy above 4. Such objects are still measured,
+  and are flagged (`surface_outside_qualified_domain`) rather than refused.
+  Smoothness is not machine-checkable from a mask and is the caller's
+  responsibility.
+- **SG-1 remains FAIL.** It is unrestricted and the frozen grid contains
+  creased and under-resolved shapes; unrestricted worst error is 25.81 %, on a
+  3-voxel cylinder. No criterion, phantom or acceptance rule was changed to
+  accommodate the new estimator, and the domain-restricted claim is enforced by
+  a separate test, not by the gate.
+- **Volume is untouched** and SG-2 is bit-identical to the previous record.
+  Inside the declared domain volume, not area, is now the binding constraint.
+
+Every exported area and sphericity value changes; sphericity for small objects
+now slightly exceeds 1 because an accurate area no longer cancels the positive
+bias of voxel-count volume. The superseded estimator is preserved under its own
+identity (`legacy_surface_area()`, `marching_cubes_binary_lewiner_v1`) with the
+evidence that it fails. Details:
+[validation update](VALIDATION_UPDATE_2026-09-12.md).

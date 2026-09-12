@@ -50,6 +50,25 @@
 
 **状态：FAIL，当前已知问题经新反例确认。** [probe.json 的 C1_geometry](evidence/2026-09-11-code-science-audit/probe.json)。[scikit-image 官方接口](https://scikit-image.org/docs/stable/api/skimage.measure.html#skimage.measure.marching_cubes)说明方法/spacing 语义，不提供本项目的精度保证。
 
+
+**状态更新 2026-09-12：已关闭（限定适用域）。**
+生产估计量已替换为 `crofton_minimax_sym_v3`（权重来自平面朝向上的 minimax
+线性规划，取值前即给出先验误差预算）。在冻结后、确认集未被触碰的前提下，
+96 个域内确认案例最差面积误差 0.951 %；项目自身冻结网格的 40 个域内案例最差
+0.790 %（原估计量为 17.85 %）。适用域为声明并冻结的 ρ_in ≥ 10、anisotropy ≤ 4、
+光滑闭合曲面；带二面角折痕的曲面在任何分辨率下均 `NOT QUALIFIED`。域内判定逐
+对象导出并对域外对象加 review 标记，不拒绝也不静默通过；光滑性无法从 mask 机器
+检验，由调用方负责。
+
+未一并解决、必须照实记录的部分：SG-1 为无限定项，冻结网格含折痕与欠分辨形状，
+因此仍为 FAIL（无限定最差 25.81 %，出现在 3 体素圆柱上，比原估计量的 18.74 %
+更差——该估计量在其声明域内远更准确，在域外退化更快）。验收判据、phantom 与
+gate 规则一概未改，域内主张由独立测试承载。体积仍为体素计数、未改动，SG-2 与
+上一份记录逐位一致，并且在域内体积而非面积成为约束项（F2 中"球形度偏低"的
+部分随之改变方向：准确面积不再抵消体素体积的正偏差，小对象球形度略高于 1，
+按既有策略标记而不裁剪）。证据：`docs/evidence/2026-09-12-surface-crofton-v3`
+（canonical），说明见 `docs/VALIDATION_UPDATE_2026-09-12.md`。
+
 ### F3 — P2：聚类推荐、拟合、评分用了不同的特征尺度
 
 **位置：** `web_interface/analysis_ui.py:408–416`；`statistics/exploration.py:538–575`。
@@ -105,7 +124,7 @@
 | 图像读入 | ZYX/CZYX，显式时间点、物理单位、均匀 Z；形状/spacing 一致不足以证明配准 | 单位定义 ESTABLISHED；部分元数据完整性 FAIL（F1）；采集与配准资格 INSUFFICIENT EVIDENCE |
 | 经典分割 | 强度阈值/Otsu、物理尺度平滑、闭运算、填洞、距离变换 watershed；要求结构信号对应目标边界 | 方法 CONTEXT_DEPENDENT；尚无目标图像精度支持，适用性 INSUFFICIENT EVIDENCE。核染色边界不能自动替代整类器官边界 |
 | Cellpose | 4.2.1.1；默认 cpdino-vitb，do_3D，正交平面网络、diameter/anisotropy 与下采样尺度调整 | 模型数据适配 CONTEXT_DEPENDENT；接口回归 PARTIAL，真实精度 INSUFFICIENT EVIDENCE。未新运行网络或下载权重 |
-| 体积、矩与表面 | 体素计数、含体素内二阶矩的等效椭球轴、marching cubes；经典流程填洞，multilevel/Web 默认原始标签 | 公式 ESTABLISHED；支持定义不同必须保留；连续对象精度 FAIL（F2） |
+| 体积、矩与表面 | 体素计数、含体素内二阶矩的等效椭球轴；表面自 2026-09-12 起为 minimax 权重的格点截线计数（marching cubes 保留为 legacy）；经典流程填洞，multilevel/Web 默认原始标签 | 公式 ESTABLISHED；支持定义不同必须保留；面积精度在声明域内 PASS、域外无主张、无限定 SG-1 仍 FAIL；体积精度 ρ_in < 12 仍 FAIL（F2 更新见下） |
 | 层级/接触/位置 | 最大重叠分配，完整子对象体积作分母；6 邻接体素面面积；EDT 取舍入后质心处 | 离散定义 ESTABLISHED/CONTEXT_DEPENDENT；身份完整性 FAIL（F4）。体素接触是离散代理；EDT 是到背景体素中心，不等同连续膜面距离 |
 | 活性代理 | 局部背景中位数扣除、批内独立对照汇总、双标记规则；保留负扣背景值与超对照范围标记 | HEURISTIC；只能称信号状态。饱和条件 FAIL（F6），独立 assay 适用性 INSUFFICIENT EVIDENCE |
 | 推断与探索 | 生物重复随机截距 LMM，失败/退化时 clustered OLS；对象级分类、KMeans | CONTEXT_DEPENDENT/HEURISTIC；研究设计与统计校准 INSUFFICIENT EVIDENCE；聚类流程一致性 FAIL（F3） |
@@ -178,4 +197,4 @@ LMM 的 t(G−1) 近似不是 Satterthwaite/Kenward–Roger；仅收敛不足以
 
 本次 Gate 1/2 完成当前仓库与影响重建；Gate 3/4 核对现有规范与方法参数（没有实施新设计）；Gate 5 冻结反例标准；Gate 6/7/8 审阅实现并执行相应检查；Gate 9 明示审核分离限制；Gate 10 完成分级与最小修复建议，按 audit-only 范围不修改生产逻辑；Gate 11 记录源码/锁文件/数据身份；Gate 12 以本报告及矩阵给出受范围约束结论。无新实现的设计审批、无发布的发行物/部署评估均不在本次范围。
 
-优先关闭 F1 和 F2；F3/F4/F5 的修复可保持既有科学模型与阈值，F6 需要明确采集上限契约。修复工程问题后仍须分别建立真实图像分割、活性代理和实验设计的科学证据。**当前总体结论仍是 NOT READY FOR THE SPECIFIED RESEARCH USE。**
+F2 已于 2026-09-12 在限定适用域内关闭（无限定 SG-1 仍 FAIL，体积未改动）；优先关闭 F1；F3/F4/F5 的修复可保持既有科学模型与阈值，F6 需要明确采集上限契约。修复工程问题后仍须分别建立真实图像分割、活性代理和实验设计的科学证据。**当前总体结论仍是 NOT READY FOR THE SPECIFIED RESEARCH USE。**

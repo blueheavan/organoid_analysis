@@ -17,6 +17,10 @@ everything would defeat the point.
 """
 from __future__ import annotations
 
+import csv
+import json
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -25,6 +29,9 @@ from organoid_analysis.quantification.features import SURFACE_AREA_METHOD, geome
 
 AREA_CRITERION = 0.05      # SCIENTIFIC_SPEC section 9
 VOLUME_CRITERION = 0.01    # SCIENTIFIC_SPEC section 9
+# The declared domain's smoothness scope, as shape classes of the frozen
+# V&V grid: cylinders carry dihedral creases and are excluded by name.
+SMOOTH_SHAPES = frozenset({"sphere", "ellipsoid", "capsule"})
 
 
 # Sub-voxel offsets matching how the development and confirmation sets placed
@@ -199,3 +206,29 @@ def test_plane_response_deviation_decreases_with_stencil_radius():
     deviations = [sc.crofton_weights_sym((2.0, 1.0, 1.0), m)[2]["plane_response_max_abs_dev"]
                   for m in sc.M_CANDIDATES]
     assert deviations == sorted(deviations, reverse=True)
+
+
+def test_recorded_vv_table_meets_the_criterion_inside_the_declared_domain():
+    """The claim is checked against the record, not only against fresh phantoms.
+
+    SG-1 in the validation record is unrestricted and still FAILS: the frozen
+    grid contains creased cylinders and objects down to rho_in 1.5, which the
+    declared domain excludes. This test reads the same recorded per-case table
+    and asserts the criterion on the subset the accuracy claim actually covers.
+    It must not be turned into a restatement of SG-1, and the subset must stay
+    defined by the frozen domain constants rather than by a threshold chosen
+    to make it pass.
+    """
+    root = Path(__file__).resolve().parents[2]
+    pointer = json.loads((root / "docs/evidence/analytical_geometry_current_record.json").read_text())
+    manifest = json.loads((root / pointer["manifest"]).read_text())
+    assert manifest["estimator"]["surface_area_method"]["method_version"] == sc.METHOD_NAME
+    table = root / pointer["manifest"].rsplit("/", 1)[0] / "surface_vv_dev.csv"
+    rows = [r for r in csv.DictReader(table.open())
+            if r["estimator"] == manifest["estimator"]["harness_label"]
+            and r["shape"] in SMOOTH_SHAPES
+            and float(r["rho"]) >= sc.DOMAIN_RHO_IN_MIN
+            and float(r["anisotropy"]) <= sc.DOMAIN_ANISO_MAX]
+    assert len(rows) >= 40, f"domain subset unexpectedly small: {len(rows)}"
+    worst = max(abs(float(r["area_rel_err"])) for r in rows)
+    assert worst < AREA_CRITERION, f"worst in-domain recorded area error {worst:.4%}"

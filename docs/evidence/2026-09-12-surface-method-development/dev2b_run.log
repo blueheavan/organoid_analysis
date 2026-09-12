@@ -1,0 +1,10 @@
+dev2b: 192 cases
+     0/192       0s  cylinder  rho=11
+    25/192      13s  cylinder  rho=20
+    50/192      47s  cylinder  rho=11
+    75/192      81s  box       rho=20
+   100/192     168s  box       rho=11
+   125/192     225s  box       rho=20
+   150/192     390s  cylinder  rho=13
+   175/192     453s  cylinder  rho=24
+done 192 cases in 611s -> out/vv_dev2b.csv

@@ -1,0 +1,46 @@
+{
+  "grid": "confirm",
+  "method": "crofton_minimax_adaptive_v2",
+  "n_cases": 78,
+  "n_in_domain": 16,
+  "n_out_of_domain": 62,
+  "checks": {
+    "A1_area": {
+      "criterion": 0.05,
+      "n_violations": 1,
+      "status": "FAIL",
+      "worst_case": "confirm-021-cylinder-size10-sp1.5x1x1-rot1",
+      "worst_abs": 0.054105935407400385,
+      "violating_cases": [
+        "confirm-021-cylinder-size10-sp1.5x1x1-rot1"
+      ]
+    },
+    "A2_volume": {
+      "criterion": 0.01,
+      "n_violations": 1,
+      "status": "FAIL",
+      "worst_case": "confirm-020-cylinder-size10-sp1.5x1x1-rot0",
+      "worst_abs": 0.022729664308519526,
+      "violating_cases": [
+        "confirm-020-cylinder-size10-sp1.5x1x1-rot0"
+      ]
+    },
+    "A3_sphericity": {
+      "criterion": 0.05,
+      "n_violations": 3,
+      "status": "FAIL",
+      "worst_case": "confirm-020-cylinder-size10-sp1.5x1x1-rot0",
+      "worst_abs": 0.0573701250925569,
+      "violating_cases": [
+        "confirm-020-cylinder-size10-sp1.5x1x1-rot0",
+        "confirm-021-cylinder-size10-sp1.5x1x1-rot1",
+        "confirm-022-cylinder-size10-sp1.5x1x1-rot2"
+      ]
+    }
+  },
+  "verdict": "FAIL",
+  "legacy_E0_in_domain_violations": 14,
+  "legacy_E0_worst_abs": 0.1170459997767308,
+  "out_of_domain_worst_area_abs": 0.18951258496845724,
+  "out_of_domain_area_violations": 15
+}

@@ -1,0 +1,67 @@
+{
+ "verdict": "QUALIFIED",
+ "criteria": {
+  "A1_area": 0.05,
+  "A2_volume": 0.01,
+  "A3_sphericity": 0.05
+ },
+ "domain": {
+  "rho_in_min": 10.0,
+  "aniso_max": 4.0,
+  "scope": "smooth closed surfaces (no dihedral creases)",
+  "not_qualified": "surfaces with dihedral creases, at any resolution"
+ },
+ "n_cases_executed": 480,
+ "n_in_scope_and_gated": 96,
+ "worst": {
+  "area_rel_err": 0.0095077904022171,
+  "volume_rel_err": 0.007613374269059,
+  "sphericity_rel_err": 0.0094869197651933
+ },
+ "rules": {
+  "A1_area": true,
+  "A2_volume": true,
+  "A3_sphericity": true,
+  "V1_set_nonempty_all_classes": true,
+  "V2_all_measured": true
+ },
+ "violations": {
+  "A1": [],
+  "A2": [],
+  "A3": []
+ },
+ "per_class_in_scope": {
+  "sphere": {
+   "n": 24,
+   "worst_area": 0.0086295292542432,
+   "worst_volume": 0.0010507589245495,
+   "worst_sphericity": 0.0087312490699589
+  },
+  "ellipsoid": {
+   "n": 24,
+   "worst_area": 0.0059252251317434,
+   "worst_volume": 0.0008039313509093,
+   "worst_sphericity": 0.0059181121404262
+  },
+  "capsule": {
+   "n": 24,
+   "worst_area": 0.0095077904022171,
+   "worst_volume": 0.0026898039558012,
+   "worst_sphericity": 0.0094869197651933
+  },
+  "torus": {
+   "n": 24,
+   "worst_area": 0.0062236483971642,
+   "worst_volume": 0.007613374269059,
+   "worst_sphericity": 0.0082424366349187
+  }
+ },
+ "reported_not_adjudicated": {
+  "n_out_of_scope_or_below_gate": 384,
+  "creased_worst_area": 0.1377165147143282,
+  "creased_in_gate_worst_area": 0.0909638412687827,
+  "legacy_E0_worst_area_on_S": 0.2185695515928205,
+  "legacy_E0_violations_of_A1_on_S": 96,
+  "legacy_E0_median_area_err_on_S": 0.1248619686389934
+ }
+}

@@ -1,0 +1,17 @@
+{
+ "decision": "stencil radius m=6 EXCLUDED from the round-2 method; M_CANDIDATES=(1,2,3,4,5)",
+ "declared_before": "execution of the confirm2 grid",
+ "rule_applied": "ROUND2_PROTOCOL.md section 3 -- a radius that does not solve within the stated wall-clock budget is excluded, and the exclusion is recorded before any phantom is run",
+ "evidence": {
+  "m6_ratios_attempted": 11,
+  "m6_ratios_converged": 10,
+  "m6_failure": "spacing 1.2x1x1: TimeoutError after 900 s at cutting-plane iteration 80 (first attempt: 600 s, 40 iterations)",
+  "m6_max_solve_seconds_when_successful": 249.56,
+  "m5_ratios_attempted": 11,
+  "m5_ratios_converged": 11,
+  "m5_max_solve_seconds": 37.12
+ },
+ "reason_for_global_cap": "production encounters voxel spacings not in this table and must solve the LP at measurement time; a radius that can fail to converge for some ratio cannot be guaranteed for an unseen one, so the exclusion is global rather than a per-spacing table",
+ "consequence": "the a-priori budget is marginally larger for well-resolved objects at anisotropic spacing, where m=6 would otherwise have been selected; quantified in out/m6_sensitivity.md",
+ "not_done": "the cap was NOT chosen to save compute, and was NOT lowered after seeing any phantom result"
+}
