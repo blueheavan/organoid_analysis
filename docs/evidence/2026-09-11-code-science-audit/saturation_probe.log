@@ -1,0 +1,40 @@
+{
+  "detector_bit_depth": 12,
+  "storage_dtype": "uint16",
+  "known_detector_ceiling": 4095,
+  "true_calcein_saturated_fraction": 1.0,
+  "default": {
+    "calcein_mean_raw": 4095.0,
+    "calcein_background_median": 100.0,
+    "calcein_background_noise_mad": 0.0,
+    "calcein_mean_bg_corrected": 3995.0,
+    "calcein_integrated_bg_corrected": 1370285.0,
+    "calcein_saturated_fraction": 0.0,
+    "pi_mean_raw": 200.0,
+    "pi_background_median": 100.0,
+    "pi_background_noise_mad": 0.0,
+    "pi_mean_bg_corrected": 100.0,
+    "pi_integrated_bg_corrected": 34300.0,
+    "pi_saturated_fraction": 0.0,
+    "background_voxels": 4914,
+    "viability_measurement_eligible": true,
+    "viability_measurement_flags": ""
+  },
+  "explicit_acquisition_ceiling": {
+    "calcein_mean_raw": 4095.0,
+    "calcein_background_median": 100.0,
+    "calcein_background_noise_mad": 0.0,
+    "calcein_mean_bg_corrected": 3995.0,
+    "calcein_integrated_bg_corrected": 1370285.0,
+    "calcein_saturated_fraction": 1.0,
+    "pi_mean_raw": 200.0,
+    "pi_background_median": 100.0,
+    "pi_background_noise_mad": 0.0,
+    "pi_mean_bg_corrected": 100.0,
+    "pi_integrated_bg_corrected": 34300.0,
+    "pi_saturated_fraction": 0.0,
+    "background_voxels": 4914,
+    "viability_measurement_eligible": false,
+    "viability_measurement_flags": "calcein_saturated"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "docs/evidence/2026-09-11-code-science-audit/PLAN.md": "6a770bb39946689270941f12ff97d9dc9fe141c04b4e41f2a231f2fd52e839e5",
+  "docs/evidence/2026-09-11-code-science-audit/check.log": "d39659ecb351b211cf890dc2a2fafc3c5c04190d6e2bdd2e0e03e72733baadb8",
+  "docs/evidence/2026-09-11-code-science-audit/command_exit_codes.json": "a7b3fa214ba7dd48625699c557371d252b31287445fdec6022c11a84d1654303",
+  "docs/evidence/2026-09-11-code-science-audit/lint.log": "3d2edbca0ccbd7987d302253f4a3f82a52adc5f10e0c5d67b21300e5812ef714",
+  "docs/evidence/2026-09-11-code-science-audit/probe.json": "e4fedb3ccff7107b67ce275e2fa7e833d4892363e86ed97e299412269f771519",
+  "docs/evidence/2026-09-11-code-science-audit/probe.log": "b5c6a70af06759ff9248b4ed5ce94ee6cd6b1d9ede0f1a0f52710f1b54f700c9",
+  "docs/evidence/2026-09-11-code-science-audit/probe.py": "e6554abd7ac67fbb4f923d0bc6f8f1823a38c0fec124b93f9f5134b5ab697ea2",
+  "docs/evidence/2026-09-11-code-science-audit/pytest.log": "4d0db20c00664db3f3bc541420940a2536120f335e895f19aa0ad8c4944ef038",
+  "docs/evidence/2026-09-11-code-science-audit/pytest.xml": "50f20e72616ac97011986aa6e1f057451580c333003f79e0990c9348d35e3d46",
+  "docs/evidence/2026-09-11-code-science-audit/real_data_inventory.json": "f63e91842b587043cb51df9aa5650d18d93d6db3fbc7e37abe575defcf15ff62",
+  "docs/evidence/2026-09-11-code-science-audit/saturation_probe.json": "25cd3417a2c0c5b113bd43966a4f1bb44f2bf1eb434306492b0d8bf72e8b4adf",
+  "docs/evidence/2026-09-11-code-science-audit/saturation_probe.log": "25cd3417a2c0c5b113bd43966a4f1bb44f2bf1eb434306492b0d8bf72e8b4adf",
+  "docs/evidence/2026-09-11-code-science-audit/saturation_probe.py": "d25d396aabc78194aaa97123aedf21245d5e09659a17d2f0cb145b9b13d11402",
+  "docs/evidence/2026-09-11-code-science-audit/science-gate.log": "7db6c4fa67941d1c3f2e31efd51d55679de91f8c0df1926c888d6eeaf1d429af",
+  "docs/evidence/2026-09-11-code-science-audit/snapshot.json": "4a8926271b6f86ac852b10a2347ebcab30581bb7f704eeb56289b4e12821efb5",
+  "docs/evidence/2026-09-11-code-science-audit/typecheck-ratchet.log": "a26721113f9af0e4b39c8739133d35c8219bf3443ccfcb4bf1ca77d6dfc3ef76",
+  "docs/SCIENTIFIC_CODE_AUDIT_2026-09-11.md": "07bd753beb623fbd263f7593642ad700ad10dccfee30cff1d01adbbe01a95958"
+}

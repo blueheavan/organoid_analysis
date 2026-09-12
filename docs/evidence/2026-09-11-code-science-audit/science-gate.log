@@ -1,0 +1,29 @@
+✨ Pixi task (science-gate): python scripts/scientific_validation_gate.py
+SCIENTIFIC VALIDATION GATE (separate from the engineering regression gate)
+
+[FAIL] SG-1 Analytical surface area (production estimator)
+    criterion: every analytical case |error| < 5%
+    basis: 188 cases; max |error| 18.74% (dev-139-cylinder-size24-sp3x1x1-rot2), median signed +9.72%, non-estimable 0 [record 2026-09-11-analytical-geometry-canonical, canonical, source 27d5449d23bb]
+    evidence: docs/evidence/2026-09-11-analytical-geometry-canonical/evidence_manifest.json
+    evidence: docs/evidence/2026-09-11-analytical-geometry-canonical/surface_vv_dev_summary.md
+    evidence: docs/evidence/2026-09-11-measurement-vv/SURFACE_VV_PLAN.md
+[FAIL] SG-2 Analytical voxel-count volume
+    criterion: every analytical case |error| < 1%
+    basis: fails for medium(6-12) max 2.57%, small(3-6) max 2.74%, very_small(<3) max 18.26% [record 2026-09-11-analytical-geometry-canonical, canonical, source 27d5449d23bb]
+    evidence: docs/evidence/2026-09-11-analytical-geometry-canonical/evidence_manifest.json
+    evidence: docs/evidence/2026-09-11-analytical-geometry-canonical/surface_vv_dev_summary.md
+    evidence: docs/evidence/2026-09-11-measurement-vv/SURFACE_VV_PLAN.md
+[INSUFFICIENT EVIDENCE] SG-3 Segmentation accuracy against independent annotation (detection, mask, downstream measurement bias)
+    criterion: predeclared per docs/evidence/2026-09-11-measurement-vv/SEGMENTATION_VALIDATION_PROTOCOL.md
+    basis: no qualified independent 3D annotation set exists
+[NOT ASSESSED] SG-4 Calcein/PI viability assay validity
+    criterion: orthogonal viability reference; control-based calibration evaluated on held-out batches
+    basis: no orthogonal assay or held-out control data
+[INSUFFICIENT EVIDENCE] SG-5 Statistical and study-design validity
+    criterion: predeclared design with an independent experimental unit; type-I error and CI coverage for the shipped models
+    basis: generic tools only; no study design or calibration evidence
+[INSUFFICIENT EVIDENCE] SG-6 Acquisition calibration and channel registration
+    criterion: independently verified voxel size and registration for the intended instruments
+    basis: metadata is read and traced but not independently verified
+
+GATE: NOT PASSED (0/6 items PASS)

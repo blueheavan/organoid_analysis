@@ -1,0 +1,966 @@
+{
+  "source_commit": "3639bec910337ec623782b657fe62cf1dafc3800",
+  "initial_worktree": "clean (verified before audit files created)",
+  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "source_sha256": {
+    "src/organoid_analysis/__init__.py": "ac732a6ee95256e7a4178f53ce00b3f04e6975de64a410675b533daf794d5bd5",
+    "src/organoid_analysis/__main__.py": "4ea1325e2959033e0bb46a0e118347aff284128deb173e28f5ab1b169e13c112",
+    "src/organoid_analysis/command_line/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/organoid_analysis/command_line/organoid_commands.py": "47e62958081ff6725232e8d6af271b32aa288ea69eb2eafed34c600e75dd54ec",
+    "src/organoid_analysis/config.py": "1e0a449438515edd6cf0c7e7cba72cbfbe4d35688efbac9e340c59541953fdf2",
+    "src/organoid_analysis/microscopy_io/__init__.py": "787212203c9d63739eec4d1ff84a54dc65fbdf15325036b89a066e8e90288c72",
+    "src/organoid_analysis/microscopy_io/metadata.py": "d2c6c5217e2bdda490b298565df79ecc2f1c47fd4d46c086ed0859487e8a3968",
+    "src/organoid_analysis/microscopy_io/resampling.py": "293a66a4800ff579f483867d05ee6f9bc537dc53d14df758546da2ea3ece7b57",
+    "src/organoid_analysis/microscopy_io/tiff_contract.py": "fcaad59687e4d8ccfe2c08be874243b9b208cfa66efebb80f174c72b0db3d6e4",
+    "src/organoid_analysis/microscopy_io/voxel_spacing.py": "893e757cd69dcf4aa08d7e1f9bb5519cb8405e70bdf4c0eed2f516a8ce4382b0",
+    "src/organoid_analysis/microscopy_io/zstack_reader.py": "88ddfad2bced8edb24c3a65db320e2903423c59e7f571dc150a6b9711777c6b0",
+    "src/organoid_analysis/phenotyping/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/organoid_analysis/phenotyping/viability.py": "9eaa73a3554ae4cfe06f74e607ecce6dc5db0d2118fd8ad0c7ae38999c6b536d",
+    "src/organoid_analysis/quantification/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/organoid_analysis/quantification/cellular_measurements.py": "9dbcfc3b447e4e81f51e8ce20076a19b3e33a95f69cb6b238764d8b388022b05",
+    "src/organoid_analysis/quantification/features.py": "272bcb96ab0433593c4312f8d05338f0ca2ba084ceb3a0c843e75380c14408c5",
+    "src/organoid_analysis/quantification/labels.py": "8877549b58096d667d071e01a10e52f521add50d6bc105f48b872af9bdfa0ff6",
+    "src/organoid_analysis/quantification/mask_features.py": "e940900a23e317c00a3f2efe79618a22a2c96fd69de76c0b6c851b8f598c7c96",
+    "src/organoid_analysis/quantification/multilevel_relationships/__init__.py": "61c9f9d4e228b8fb0aae08a225fefa8d5060e26d591ab47f56a4af70f7c0b65e",
+    "src/organoid_analysis/quantification/multilevel_relationships/config.py": "7907df8e30c84062bfeb672ef96a26033e8ab0e726646c4b297774e3b0242ab4",
+    "src/organoid_analysis/quantification/multilevel_relationships/hierarchy.py": "aeb109d4b31488c123acaabdeb77019679d7158a770d1ec7617851e0623c7c1d",
+    "src/organoid_analysis/quantification/multilevel_relationships/morphology.py": "afe49f45515e5ef42c3928984c7b7e26ed2e54e500d95cbaf75d289a6a01b620",
+    "src/organoid_analysis/quantification/multilevel_relationships/qc.py": "1a3c9971ebafdf39183d03bc40156f76120449f566e14ac02e17c27f3b326414",
+    "src/organoid_analysis/quantification/multilevel_relationships/spatial.py": "6c2af48e15a4260e8afcc1149de8cdbc46117b4eb604c859bb62f636d179b4ba",
+    "src/organoid_analysis/quantification/multilevel_relationships/topology.py": "4b5aaf6203d3282c5c0eaafaa5840b41b394d3c8650f28ff832c223cefd6b7d3",
+    "src/organoid_analysis/quantification/multilevel_relationships/validation.py": "b04074dbb619745e1e7db219e23bbd5b1858459f8a69ea79a10b757b89b60e90",
+    "src/organoid_analysis/result_export/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/organoid_analysis/result_export/mask_feature_bundle.py": "95f87e8978c87eb474a16fe4b53d58662c02080b63894969cbe813feb94e7716",
+    "src/organoid_analysis/result_export/measurement_tables.py": "e2b7fdb9a59c8067364bde9790c2df639911a8466319147cc49a8fd97cff144b",
+    "src/organoid_analysis/result_export/report.py": "a1996fbf63d7d07c1bb86d0c22dd66525a911d797224c03ed660cb3f35078f28",
+    "src/organoid_analysis/segmentation/__init__.py": "3d61bf6e16d67bcde4a49bbb23372d247bb22cec36621d1653948649a5af02db",
+    "src/organoid_analysis/segmentation/cellpose_inference.py": "9846d4395468bca9893b12e834f24054ab77730b5dc714f2765e44031b60b520",
+    "src/organoid_analysis/segmentation/parameter_estimation.py": "6e075c4aa90f9321d41096a2261a1e55dac9724ed3e578d18c2faeef4260b79c",
+    "src/organoid_analysis/segmentation/paths.py": "fe4a2a295ec155cf9c10c83245acb8ab9a3bbcfe56461b3e8257cc66bd21b9c0",
+    "src/organoid_analysis/segmentation/watershed_instances.py": "425acfb87073f56b7acaec3bbeee8a77d003364b7db02eccd5b6bd60e2cc8007",
+    "src/organoid_analysis/statistics/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/organoid_analysis/statistics/aggregation.py": "59f22ea583507ee171cd903d9e3ccc823470947a2a23cb9280afedb6acdc703a",
+    "src/organoid_analysis/statistics/exploration.py": "44cfe16f08b4fae6a52fd13bf43643e50ab36b57f15e62cd7f9f86db2c45227f",
+    "src/organoid_analysis/statistics/inference.py": "8d880d0b0fe28310f23bf5885b2718202489e009507e47021a080ccbf0b49b23",
+    "src/organoid_analysis/validation/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/organoid_analysis/validation/analytical_geometry_evidence.py": "7411aada73d7c817757ed604b928cb60478dfc2e342e7416a52d73e0eb189952",
+    "src/organoid_analysis/validation/evidence_manifest.py": "7397f2f124fc84089b49e1a0f55696e735ec279df698bbdf4b640509da0de335",
+    "src/organoid_analysis/validation/segmentation_metrics.py": "5fed50cd577bb76933825da2ec03279b43f42d9a4ae5b73001ea1f8ae1c0390b",
+    "src/organoid_analysis/visualization/__init__.py": "5795524b108fdc8034c3bac3fd25bd09244b3a65dff6657f86d7ae06c73701ab",
+    "src/organoid_analysis/visualization/capabilities.py": "f00176f9aa2afdfcc1889c4ca0c3a27df6b1ef7b4084458875e0d12289c85516",
+    "src/organoid_analysis/visualization/projection_rendering.py": "29d885b505527bebc02bca01785f955f6a61fbeaaef02bb5379af7f9288ef2b7",
+    "src/organoid_analysis/visualization/surface_rendering.py": "9b57476592ebb037443427f819549cd7e9dc4d41b844673506ecacca64de927a",
+    "src/organoid_analysis/visualization/volume_viewer/__init__.py": "cde5500e9959e91eef6f92fd92ea4e48f14cab5e1a9f087e08530d04cf00f508",
+    "src/organoid_analysis/visualization/volume_viewer/rendering_presets.py": "3dd42164ed54463aa2df3dee84f1ff3565fe743005a7fd2f7e5de5eed0c85fae",
+    "src/organoid_analysis/visualization/volume_viewer/viewer_payload.py": "73bfa36f131ea16d49bc813bacdbafb0193ce5e9b0d770562534e9e23bf21230",
+    "src/organoid_analysis/web_interface/__init__.py": "adfb81049af51c3cd430624e1ed19bf45dfed8f4b394c892f68bfb262ad0e235",
+    "src/organoid_analysis/web_interface/analysis_ui.py": "ea97dadd5f597b4e49bf36fff18d9a453e04a4d5394a62ac00db59b2f72f49ea",
+    "src/organoid_analysis/web_interface/demo_app.py": "45be53987ee5529dea1b61851b773641c3f3493137c6686976c3e521dce0d425",
+    "src/organoid_analysis/web_interface/multilevel_results.py": "8d748d7c95067a07b2c4868d5e6cffb53e368c4474b359f2c00925c1854c1aaa",
+    "src/organoid_analysis/web_interface/organoid_workspace.py": "67641f80f11c31808ba216bc70184c0184d769594bce4cfa9006c98f52ab15ed",
+    "src/organoid_analysis/web_interface/segmentation_workspace.py": "32c36d9889faf4816969b012128411de32d075ecd9b17ea760704153209e75d4",
+    "src/organoid_analysis/workflows/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/organoid_analysis/workflows/demo_workflow.py": "e8d2116cb374d9577d43dd7d434777da2348e10b887ff6644741881c5606a90a",
+    "src/organoid_analysis/workflows/multilevel_measurement_workflow.py": "afce8fad0590a277dcdf8590dee4a2919c924e394e31cfb0960bd6b68f12ddd7",
+    "src/organoid_analysis/workflows/organoid_measurement_workflow.py": "ab7d2d65db95de61b6fddafc9680880501285a4756fa922872c1f197368072e6"
+  },
+  "lockfile_sha256": "fdba57d5d030dc0c72eaae1e3f1d950f4b58c44f1ab471aa54ce193308f9ae8c",
+  "project_file_sha256": "a676bd98c1d659d5b57ef0e9704a974ccab3890cede33c0ddd612de93f8a80bd",
+  "data_inventory": [
+    {
+      "path": "data/images/HCT116-Cells-Monolayer-C1.tif",
+      "bytes": 7869877,
+      "sha256": "ed977d3be7205d255335767a1cc4a7b61f81b2db5033a1515158933a0b48b937"
+    },
+    {
+      "path": "data/images/2D-CR-10X.jpg",
+      "bytes": 8716731,
+      "sha256": "42960809ba1c05bec8affb12907aaa22e77638e09371f48a5a543b2a77bc05d1"
+    },
+    {
+      "path": "data/images/PDAC-C1.tif",
+      "bytes": 57175006,
+      "sha256": "fee5e8bd291c9bd0b37cf9b4a7727f67b554205cdce5a5fa7bf91313b1da89f2"
+    },
+    {
+      "path": "data/images/PDAC-C2.tif",
+      "bytes": 57175006,
+      "sha256": "70788054bbdd88a7593ac08e3f9556daf08f921cae2be604ba3b4d0426803c99"
+    },
+    {
+      "path": "data/images/ZeroG-Breast-Cancer-Spheroid-C1.tif",
+      "bytes": 29441195,
+      "sha256": "6aaa22d6c0f0e80a7791f2efef9aa7a84855ea0028d8587cff75efe876e79471"
+    },
+    {
+      "path": "data/images/Human-Colon-Organoids-C1.tif",
+      "bytes": 8394407,
+      "sha256": "6eb44c9da1ae69f165bbca3c2d100138d1d733f5ce5642d1ebe36ee54cfd7970"
+    },
+    {
+      "path": "data/synthetic_demo/synthetic_detection_per_image.csv",
+      "bytes": 1560,
+      "sha256": "2c2c88dd0d4e33c81141260fc221a986075027001a9f17c948dae4e14de5d685"
+    },
+    {
+      "path": "data/synthetic_demo/ground_truth.csv",
+      "bytes": 9446,
+      "sha256": "d422292edc07d9ffe2ba400ebaca21a7ee3169cbc9053fee8bc6da43d16b841f"
+    },
+    {
+      "path": "data/synthetic_demo/config.yaml",
+      "bytes": 849,
+      "sha256": "90214e29b8fe83c849970e595228d0c8cc0375795258d50c1659ddd410a4abe3"
+    },
+    {
+      "path": "data/synthetic_demo/manifest.csv",
+      "bytes": 2170,
+      "sha256": "9c93e86dd9c6a696dbd4a48874cfbdd2a1e69a6e2abb63b529a10391391a4707"
+    },
+    {
+      "path": "data/synthetic_demo/synthetic_validation_per_object.csv",
+      "bytes": 6685,
+      "sha256": "c0703ad156a6fea63c0ea7dc4a3278a2bd08b5c79516a95875dd734b6ffee961"
+    },
+    {
+      "path": "data/synthetic_demo/synthetic_validation.json",
+      "bytes": 732,
+      "sha256": "f23602228ad121b31cad1097bdc8031763975581526c5afd2f3d982f38844668"
+    },
+    {
+      "path": "data/synthetic_demo/SYNTHETIC_DATA_NOTICE.txt",
+      "bytes": 165,
+      "sha256": "32589c4d894c6930363bb5467882a8017786e693d36c9234c07f45c70da06365"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Treatment_B_R1.ome.tif",
+      "bytes": 1657565,
+      "sha256": "26ab8c03a54c23ab4070720be4e886a1160269d0077837e49205a41ed598c125"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Treatment_B_R3.ome.tif",
+      "bytes": 1668401,
+      "sha256": "3ba924548c95038dfc1335d65c46e7947ae1989b315344b06acc554dbb64f645"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Treatment_B_R2.ome.tif",
+      "bytes": 1672737,
+      "sha256": "e3d3f9a78186469555e819864cc44ce83b2afc58750d071c8efcd5a3f7b1b347"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Treatment_A_R2.ome.tif",
+      "bytes": 1705863,
+      "sha256": "bc329b2f6e67b47fd13a867524b5d06987769bb42550b24cb4ea627164496f4e"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Live_control_R3.ome.tif",
+      "bytes": 1708911,
+      "sha256": "e97bfcaecfca83d25a3e26f4034ad25b8c5acc54e3a2f07cf29c6f2107f6414a"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Vehicle_R1.ome.tif",
+      "bytes": 1692993,
+      "sha256": "df38c3f3beb0d8840141cf8826ea0d7ffbf8777d97657c059da8f67652c4fa96"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Dead_control_R2.ome.tif",
+      "bytes": 1710335,
+      "sha256": "82ae3ebcf61140aed5460cbd64d248cd3c82ae2b0a1ff56a19511db75d46301d"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Dead_control_R3.ome.tif",
+      "bytes": 1696503,
+      "sha256": "635ec2adea221e4951d0d605281ac849742f75b0e1abd9eb9a91bae3aac06f1f"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Treatment_A_R3.ome.tif",
+      "bytes": 1686617,
+      "sha256": "d2d2b98e2ae2ce194acdf2d255b792fc145678a3ac0e3a87852a36eab548520b"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Live_control_R2.ome.tif",
+      "bytes": 1734459,
+      "sha256": "24417159edcee9c73f2b959167b97f2fc4efdea34126ee81a05675e7334e0059"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Vehicle_R2.ome.tif",
+      "bytes": 1731519,
+      "sha256": "709c88d329e1ed47503a3908652fc6f507dc4102b2a9f7aa4d1061c86bf82014"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Dead_control_R1.ome.tif",
+      "bytes": 1678985,
+      "sha256": "0ad84a2c9394c719a90a565f6f8191f7b7b2099e37936ab5391c0e917eb77da9"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Treatment_A_R1.ome.tif",
+      "bytes": 1688053,
+      "sha256": "5673892f2a5b4627d8271310a20430d31de2aab716140a5478b762c54929a63b"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Live_control_R1.ome.tif",
+      "bytes": 1692511,
+      "sha256": "b13023195e936b08d9892e7b48b93dd21f5b9c9462ba0943d91d87ac34b34d2a"
+    },
+    {
+      "path": "data/synthetic_demo/images/SYN_Vehicle_R3.ome.tif",
+      "bytes": 1711197,
+      "sha256": "e4618af35c86afc924a2515e22435dfbbdb928c766fc72faf889d59b5c938b24"
+    },
+    {
+      "path": "data/synthetic_demo/results/manifest.resolved.csv",
+      "bytes": 3549,
+      "sha256": "f0a3535d266eb80bdc8b8dcd6a8cbc781963a4b114f8c69d891b8ac39c3916ae"
+    },
+    {
+      "path": "data/synthetic_demo/results/config.resolved.yaml",
+      "bytes": 849,
+      "sha256": "90214e29b8fe83c849970e595228d0c8cc0375795258d50c1659ddd410a4abe3"
+    },
+    {
+      "path": "data/synthetic_demo/results/unit_summary.csv",
+      "bytes": 3118,
+      "sha256": "3d8a54815720180795954ab56d7b412960cf7da2487f7b273e1feb2eb05c4394"
+    },
+    {
+      "path": "data/synthetic_demo/results/condition_summary.csv",
+      "bytes": 1666,
+      "sha256": "26fbf6c656738aeef7d956c44a7afa3b917e5c5b5369f7615a5a229010217dd4"
+    },
+    {
+      "path": "data/synthetic_demo/results/size_comparison.svg",
+      "bytes": 25578,
+      "sha256": "9daf0046cadccc7d3355a7f62550b6f0ced69a53fee8a4124fc94eb9e09ed4a2"
+    },
+    {
+      "path": "data/synthetic_demo/results/calibration.csv",
+      "bytes": 375,
+      "sha256": "da900cbff8cf9f2683392a3ee83eba51a05ea9febd14963d50b6b99ed88588f6"
+    },
+    {
+      "path": "data/synthetic_demo/results/provenance.json",
+      "bytes": 10663,
+      "sha256": "53e5d91b54ab280b791d9507267d4ba7a21ed8d7ade9cafa151397229c829205"
+    },
+    {
+      "path": "data/synthetic_demo/results/organoids.csv",
+      "bytes": 43182,
+      "sha256": "522c94fa0f8d34b83847380724e99640aef19da604942e9fbc1f44f7b90605ca"
+    },
+    {
+      "path": "data/synthetic_demo/results/sample_summary.csv",
+      "bytes": 3922,
+      "sha256": "c00bbd68986d7da9d8c46a94e523b6f9a4abe6772fd6a7758c2b17c3b96aaf1b"
+    },
+    {
+      "path": "data/synthetic_demo/results/size_comparison.pdf",
+      "bytes": 27050,
+      "sha256": "81cd554eb16e3354a11083668289f907433934b6c08be371e760c659e1c0dbd2"
+    },
+    {
+      "path": "data/synthetic_demo/results/size_comparison.png",
+      "bytes": 189289,
+      "sha256": "16f793dd41be322b58238b25990e4e18e9a6b38341e6e8c216e0a81ba61901b7"
+    },
+    {
+      "path": "data/synthetic_demo/results/replicate_summary.csv",
+      "bytes": 2372,
+      "sha256": "c81bde55f4d5d3d50a119868f18f290d7702303513e0a122379a35f327f2e593"
+    },
+    {
+      "path": "data/synthetic_demo/results/morphology_viability.svg",
+      "bytes": 31044,
+      "sha256": "73eb1329c3cfb1449e855628fb071513eb423c03978030a4fb554f4d8c01b8f8"
+    },
+    {
+      "path": "data/synthetic_demo/results/morphology_viability.pdf",
+      "bytes": 26825,
+      "sha256": "afb47696357d47f563940dcdd82e27daa2bcc663bc22da35bfcad887313c9d9f"
+    },
+    {
+      "path": "data/synthetic_demo/results/morphology_viability.png",
+      "bytes": 212205,
+      "sha256": "5037ba0fb4064cdee69327de21167c44b54e26a1e91a58672c38a63533ab2b49"
+    },
+    {
+      "path": "data/synthetic_demo/results/report.html",
+      "bytes": 8082778,
+      "sha256": "cfb05666b66849396815d7564b4d5da1050101bc6669fb329fe96c153bdc49cd"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Dead_control_R2.truth.ome.tif",
+      "bytes": 11861,
+      "sha256": "e8863886614fc40d7898331b52f92a14fa7903fcdb300a82053484371833b018"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Dead_control_R1.truth.ome.tif",
+      "bytes": 10853,
+      "sha256": "90e19ef0b68d767dfbffa156d9bb5ea441792dc070e8ccda0fac7d842cad28f2"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Treatment_B_R2.truth.ome.tif",
+      "bytes": 10501,
+      "sha256": "45b7d0835206e4bf8f5e81f195554d811fb7f7564eebed41b793b94667794c39"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Live_control_R1.truth.ome.tif",
+      "bytes": 11365,
+      "sha256": "2b86b1b98d84f11a114fdefb5420038ac12b79820f20c4f0f4889ea3e3c635a3"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Vehicle_R2.truth.ome.tif",
+      "bytes": 12421,
+      "sha256": "9e3cebbabe9760a2d3fe2ff6dc71bd84997f3bb25d8e20e2083c912621d1128a"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Live_control_R2.truth.ome.tif",
+      "bytes": 12773,
+      "sha256": "e1775d6f36db9e94c4e11c49ec88792c20d4c733b4788b3f261606f728653059"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Vehicle_R1.truth.ome.tif",
+      "bytes": 11301,
+      "sha256": "e6f2e288d758ba073821bbd5907ab78235b51c83c97cd6cf53b234a0b742c496"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Treatment_B_R1.truth.ome.tif",
+      "bytes": 9845,
+      "sha256": "eb22e2a2095229683c8e0e0298585b10c05ef5c274c1f52d19c32cec06a7ff5b"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Treatment_A_R3.truth.ome.tif",
+      "bytes": 10917,
+      "sha256": "1934eec993ab625b7e95e9423c7cb55378d1bc2411889471e34bc658fda47790"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Live_control_R3.truth.ome.tif",
+      "bytes": 11845,
+      "sha256": "5ce30b7e6af4592f031d323cecc07dcda43bc13cd9c539a3149cfda4f5cea364"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Treatment_A_R2.truth.ome.tif",
+      "bytes": 11205,
+      "sha256": "1328b26cd8d59e3c1198d9fb8f0baa5070762b6f3aabc38a7849c21e1dcb88e7"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Treatment_A_R1.truth.ome.tif",
+      "bytes": 10821,
+      "sha256": "b07cfb9721992abc8ee34dbea93949e45024dc59005ae23eb31b3af601fac64f"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Treatment_B_R3.truth.ome.tif",
+      "bytes": 10373,
+      "sha256": "68df464cad9d7173e907f150f2351a7e8773d1bfc84e030ec20d9548b78f11e0"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Vehicle_R3.truth.ome.tif",
+      "bytes": 11797,
+      "sha256": "bd637e926567a1324058be7e2e70a1803eeec7f56e321859fc9cea42df082320"
+    },
+    {
+      "path": "data/synthetic_demo/truth/SYN_Dead_control_R3.truth.ome.tif",
+      "bytes": 11461,
+      "sha256": "9a2497141eb2918056c11325bc9cb757679f864a8118c78235ca2e7ef2dd1e81"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Treatment_B_R2.labels.ome.tif",
+      "bytes": 12374,
+      "sha256": "c207600af70be37a2d79390bd861497256fa192f633b27fc37b0e2d4015c4090"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Live_control_R1.labels.ome.tif",
+      "bytes": 13446,
+      "sha256": "c38d717d6dd99b8f88823afaa2c23dc60f5af7d40966f01e807ffc9490474f52"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Dead_control_R2.labels.ome.tif",
+      "bytes": 14214,
+      "sha256": "60aeaaa3c46ee07d930d7f95302f848174181e1fa9bbbb3a976d158e6ca48adb"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Dead_control_R3.labels.ome.tif",
+      "bytes": 13542,
+      "sha256": "32f6a06ba04724261e1349987af6146c8cc977a4f0df73a01c41ef25b6214f26"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Treatment_A_R1.labels.ome.tif",
+      "bytes": 12742,
+      "sha256": "145d437695028b6dc2479326cbf879ce05477fcb3fefe0b032594886339e27ac"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Treatment_B_R3.labels.ome.tif",
+      "bytes": 12182,
+      "sha256": "3639864a615d3947fdde22eb5068d784fd120fd91da17c04d5437df9116d2db3"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Vehicle_R1.labels.ome.tif",
+      "bytes": 13366,
+      "sha256": "32dcd7af66820a165230647388a4a9a41cf7bdd19a3fc9ebccc07598fcf85b0c"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Treatment_B_R1.labels.ome.tif",
+      "bytes": 11526,
+      "sha256": "aba7e583b4f07a459052eb83dac45a024c023ae8b5c180ab6bf3f7028b33950d"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Vehicle_R3.labels.ome.tif",
+      "bytes": 14038,
+      "sha256": "7f64d98d7382fa53cd69518248589fca07e5ab89d3316251bc80c328cb2d4af8"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Treatment_A_R3.labels.ome.tif",
+      "bytes": 12870,
+      "sha256": "3e3afeb3b6604fc5e3f3d9c3e48e5a9f0546ba6a92ded59cbd5f9a5864d4a27d"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Dead_control_R1.labels.ome.tif",
+      "bytes": 12870,
+      "sha256": "a74baf498581f8bba4e0a753e9679105ea538e155c8ca893865153dde5ae0080"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Live_control_R2.labels.ome.tif",
+      "bytes": 15638,
+      "sha256": "27800fa2c2b33099e9dae0ce1cd3569daa0a8fed182ab59ba05acc697eacd054"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Live_control_R3.labels.ome.tif",
+      "bytes": 14198,
+      "sha256": "757f3e59f20ef5e3d6bc6f4b0a771fe2a5444cb7c12f1c0bf0c7e416d26cc51d"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Treatment_A_R2.labels.ome.tif",
+      "bytes": 13382,
+      "sha256": "5e436845b49689233cd6c406afdf437474c8efcde761551c8b9397ccb8359d49"
+    },
+    {
+      "path": "data/synthetic_demo/results/labels/SYN_Vehicle_R2.labels.ome.tif",
+      "bytes": 14982,
+      "sha256": "8c3d8e00aae71e27fb7731d8747cbf80cb35deb93a7e93a3423d01533169f40e"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Dead_control_R3.png",
+      "bytes": 396104,
+      "sha256": "a66e8dc75ca56f6e99fbd7e7dd9d3b68e8a0949514003da2bb23605f5446bb28"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Dead_control_R2.png",
+      "bytes": 406882,
+      "sha256": "5973fe1baf887c73f64fbdf4aa047cf90e31426fb93eacdf216f572775814cda"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Dead_control_R1.png",
+      "bytes": 384957,
+      "sha256": "2fb6b76f78a9775d036d0b04a0cc4a574512789cbd991606c1fb8972974c87ec"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Treatment_B_R1.png",
+      "bytes": 353133,
+      "sha256": "43c6a8b82b8a58e9eb6eccfeeb7775e3649663b04e5363c44507591536276889"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Treatment_B_R2.png",
+      "bytes": 373464,
+      "sha256": "ca39855130a4df264cb3cc745b2165b4e7217e3289f829e80db2c0e73010a29a"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Treatment_B_R3.png",
+      "bytes": 365659,
+      "sha256": "deac8a5ea6cfbcc81c55f476d6649c88d481acc51af827d3aff3e58e50e71ca9"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Vehicle_R2.png",
+      "bytes": 404867,
+      "sha256": "43f5d177b31f91abb5cec0af3f17d234889a771daf0bc96eeb045122088b1a82"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Vehicle_R3.png",
+      "bytes": 396201,
+      "sha256": "b049a6dfa70c98bffb401802d514f8e96a853c539eeac45587f0fb80e61b2546"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Vehicle_R1.png",
+      "bytes": 379147,
+      "sha256": "320a57015dff3ef4635022c0641dcfe21f59b59734d510f3c2a31218656ffaf1"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Treatment_A_R1.png",
+      "bytes": 378593,
+      "sha256": "e1d2f0fe607299c865ced26156702b8b5103a4f0d73ee7c340411f6a1063f2d4"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Live_control_R1.png",
+      "bytes": 393453,
+      "sha256": "cf4b3ca2d9194a0428f4685bfa3879fa633eb3f71f54437faf9fa79a39e05c60"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Live_control_R3.png",
+      "bytes": 404725,
+      "sha256": "e7cc5b6be5fa0826b75211f680762a998eced1a11bbe62d825079bee6bf4df0a"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Treatment_A_R3.png",
+      "bytes": 196764,
+      "sha256": "fb3c9239ddcb38a2c375996738dc78ba13e9966a5956606a5d7229292d96df7b"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Treatment_A_R2.png",
+      "bytes": 387492,
+      "sha256": "51a9e892fb3f6d42cb50eda5eb09a22f46d3576b730bf3c71d5c2ac4533fbdd6"
+    },
+    {
+      "path": "data/synthetic_demo/results/qc/SYN_Live_control_R2.png",
+      "bytes": 418119,
+      "sha256": "52068775dda42e430099206de36256428ebcfd860638bd8913b06d3a6d0fae64"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R3/organoid_0003.ply",
+      "bytes": 135302,
+      "sha256": "cc1f554d91da6d8505fa2c8ba608d2fb48cf9b9d9cfb7cfb42aa0af38fb8c7a2"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R3/organoid_0002.ply",
+      "bytes": 206638,
+      "sha256": "1e6e1971bf1f4c2eaacee466f14ba4041e16f2d031701e1d371fd1f6cedfaa0c"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R3/organoid_0001.ply",
+      "bytes": 180411,
+      "sha256": "0c584d4c427033c0bcd6d87f64181e94f717b23b885e00138592bcf1dad3add5"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R3/organoid_0005.ply",
+      "bytes": 151779,
+      "sha256": "5764028089bb0021ab17675ba04d1fe483c407c930607732fe972778ffc3a5fa"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R3/organoid_0004.ply",
+      "bytes": 154088,
+      "sha256": "9fa9eeddec04d9d2a7f56c5bb4a5c388d8e7e142513674bb4a194551ab0a2588"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R3/organoid_0006.ply",
+      "bytes": 142773,
+      "sha256": "a4c7c31eac84b1501db5f052131e969310724621c7eef5b8eda16ba6c9bcceae"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R1/organoid_0003.ply",
+      "bytes": 141939,
+      "sha256": "fe1c4c1510d1a9a2880d55e0605bb5fd1c585fbc4053e0c57b74778a6c3f0e49"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R1/organoid_0002.ply",
+      "bytes": 113888,
+      "sha256": "8f45c36be845498d726705aee479038703959f7208e554d97551f258e31d1df0"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R1/organoid_0001.ply",
+      "bytes": 171270,
+      "sha256": "80765a3dfc8dca3954f0113317f8cdb000b534f1ee942fae2a34c7cda92bf9e3"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R1/organoid_0005.ply",
+      "bytes": 113780,
+      "sha256": "351c6e14bf4d64976715bf60f69dc1c28fd35624489b580bfab365d9a1445478"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R1/organoid_0004.ply",
+      "bytes": 144885,
+      "sha256": "ab5dbc30b116949803373a677acc35381c8618db3ee3ce920ae52b128bdfbacf"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R1/organoid_0006.ply",
+      "bytes": 120627,
+      "sha256": "f7d5c53437b7915c003e8919e0c2abea0cc041b1e6316e4ecadc539aeadef512"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R2/organoid_0003.ply",
+      "bytes": 180839,
+      "sha256": "ab0e8b113916bc9339fc8f04e1a72b393df14f833def38a62ab0341ff561e47f"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R2/organoid_0002.ply",
+      "bytes": 138503,
+      "sha256": "3b76515b20b5dc14b680512e8c4d4dba5c775ed8338427a6375d32479527355c"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R2/organoid_0001.ply",
+      "bytes": 254769,
+      "sha256": "ee8a7eaf9c90b9a1eb8b83ae55df808386c3c8e6f4d901bdd16a60772e5d8a19"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R2/organoid_0005.ply",
+      "bytes": 216134,
+      "sha256": "3b72f51c1e2976f1d22ed5d1b2f81fd8a997c45cf80704621d606f4859c75cb0"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R2/organoid_0004.ply",
+      "bytes": 201902,
+      "sha256": "f2e9db81c55e31e6547821c1b2870e366cf6ac68defe3d9e6ed1877e0ee84e78"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R2/organoid_0006.ply",
+      "bytes": 128097,
+      "sha256": "188e53e404e50e67bd19e923d1db534eebc6cb3062b27ff7df88807091b411a1"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R1/organoid_0003.ply",
+      "bytes": 138258,
+      "sha256": "550a5e20bd6cb2bbc30b810dfb9684d7af807d97c728674e0811efe5dc6e557b"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R1/organoid_0002.ply",
+      "bytes": 121361,
+      "sha256": "de1449e141b8a0bfccf53eabdd285ebb440e9c82b78c8965ea7034992e198338"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R1/organoid_0001.ply",
+      "bytes": 133234,
+      "sha256": "9bd49c6c7189e72198fd22dc0044adddb93b5f6941fe41a39b2a863de33693e3"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R1/organoid_0005.ply",
+      "bytes": 99118,
+      "sha256": "6d62c3f24f686bd6b584909b9e010e622b383886a4d5b4e8e995da7a633e9e51"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R1/organoid_0004.ply",
+      "bytes": 107495,
+      "sha256": "bf2dbf55441ef73eafc8aa113dbf95584e5d18dcc10e6ec49521fa01a40245e5"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R1/organoid_0006.ply",
+      "bytes": 87756,
+      "sha256": "a7885973c3fff49e7d7d36ade2e7e6570f79bdb3687519511aab39f9c86be0f2"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R3/organoid_0003.ply",
+      "bytes": 105731,
+      "sha256": "59f9d57a3290d3275095ab133e6567fcadcf589bcaba9f0b82856b5fd746e895"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R3/organoid_0002.ply",
+      "bytes": 108527,
+      "sha256": "010fb1dbb93791a2a902d90340bcd2ba84e9a971fa5938fa89933fc79a961e22"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R3/organoid_0001.ply",
+      "bytes": 104726,
+      "sha256": "605dc3abc0ec86802e55db79a542fcb056b1b8e4b32e613620a22a0ec7fa33ce"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R3/organoid_0005.ply",
+      "bytes": 70337,
+      "sha256": "ee5fdd2f0e66380116650394afb136d2c08f7fb3ffdd713efbc63f7610c4273e"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R3/organoid_0004.ply",
+      "bytes": 93219,
+      "sha256": "67fcc3e83c6cabe5695a2f393d187e3872a0f055be9f00d1bf409bb030090edd"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R3/organoid_0006.ply",
+      "bytes": 58417,
+      "sha256": "28b2f4f2d05f70631c2ec318716799e341d584d27270c05a6ae605d85c902631"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R2/organoid_0003.ply",
+      "bytes": 204108,
+      "sha256": "c4d4540a13f0e0400b507c6856eda1b01e019fc24af4f95aa817b5be0894ef30"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R2/organoid_0002.ply",
+      "bytes": 166655,
+      "sha256": "1841565817ade4fef6a24e22c9905f92bac1cf58c7d9a89d1b29158ee5e2c60a"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R2/organoid_0001.ply",
+      "bytes": 221744,
+      "sha256": "ec04c11290414515bbc26736c82b7e852dc9ec67e47262c7e538b20e3d3163b0"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R2/organoid_0005.ply",
+      "bytes": 166382,
+      "sha256": "afbfd855679facbfa04afdfad07096314768025df6686266a7a11083a99f0a1b"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R2/organoid_0004.ply",
+      "bytes": 142076,
+      "sha256": "2c8bb3666da6d6856b5b18a1f9d570a50167f84a94441918b7670fa3cfd04846"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R2/organoid_0006.ply",
+      "bytes": 120722,
+      "sha256": "5783139142e0afd0faa22e989aad09ccc63e581f4ced4e8e7effe23923fd542c"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R2/organoid_0003.ply",
+      "bytes": 77610,
+      "sha256": "f0da7c971a66cd6c4cdb3986b61d101ddbdf14984a040f7bc42f8d9d12ae986e"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R2/organoid_0002.ply",
+      "bytes": 103690,
+      "sha256": "31524a79bed5b67e8d87c6e7673fe19d3cae625c42f3a9d174da8a872260723f"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R2/organoid_0001.ply",
+      "bytes": 113787,
+      "sha256": "21ad26fb55f6862d39f62bc810c786b6724ab19c2cfe48a8cb8f002fd586a02c"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R2/organoid_0005.ply",
+      "bytes": 81596,
+      "sha256": "f25ee0e78f4bfd9be7868ed302ba527957bbc5d34ea410cb782e3c642e7b22e3"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R2/organoid_0004.ply",
+      "bytes": 114265,
+      "sha256": "027425bee4237aacfddf1dc3cf1b35bc0f9cda1d8cb178c91151bf67cce7cf02"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R2/organoid_0006.ply",
+      "bytes": 76318,
+      "sha256": "7d3c0073239bb56e783772145f05f23bf1820709f939f726e2ee855bb6d60d80"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R3/organoid_0003.ply",
+      "bytes": 130188,
+      "sha256": "3fe50e22da70b6c4c25c05455987a5eb0cd94177c370004121d3c712a15c2873"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R3/organoid_0002.ply",
+      "bytes": 176385,
+      "sha256": "63ea3c7ffbf65aaae082bcd92c99886c44b91d370c904fdeb9c141d9c8ff3efb"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R3/organoid_0001.ply",
+      "bytes": 169746,
+      "sha256": "6cfa4555a91013b5c4764132f2b30cb7583e5f985708f06ca21f350ddb2c4b88"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R3/organoid_0005.ply",
+      "bytes": 143603,
+      "sha256": "72400df9a1a1dc3ef6b8edeaa4b298d098aab0fcf60fde1e985d066ec2910e19"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R3/organoid_0004.ply",
+      "bytes": 116789,
+      "sha256": "ce7899c4f2b3042f359add86a669252f335fc06e98158486844b6f913b56b54d"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R3/organoid_0006.ply",
+      "bytes": 109126,
+      "sha256": "a10cccb4e93126ee04fc016b010408b0a907eef9c8d5cea902ae5d2de338d911"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R3/organoid_0003.ply",
+      "bytes": 95017,
+      "sha256": "d7e8eceb4c529eed6d1ab8802f16929068b1be7ef329ef2de74763b7b9ce3b61"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R3/organoid_0002.ply",
+      "bytes": 103299,
+      "sha256": "4ae1a70f5c3786d2f9bc1e896c4b8542badd96faded87bed990e950add93132e"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R3/organoid_0001.ply",
+      "bytes": 161270,
+      "sha256": "3bba5d1c2c9637057d81b9e463bb2527ff285989d5c486c0bf59f6e326e33973"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R3/organoid_0005.ply",
+      "bytes": 103732,
+      "sha256": "91556db0d5e8140f2642be055c3a30741e49507f1d7ddfbc0ad44a4c4d8242d0"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R3/organoid_0004.ply",
+      "bytes": 114250,
+      "sha256": "0602b3206613b30d3433e7a60c00a15fefbecb10c6ab9c81e97b145dd5cb55fe"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R3/organoid_0006.ply",
+      "bytes": 118086,
+      "sha256": "fc9d43ec46d3c960c2857804927931a30668b72e8afdcc7a3133171a1cd0c144"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R3/organoid_0003.ply",
+      "bytes": 219443,
+      "sha256": "937f7d65f979880501a72454ac2404b83ca0ad9555c3e3039b533a36f38197c8"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R3/organoid_0002.ply",
+      "bytes": 218899,
+      "sha256": "446d17d8c21d724ee93e18edee8a80ee7f330d695bee484b4ffcaa43bf566405"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R3/organoid_0001.ply",
+      "bytes": 161559,
+      "sha256": "c2cf6a6073651bfc52b42e7df8849700e7b720c159976383e6ff74d78bf03bfb"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R3/organoid_0005.ply",
+      "bytes": 97483,
+      "sha256": "8fb00fb1f6a4afd83914fe0aa3169ea9d33c020a805ed0e1936168218ee90cb7"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R3/organoid_0004.ply",
+      "bytes": 154745,
+      "sha256": "b5cfa068b981d4f8d6904410c0c1153087a096646ba8d3e690202bf7432c2801"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R3/organoid_0006.ply",
+      "bytes": 129975,
+      "sha256": "dd3fa21d1a34ab492c9677cba9055683ef1db33a3cd223650abb2c30be43663c"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R1/organoid_0003.ply",
+      "bytes": 100372,
+      "sha256": "6ab76bcb4bec4d747a32cc3e58dcf03ba18f05f6742f3d4ec8f5c21f232be974"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R1/organoid_0002.ply",
+      "bytes": 137652,
+      "sha256": "7df34f5398194cd75e0f56d8f07c2bd5e2cf0b29076ff14e5e3dd63e82f93bab"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R1/organoid_0001.ply",
+      "bytes": 170121,
+      "sha256": "7a1909ddc007b889aa960d3fa8c28866aed7e09b3aae8f6d98720b5f704b3d09"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R1/organoid_0005.ply",
+      "bytes": 119112,
+      "sha256": "972ded71fcc382059c70b333294c525a708d00a3aec126a4c681b79e8fa363d4"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R1/organoid_0004.ply",
+      "bytes": 164787,
+      "sha256": "4fdbc6219dc786b7ea5fc1e63f2824e7a541a8209c2becc3ebaa65fc64eb6dc3"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Vehicle_R1/organoid_0006.ply",
+      "bytes": 91690,
+      "sha256": "507c1ac4b31c7922adf7f843c15fe67b7b9b86a71f53c8e9468e88c84b26ed5c"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R2/organoid_0003.ply",
+      "bytes": 162477,
+      "sha256": "51662276042c78e8fd5c21cc46ee585350e58d21609d7171432ade40fa6a9702"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R2/organoid_0002.ply",
+      "bytes": 149608,
+      "sha256": "562b93f8ddbd5e903b6c9cf369fd37b5fa33890352e26a49d2dacadc6ec0b35b"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R2/organoid_0001.ply",
+      "bytes": 146688,
+      "sha256": "d2e2998d99b49b8cd4583ff6c4e495736a43959de49f8b067a76f3f6e23665df"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R2/organoid_0005.ply",
+      "bytes": 167872,
+      "sha256": "523e05d3ceefc1c052fac45951f5da91cefe7d03e8da502d1c71030d82eadcf9"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R2/organoid_0004.ply",
+      "bytes": 131943,
+      "sha256": "82449f32108bbf2ab79acc8228c6741080bfb129e1640ca86b3b773c8ba67803"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_A_R2/organoid_0006.ply",
+      "bytes": 107283,
+      "sha256": "80d3a7d3fa083ddfc4bbefd1ae891672fff02c6f406b11dbd232448d7a80bfa9"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R2/organoid_0003.ply",
+      "bytes": 214057,
+      "sha256": "d2d19b040cd6b668f0cbb944b8fb5a44e9d7727ddf42b440268891213d2774ba"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R2/organoid_0002.ply",
+      "bytes": 199035,
+      "sha256": "61a2f64c01b64e9b43736565248cd8e7c87157dd1b4a662dd7f3f14d6b68d6c0"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R2/organoid_0001.ply",
+      "bytes": 259221,
+      "sha256": "e7d059e8144e5e035f882265ae77dc2897f620ea934b780b49031ee6ee1f02de"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R2/organoid_0005.ply",
+      "bytes": 188037,
+      "sha256": "d494d69b57d33384a46e5f32644f41f9a52a617bc4158e887ce96ee445a8da76"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R2/organoid_0004.ply",
+      "bytes": 175958,
+      "sha256": "a1eea11b7413ccba4ba17826e2dec54b1e7a0a48c7179814c14f6ad8df67aad2"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Live_control_R2/organoid_0006.ply",
+      "bytes": 209235,
+      "sha256": "433d7d5295c65ace594d1aec193237ef360ff2bb7293ccc336f9bbf13d1ce3fb"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R1/organoid_0003.ply",
+      "bytes": 125566,
+      "sha256": "3de02ed9f204d95d9cfd9050546ca787a12e0ab9dc74d2fbcf5817dfcce96557"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R1/organoid_0002.ply",
+      "bytes": 122374,
+      "sha256": "5194e12a83df389f1970e7cd46a3fbb97889d3095371db16b306566dcc70b4c5"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R1/organoid_0001.ply",
+      "bytes": 141545,
+      "sha256": "6990f0ae0cdbb1bff10febafebd5a014364e556eaf5d1b2510681e45ed4dcef0"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R1/organoid_0005.ply",
+      "bytes": 99629,
+      "sha256": "11c914094dced27a158dedf541a9e1cdb4e6c1731a89617bdefd160e8cb85c55"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R1/organoid_0004.ply",
+      "bytes": 93382,
+      "sha256": "f350322d0b498940a10c53784cfcc4ed83340cda56a515541bb32023c8dc13e3"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Dead_control_R1/organoid_0006.ply",
+      "bytes": 98882,
+      "sha256": "d79d9e83f99e5718df12e35ac856a04f827cda432057206d50ebd38a1d0779a3"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R1/organoid_0003.ply",
+      "bytes": 60197,
+      "sha256": "8a0c466aec12900771def2f20f5c765a8add49695d1ebe368cee6c9a7de2b997"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R1/organoid_0002.ply",
+      "bytes": 80313,
+      "sha256": "19d977e68ec2212fa70bd901f10f8eef6204edcaacc652569194fcf2eee254ab"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R1/organoid_0001.ply",
+      "bytes": 82050,
+      "sha256": "55ef7a5e8d342a3d6306cc9dd3b486390bc0e16781d834bb0c08ac7a4fcfbfe6"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R1/organoid_0005.ply",
+      "bytes": 51810,
+      "sha256": "5d260985b67a818ea2763f5f91b95b4d3656417b916e41db922b83406b18e0b4"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R1/organoid_0004.ply",
+      "bytes": 46819,
+      "sha256": "ed2ed24d2881fa7386189d44a62ab382b03ffdb968780ec76b73d398a174d0e7"
+    },
+    {
+      "path": "data/synthetic_demo/results/meshes/SYN_Treatment_B_R1/organoid_0006.ply",
+      "bytes": 70228,
+      "sha256": "2a9bbfbd55b7d8d9c6c26de684f9555363a4540cb8e44e6ee6cc8d6c61b4c304"
+    }
+  ]
+}
