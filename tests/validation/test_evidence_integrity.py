@@ -29,7 +29,8 @@ from organoid_analysis.validation.evidence_manifest import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FEATURES = "src/organoid_analysis/quantification/features.py"
-OLD_GATE_REFERENCE_SPHERE_AREA_UM2 = 4549.28466796875  # the former single-number sentinel
+GATE_REFERENCE_SPHERE_AREA_UM2 = 4048.66364  # the former single-number sentinel, re-measured
+LEGACY_GATE_REFERENCE_SPHERE_AREA_UM2 = 4549.28466796875  # its value under the superseded estimator
 
 
 def problems(root: Path, relpath: str, **options: bool) -> tuple[str, ...]:
@@ -99,8 +100,11 @@ def test_repository_record_verifies_with_git_provenance_and_reexecution():
 # ------------------------------------------------- 1, 2, 9: production code
 def test_surface_change_without_method_version_bump_is_rejected(evidence_copy):
     root, relpath = evidence_copy
-    replace_once(root / FEATURES, "level=0.5,", "level=0.45,")
-    assert '"method_version": "marching_cubes_binary_lewiner_v1"' in (root / FEATURES).read_text(encoding="utf-8")
+    # A change to the area actually exported, with the method_version string
+    # left untouched -- the record must reject it on content, not on identity.
+    replace_once(root / FEATURES, 'area = float(surface["surface_area"])',
+                 'area = float(surface["surface_area"]) * 1.0001')
+    assert '"method_version": surface_crofton.METHOD_NAME' in (root / FEATURES).read_text(encoding="utf-8")
     assert any(FEATURES in p and "changed" in p for p in problems(root, relpath))
 
 
@@ -128,7 +132,7 @@ def test_change_invisible_to_the_old_sphere_sentinel_is_still_rejected(evidence_
     # The old gate re-measured only this sphere: the mutant reproduces it exactly...
     mutant_area = mutant.geometry(reference_sphere(), spacing)[0]["surface_area_um2"]
     assert mutant_area == geometry(reference_sphere(), spacing)[0]["surface_area_um2"]
-    assert mutant_area == pytest.approx(OLD_GATE_REFERENCE_SPHERE_AREA_UM2, rel=1e-6)
+    assert mutant_area == pytest.approx(GATE_REFERENCE_SPHERE_AREA_UM2, rel=1e-6)
     # ...although it silently replaced raw-label support by the filled envelope.
     shell = reference_sphere(inner_radius=10.0)
     assert (mutant.geometry(shell, spacing, fill_holes=False)[0]["volume_um3"]

@@ -95,6 +95,13 @@ class ScopeEntry:
 # Every production file whose content can change a validated SG-1/SG-2 value or
 # what that value means in an exported measurement.
 DEPENDENCY_SCOPE = (
+    ScopeEntry("src/organoid_analysis/quantification/surface_crofton.py", "estimator_core",
+               "measure(): the production surface-area estimator -- primitive direction set, stencil-radius "
+               "selection, minimax orbit weights and the grazing constant. Also in_domain() and the frozen "
+               "domain constants, which decide what the validated area means. Executed for every phantom. "
+               "The packaged weight tables under crofton_weights/ are not hashed individually; a change to "
+               "any table the grid uses breaks re-execution against the recorded per-case areas at "
+               "rtol 1e-9, which is a stronger check than a hash."),
     ScopeEntry("src/organoid_analysis/quantification/features.py", "estimator_core",
                "geometry(): voxel-count volume, marching-cubes surface area and sphericity; surface_mesh(): "
                "isosurface level, padding and physical spacing; outer_envelope(): filled support; "

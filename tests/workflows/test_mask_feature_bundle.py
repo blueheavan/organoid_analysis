@@ -37,8 +37,10 @@ def test_feature_bundle_preserves_values_ids_calibration_and_lineage(object_type
     assert meta["spacing_xyz_um"] == [.01, .01, .03]
     assert meta["segmentation_provenance"]["nuclei_input"]["sha256"] == "source-file-digest"
     # The exported surface values are tied to a versioned estimator definition.
-    assert meta["surface_area_method"]["method_version"] == "marching_cubes_binary_lewiner_v1"
-    assert meta["surface_area_method"]["isosurface_level"] == 0.5
+    assert meta["surface_area_method"]["method_version"] == "crofton_minimax_sym_v3"
+    # The exported identity carries the domain the accuracy claim is limited to.
+    assert "rho_in >= 10.0" in meta["surface_area_method"]["domain"]
+    assert "crease" in meta["surface_area_method"]["not_qualified"]
     header = {"shape_zyx": [7, 7, 7], "dtype": mask.dtype.str, "order": "C"}
     assert meta["selected_mask"]["array_sha256"] == hashlib.sha256(json.dumps(header, sort_keys=True).encode("ascii") + mask.tobytes()).hexdigest()
 

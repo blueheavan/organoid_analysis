@@ -10,6 +10,7 @@ from skimage.measure import marching_cubes, mesh_surface_area
 from organoid_analysis.microscopy_io.tiff_contract import Sample
 from organoid_analysis.segmentation.watershed_instances import SegmentationResult
 
+from . import surface_crofton
 from .labels import bbox_touches_volume_boundary
 
 # Consistency constant rescaling MAD into a sigma-equivalent robust scale
@@ -22,12 +23,45 @@ from .labels import bbox_touches_volume_boundary
 MAD_TO_SIGMA = 1.4826
 
 # Versioned identity of the estimator that defines every exported
-# ``surface_area_um2`` (and therefore ``sphericity``). Any change to level,
-# padding, smoothing or implementation must bump ``method_version`` and repeat
-# the surface V&V in docs/evidence/2026-09-11-measurement-vv, so historical
-# values are never silently reinterpreted. This estimator FAILS the analytical
-# <5% surface criterion of docs/SCIENTIFIC_SPEC.md section 9 (see that evidence).
+# ``surface_area_um2`` (and therefore ``sphericity``). Any change to the
+# weights, the stencil rule, the domain constants or the transition counting
+# must bump ``method_version`` and repeat the surface V&V, so historical values
+# are never silently reinterpreted.
+#
+# Qualified 2026-09-12 on an untouched confirmation set of 96 in-domain cases:
+# worst absolute relative area error 0.951% against the <5% criterion of
+# docs/SCIENTIFIC_SPEC.md section 9 (evidence:
+# docs/evidence/2026-09-12-surface-crofton-v3). The qualification is
+# DOMAIN-RESTRICTED; see ``domain`` below and ``surface_crofton.DOMAIN_SCOPE``.
+# Outside that domain -- in particular for surfaces with dihedral creases, at
+# any resolution -- this estimator is NOT QUALIFIED and the section 9 criterion
+# is not met. ``geometry()`` reports the domain variables and an
+# ``in_domain`` flag per object rather than silently gating.
 SURFACE_AREA_METHOD: dict[str, str | int | float] = {
+    "estimator": "crofton_minimax_sym",
+    "method_version": surface_crofton.METHOD_NAME,
+    "implementation": ("organoid_analysis.quantification.surface_crofton: weighted lattice "
+                       "transition counts (discrete Cauchy/Crofton); weights from the "
+                       "orbit-symmetry-reduced minimax LP over plane orientations"),
+    "input": "binary measurement support, zero-padded by the stencil radius",
+    "spacing": "native physical ZYX voxel spacing",
+    "stencil_radius_rule": "per object, minimises plane-response deviation + grazing deficit",
+    "stencil_radius_candidates": "1,2,3,4,5",
+    "smoothing": "none",
+    "domain": (f"rho_in >= {surface_crofton.DOMAIN_RHO_IN_MIN} and "
+               f"anisotropy <= {surface_crofton.DOMAIN_ANISO_MAX}, "
+               f"{surface_crofton.DOMAIN_SCOPE}"),
+    "not_qualified": surface_crofton.DOMAIN_NOT_QUALIFIED,
+    "evidence": "docs/evidence/2026-09-12-surface-crofton-v3",
+}
+
+# The superseded estimator, preserved under its own identity together with the
+# evidence that it FAILS the section 9 criterion: it errs by a median of 12.5%
+# and a worst of 21.9% on the very cases the qualified estimator handles to
+# 0.33% median, and its error does not shrink with resolution. Retained so
+# historical values remain reproducible and comparable, and reachable through
+# ``legacy_surface_area()``; it defines no exported column.
+LEGACY_SURFACE_AREA_METHOD: dict[str, str | int | float] = {
     "estimator": "marching_cubes_binary",
     "method_version": "marching_cubes_binary_lewiner_v1",
     "implementation": "skimage.measure.marching_cubes (Lewiner) + skimage.measure.mesh_surface_area",
@@ -36,6 +70,8 @@ SURFACE_AREA_METHOD: dict[str, str | int | float] = {
     "spacing": "native physical ZYX voxel spacing",
     "step_size": 1,
     "smoothing": "none",
+    "status": "SUPERSEDED 2026-09-12; FAILS the docs/SCIENTIFIC_SPEC.md section 9 area criterion",
+    "evidence": "docs/evidence/2026-09-11-measurement-vv",
 }
 
 # Sphericity cannot exceed 1 for a continuous solid; discretized values above
@@ -49,6 +85,8 @@ GEOMETRY_COLUMNS = ["organoid_id", "original_label_id", "segmented_voxels", "env
                     "equivalent_diameter_um", "enclosed_void_fraction", "centroid_z_um", "centroid_y_um",
                     "centroid_x_um", "extent_z_um", "extent_y_um", "extent_x_um", "principal_axis_major_um",
                     "principal_axis_intermediate_um", "principal_axis_minor_um", "axis_ratio_minor_to_major", "n_z_slices",
+                    "surface_rho_in", "surface_anisotropy", "surface_stencil_radius",
+                    "surface_apriori_rel_bound", "surface_in_qualified_domain", "surface_domain_flags",
                     "touches_border", "morphology_eligible", "morphology_flags"]
 MARKER_COLUMNS = ["background_voxels"] + [f"{marker}_{field}" for marker in ["calcein", "pi"]
                   for field in ["mean_raw", "background_median", "background_noise_mad", "mean_bg_corrected",
@@ -77,6 +115,21 @@ def surface_mesh(
     return vertices, faces
 
 
+def legacy_surface_area(
+    mask: np.ndarray,
+    spacing: tuple[float, float, float],
+    origin_zyx: tuple[float, float, float] = (0, 0, 0),
+) -> float:
+    """Surface area under the superseded ``marching_cubes_binary_lewiner_v1``.
+
+    Preserved so historical ``surface_area_um2`` values stay reproducible and
+    so the evidence that this estimator fails the section 9 criterion can be
+    re-executed. It defines no exported column; ``geometry()`` uses the
+    qualified estimator. See ``LEGACY_SURFACE_AREA_METHOD``.
+    """
+    return float(mesh_surface_area(*surface_mesh(mask, spacing, origin_zyx)))
+
+
 def geometry(
     mask: np.ndarray,
     spacing: tuple[float, float, float],
@@ -102,8 +155,14 @@ def geometry(
     segmented = int(mask.sum())
     count = int(envelope.sum())
     volume = float(count * np.prod(spacing_arr))
+    # Surface area comes from the qualified Crofton estimator, not from the
+    # mesh: the mesh is still built and returned for visualisation and PLY
+    # export, but a marching-cubes mesh of a binarised field measures the area
+    # of a staircase, which is the defect SURFACE_AREA_METHOD records.
     vertices, faces = surface_mesh(envelope, tuple(spacing_arr), origin_zyx)
-    area = float(mesh_surface_area(vertices, faces))
+    surface = surface_crofton.measure(envelope, tuple(spacing_arr))
+    area = float(surface["surface_area"])
+    qualified, domain_flags = surface_crofton.in_domain(surface)
     sphericity = float(np.cbrt(np.pi) * (6.0 * volume) ** (2 / 3) / area)
     points = np.argwhere(envelope)
     center = (points.mean(axis=0) + origin_zyx) * spacing_arr
@@ -119,7 +178,19 @@ def geometry(
               "enclosed_void_fraction": float((count - segmented) / count),
               "principal_axis_major_um": float(lengths[0]), "principal_axis_intermediate_um": float(lengths[1]),
               "principal_axis_minor_um": float(lengths[2]), "axis_ratio_minor_to_major": float(lengths[2]/lengths[0]),
-              "n_z_slices": int(np.any(envelope, axis=(1, 2)).sum())}
+              "n_z_slices": int(np.any(envelope, axis=(1, 2)).sum()),
+              # Applicability-domain variables of the surface estimator, exported
+              # per object so a consumer can tell whether a given
+              # surface_area_um2/sphericity pair is inside the qualified domain.
+              # ``surface_in_qualified_domain`` covers the machine-checkable gate
+              # only; smoothness (SURFACE_AREA_METHOD["domain"]) cannot be
+              # checked from a mask and remains the caller's responsibility.
+              "surface_rho_in": float(surface["rho_in"]),
+              "surface_anisotropy": float(surface["anisotropy"]),
+              "surface_stencil_radius": int(surface["stencil_m"]),
+              "surface_apriori_rel_bound": float(surface["apriori_bound"]),
+              "surface_in_qualified_domain": bool(qualified),
+              "surface_domain_flags": ";".join(domain_flags)}
     for axis, value, width in zip("zyx", center, extent):
         values[f"centroid_{axis}_um"] = float(value)
         values[f"extent_{axis}_um"] = float(width)

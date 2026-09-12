@@ -67,10 +67,15 @@ def build_mask_feature_bundle(
             else "assumed_or_unknown"
         ),
         "coordinates": "array-local voxel centers; origin ZYX=(0,0,0); micrometres",
-        "surface_method": "skimage Lewiner marching cubes; level=0.5; native spacing; step_size=1; zero padding",
+        "surface_method": ("weighted lattice intersection counting (Crofton) with minimax-optimal "
+                           "orbit-symmetric weights; native spacing; see quantification.surface_crofton"),
         "surface_area_method": dict(SURFACE_AREA_METHOD),
-        "surface_accuracy_status": ("NOT ASSESSED for this mask; the estimator fails the analytical <5% criterion "
-                                    "(docs/evidence/2026-09-11-measurement-vv)"),
+        "surface_accuracy_status": ("NOT ASSESSED for this mask. The estimator meets the analytical <5% area "
+                                    "criterion on an untouched confirmation set within its declared domain "
+                                    "(docs/evidence/2026-09-12-surface-crofton-v3); per-object domain membership "
+                                    "is exported as surface_in_qualified_domain, and objects outside it carry the "
+                                    "surface_outside_qualified_domain review flag. The domain also requires a "
+                                    "smooth surface, which cannot be checked from a mask and is not asserted here"),
         "axis_columns": {"major_axis_um": "largest moment-equivalent diameter", "minor_axis_um": "intermediate diameter (legacy name)", "least_axis_um": "smallest diameter"},
         "legacy_aliases": {"equivalent_disk_um": "equivalent_sphere_diameter_um"},
         "qc_policy": "All objects retained; review flags do not imply biological abnormality or validated accuracy",

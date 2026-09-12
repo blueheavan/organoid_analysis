@@ -73,12 +73,23 @@ class FeatureTests(unittest.TestCase):
         )
 
     def test_sphericity_close_to_one_for_spheres(self) -> None:
+        """Discretized spheres bracket 1, and values above 1 are not clipped.
+
+        These phantoms (radii 6 and 4 voxels) are below the surface
+        estimator's qualified resolution, so neither the area nor this
+        sphericity carries an accuracy claim. They may land slightly above 1:
+        with an accurate area, sphericity now exposes the positive bias of
+        voxel-count volume at small radii instead of masking it against a
+        compensating area over-estimate, as the superseded estimator did
+        (0.92 and 0.94 there, from a +10% area error). Above
+        SPHERICITY_REVIEW_LIMIT such values are flagged, never clipped.
+        """
         mask = _two_spheres()
         features = extract_mask_features(mask, spacing_um=(1.0, 1.0, 1.0))
         for label in (1, 2):
             sphericity = features.loc[label, "sphericity"]
-            self.assertGreater(sphericity, 0.9)
-            self.assertLessEqual(sphericity, 1.0)
+            self.assertGreater(sphericity, 0.95)
+            self.assertLess(sphericity, 1.05)
 
     def test_spacing_scales_volume(self) -> None:
         mask = _two_spheres()

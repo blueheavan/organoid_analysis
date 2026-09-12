@@ -12,7 +12,10 @@ support is the raw label, as in multilevel analysis; optional hole filling
 uses the filled support consistently for every geometry feature. Exported
 values retain floating-point precision; rounding belongs in presentation:
   * volume_um3       — object volume in cubic microns
-  * surface_area_um2 — isosurface area in square microns (marching cubes)
+  * surface_area_um2 — surface area in square microns (weighted lattice
+    intersection counting, ``surface_crofton``); accuracy is claimed only
+    inside the declared domain, reported per object by
+    surface_in_qualified_domain / surface_rho_in / surface_anisotropy
   * equivalent_sphere_diameter_um — diameter of the sphere of equal volume
     (equivalent_disk_um is retained as a legacy alias)
   * sphericity       — ratio to the minimal possible surface for a volume
@@ -45,7 +48,8 @@ from organoid_analysis.quantification.labels import (
 # classical route). Columns and numeric definitions are unchanged from 2.0.
 FEATURE_SCHEMA_VERSION = "2.1"
 FEATURE_COLUMNS = [
-    "volume_um3", "surface_area_um2", "equivalent_disk_um", "equivalent_sphere_diameter_um",
+    "volume_um3", "surface_area_um2", "surface_rho_in", "surface_anisotropy",
+    "surface_in_qualified_domain", "equivalent_disk_um", "equivalent_sphere_diameter_um",
     "sphericity", "solidity", "major_axis_um", "minor_axis_um", "least_axis_um", "elongation",
     "centroid_z_um", "centroid_y_um", "centroid_x_um", "voxel_count", "segmented_volume_um3",
     "filled_voxel_count", "measurement_basis", "touches_image_border", "fragmented_object",
@@ -163,6 +167,12 @@ def extract_mask_features(
         # Same review limit as the classical route; the value is kept unclipped.
         if sphericity > SPHERICITY_REVIEW_LIMIT:
             flags.append("sphericity_above_geometric_range")
+        # The surface estimator's accuracy claim is domain-restricted, so an
+        # object outside the domain is flagged for review rather than silently
+        # carrying an unqualified area. The machine-checkable gate only; the
+        # smoothness part of the domain is the caller's responsibility.
+        if not g["surface_in_qualified_domain"]:
+            flags.append("surface_outside_qualified_domain")
         eq_disk = g["equivalent_diameter_um"]
         elongation = 1.0 - least / major
         voxel_count = int(np.count_nonzero(binary))
@@ -171,6 +181,9 @@ def extract_mask_features(
                 "Label": source_ids[int(p.label)],
                 "volume_um3": volume,
                 "surface_area_um2": surface,
+                "surface_rho_in": g["surface_rho_in"],
+                "surface_anisotropy": g["surface_anisotropy"],
+                "surface_in_qualified_domain": g["surface_in_qualified_domain"],
                 "equivalent_disk_um": eq_disk,
                 "equivalent_sphere_diameter_um": eq_disk,
                 "sphericity": sphericity,

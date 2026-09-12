@@ -29,7 +29,9 @@ def test_raw_geometry_counts_and_centroid_use_same_voxels():
     assert result.measurement_basis == "raw_label"
     assert result.filled_voxel_count == 0
     assert result.solidity == pytest.approx(480 / 504)
-    assert result.qc_flags == ""
+    # A few voxels across is far below the estimator's qualified resolution,
+    # so the area carries no accuracy claim and the object says so.
+    assert result.qc_flags == "surface_outside_qualified_domain"
 
 
 def test_explicit_envelope_uses_filled_centroid_and_solidity():
@@ -59,7 +61,8 @@ def test_small_volumes_keep_precision_and_missing_solidity_has_qc():
     assert np.isnan(result.solidity)
     # A single voxel's discretized sphericity (~2.79) also exceeds the shared
     # review limit (feature schema 2.1); the value itself is not clipped.
-    assert result.qc_flags == "solidity_not_estimable;sphericity_above_geometric_range"
+    assert result.qc_flags == ("solidity_not_estimable;sphericity_above_geometric_range;"
+                              "surface_outside_qualified_domain")
     assert result.qc_status == "review"
 
 
@@ -72,7 +75,8 @@ def test_border_and_fragment_flags_preserve_objects_and_raw_mask():
     assert list(result.index) == [9001]
     assert result.loc[9001, "volume_um3"] == 54
     assert result.loc[9001, "connected_component_count"] == 2
-    assert result.loc[9001, "qc_flags"] == "border_truncated;fragmented_object"
+    assert result.loc[9001, "qc_flags"] == ("border_truncated;fragmented_object;"
+                                           "surface_outside_qualified_domain")
     np.testing.assert_array_equal(mask, before)
 
 
@@ -84,11 +88,12 @@ def test_empty_result_retains_download_schema():
 
 
 def test_discretized_sphericity_above_review_limit_is_flagged_not_clipped():
-    # A single voxel has sphericity ~2.79 (> 1 is impossible for a continuous
+    # A single voxel has sphericity ~1.61 under the adopted surface estimator
+    # (~2.79 under the superseded one; > 1 is impossible for a continuous
     # solid). The Web route must flag it like the classical route, not clip it.
     mask = np.zeros((5, 5, 5), np.uint8)
     mask[2, 2, 2] = 1
     result = extract_mask_features(mask).loc[1]
-    assert result["sphericity"] > 2.5
+    assert result["sphericity"] > 1.5
     assert "sphericity_above_geometric_range" in result["qc_flags"].split(";")
     assert result["qc_status"] == "review"

@@ -4,17 +4,19 @@ import pytest
 from organoid_analysis.config import load_config
 from organoid_analysis.microscopy_io.tiff_contract import Sample
 from organoid_analysis.quantification.features import (
+    LEGACY_SURFACE_AREA_METHOD,
     SURFACE_AREA_METHOD,
     geometry,
+    legacy_surface_area,
     measure_instances,
 )
 from organoid_analysis.segmentation.watershed_instances import SegmentationResult
 
-# REGRESSION tolerance, not the scientific acceptance criterion. SCIENTIFIC_SPEC
-# section 9 requires <5% area error for analytical shapes, and this production
-# estimator FAILS it (docs/evidence/2026-09-11-measurement-vv). The 15% bound
-# only detects an unintended change in the estimator's known terracing bias;
-# passing it is not evidence of surface accuracy.
+# REGRESSION tolerance, not the scientific acceptance criterion, and deliberately
+# NOT tightened to the section 9 <5% bound: it must keep passing for shapes and
+# resolutions outside the qualified domain, where no accuracy claim is made. The
+# accuracy claim is tested in tests/quantification/test_surface_qualified_domain.py
+# against the declared domain; passing 15% here is not evidence of accuracy.
 SURFACE_REGRESSION_TOLERANCE=.15
 
 
@@ -28,7 +30,7 @@ def test_anisotropic_sphere_agrees_with_analytic_geometry():
     radius=18.
     measured,_=geometry(_reference_sphere(),spacing)
     assert abs(measured['volume_um3']/(4*np.pi*radius**3/3)-1)<.025
-    # Unsmooth voxel marching cubes has a discretization bias; do not assert perfect spheres.
+    # A wide regression bound by design; see SURFACE_REGRESSION_TOLERANCE above.
     assert abs(measured['surface_area_um2']/(4*np.pi*radius**2)-1)<SURFACE_REGRESSION_TOLERANCE
     assert .85<measured['sphericity']<1.04
 
@@ -36,16 +38,49 @@ def test_anisotropic_sphere_agrees_with_analytic_geometry():
 def test_surface_estimator_version_lock():
     """Change detector for the versioned production surface estimator.
 
-    The expected value is the area recorded for this exact phantom in
-    docs/evidence/2026-09-11/analytical-geometry.json and reproduced in
-    docs/evidence/2026-09-11-measurement-vv. It is NOT an accuracy oracle: the
-    analytical area is 4*pi*18**2 = 4071.5 um2 (+11.7% bias). If this fails, the
-    estimator changed: bump SURFACE_AREA_METHOD['method_version'] and repeat the
-    surface V&V rather than editing this number.
+    The expected value is the area this exact phantom takes under
+    ``crofton_minimax_sym_v3``, recorded when that estimator was adopted
+    (docs/evidence/2026-09-12-surface-crofton-v3). It is NOT an accuracy
+    oracle. If this fails, the estimator changed: bump
+    SURFACE_AREA_METHOD['method_version'] and repeat the surface V&V rather
+    than editing this number.
     """
     measured,_=geometry(_reference_sphere(),(2.,1.,1.))
-    assert SURFACE_AREA_METHOD['method_version']=='marching_cubes_binary_lewiner_v1'
-    assert measured['surface_area_um2']==pytest.approx(4549.28466796875,rel=1e-6)
+    assert SURFACE_AREA_METHOD['method_version']=='crofton_minimax_sym_v3'
+    assert measured['surface_area_um2']==pytest.approx(4048.66364,rel=1e-6)
+
+
+def test_superseded_estimator_stays_reproducible_and_still_fails():
+    """The legacy estimator is preserved under its own identity, with its defect.
+
+    Historical ``surface_area_um2`` values must stay reproducible, so the
+    superseded estimator keeps its recorded value for this phantom -- and keeps
+    failing the SCIENTIFIC_SPEC section 9 <5% criterion that the adopted
+    estimator meets on the same mask.
+    """
+    mask=_reference_sphere()
+    analytic=4*np.pi*18.**2
+    assert LEGACY_SURFACE_AREA_METHOD['method_version']=='marching_cubes_binary_lewiner_v1'
+    assert legacy_surface_area(mask,(2.,1.,1.))==pytest.approx(4549.28466796875,rel=1e-6)
+    assert abs(legacy_surface_area(mask,(2.,1.,1.))/analytic-1)>.05
+    assert abs(geometry(mask,(2.,1.,1.))[0]['surface_area_um2']/analytic-1)<.05
+
+
+def test_domain_variables_are_exported_and_gate_is_not_silent():
+    """A measurement outside the qualified domain is returned, flagged, not hidden.
+
+    This phantom's inscribed radius is 9.01 voxels of the coarsest axis, just
+    below the declared rho_in >= 10, so it is out of the qualified domain --
+    which the estimator reports per object rather than refusing or silently
+    returning an unqualified number.
+    """
+    measured,_=geometry(_reference_sphere(),(2.,1.,1.))
+    assert measured['surface_rho_in']==pytest.approx(9.014,abs=5e-3)
+    assert measured['surface_anisotropy']==pytest.approx(2.)
+    assert measured['surface_stencil_radius'] in (1,2,3,4,5)
+    assert measured['surface_in_qualified_domain'] is False
+    assert 'rho_in' in measured['surface_domain_flags']
+    assert measured['surface_area_um2']>0
 
 
 def test_units_scale_volume_area_and_not_sphericity():
