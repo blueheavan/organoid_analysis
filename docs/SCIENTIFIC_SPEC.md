@@ -366,3 +366,44 @@ one-voxel exterior background fixes the inscribed radius of tight crops. Exact
 weights, directions, stencil candidates, thresholds and acceptance criteria are
 unchanged. Only affected crop surface/domain values change; voxel volume,
 diameter and moments do not. See [review and validation](MORPHOLOGY_ARCHITECTURE_REVIEW.md).
+
+## 18. Spacing provenance, volume audit and gate semantics — 2026-09-13
+
+**Voxel spacing is resolved per axis.** An external manifest may complete the
+axes a file omits; on any axis both sources state, the values must agree within
+`SPACING_RTOL` / `SPACING_ATOL_UM` or the load is refused, naming the axis and
+both values. Completion and comparison are independent rules: neither is
+skipped because the other axes are incomplete. Mixed provenance is preserved in
+`spacing_source_by_axis` rather than collapsed to a single label. Measurement
+behaviour is unchanged wherever metadata was already complete. The defect this
+replaces silently accepted a conflicting stated axis and used the external
+value (demonstrated: a 2.0 µm file axis overridden by a 1.0 µm manifest value,
+a 2× single-axis error in every physical measurement, no warning).
+
+**Recording provenance is not verification.** A manifest value carries the
+authority of whoever entered it; independent verification of voxel size is
+SG-6, which remains FAIL / INSUFFICIENT EVIDENCE. See
+[study proposals](evidence/2026-09-13-volume-audit/STUDY_PROPOSALS_SG3_SG6.md).
+
+**The canonical record was re-executed** at the committed source after the fix
+(`docs/evidence/2026-09-13-analytical-geometry-record/`). Per-case results are
+bit-identical to the superseded record across all 1128 rows. This restores the
+binding between the record and the source under test; it is **not** new
+independent confirmation, and confidence in the estimators is unchanged.
+
+**SG-2 (volume) is FAIL / NOT QUALIFIED**, audited as a separate problem with no
+change to the volume algorithm. Unrestricted worst error 18.26 % on the frozen
+grid, which is the criterion as written. Predeclared in-domain confirmation
+evidence does exist — 96 in-scope smooth confirmation cases, worst 0.76 %
+against the frozen 1 % rule — but the *machine-checkable* part of the domain
+does not bound volume: creased confirmation cases inside `ρ_in ≥ 10`,
+anisotropy ≤ 4 reach 3.20 %. No resolution threshold is declared a guarantee.
+Full audit and the qualification protocol:
+[volume audit](evidence/2026-09-13-volume-audit/VOLUME_QUALIFICATION_PROTOCOL.md).
+
+**Gate semantics are unresolved by design.** Whether SG-1 and SG-2 should be
+evaluated unrestricted or restricted to the declared domain is an owner
+decision, analysed with four options in
+[gate semantics](GATE_SEMANTICS_ANALYSIS.md). Until a decision is recorded
+there, the gate keeps its current unrestricted behaviour and both items remain
+FAIL.

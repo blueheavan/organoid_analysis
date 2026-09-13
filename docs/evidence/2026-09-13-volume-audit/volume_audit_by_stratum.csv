@@ -1,0 +1,20 @@
+evidence_set,subset,n,max_abs_rel_error,median_signed_rel_error,frac_cases_ge_1pct,worst_case,status_vs_1pct
+frozen_grid_n188,rho_in very_small(<3),44,0.18261,0.00743,0.6818,dev-078-cylinder-size3-sp2x1x1-rot0,FAIL
+frozen_grid_n188,rho_in small(3-6),44,0.02739,-0.00074,0.1591,dev-000-sphere-size3-sp1x1x1-offset0,FAIL
+frozen_grid_n188,rho_in medium(6-12),44,0.02567,-0.00015,0.0455,dev-035-cylinder-size6-sp1x1x1-rot0,FAIL
+frozen_grid_n188,rho_in large(>=12),56,0.00528,4e-05,0.0,dev-090-cylinder-size24-sp2x1x1-rot0,PASS
+frozen_grid_n188,all cases (SG-2 as written),188,0.18261,3e-05,0.2074,dev-078-cylinder-size3-sp2x1x1-rot0,FAIL
+frozen_grid_n188,"EXPLORATORY post-hoc cut rho_in>=4 (hypothesis, not a domain)",111,0.02567,-0.0,0.027,dev-035-cylinder-size6-sp1x1x1-rot0,exceeds on this grid
+frozen_grid_n188,"EXPLORATORY post-hoc cut rho_in>=6 (hypothesis, not a domain)",100,0.02567,1e-05,0.02,dev-035-cylinder-size6-sp1x1x1-rot0,exceeds on this grid
+frozen_grid_n188,"EXPLORATORY post-hoc cut rho_in>=8 (hypothesis, not a domain)",67,0.00528,4e-05,0.0,dev-090-cylinder-size24-sp2x1x1-rot0,meets on this grid (no error control)
+frozen_grid_n188,"EXPLORATORY post-hoc cut rho_in>=10 (hypothesis, not a domain)",56,0.00528,4e-05,0.0,dev-090-cylinder-size24-sp2x1x1-rot0,meets on this grid (no error control)
+frozen_grid_n188,"EXPLORATORY post-hoc cut rho_in>=12 (hypothesis, not a domain)",56,0.00528,4e-05,0.0,dev-090-cylinder-size24-sp2x1x1-rot0,meets on this grid (no error control)
+confirm2_n480_predeclared,in scope and in gate (smooth: sphere/ellipsoid/capsule/torus),96,0.00761,5e-05,0.0,confirm2-0178-torus-rho13-sp2.2x1x1-rot0,A2 met (predeclared)
+confirm2_n480_predeclared,creased classes in gate (box/cylinder) - OUT OF SCOPE,49,0.03202,-6e-05,0.2041,confirm2-0160-cylinder-rho11-sp2.2x1x1-rot0,exceeds 1%
+confirm2_n480_predeclared,all executed cases,480,0.09816,4e-05,0.1167,confirm2-0018-box-rho6.5-sp1.2x1x1-rot0,exceeds 1%
+confirm2_n480_predeclared,"in gate, class=box",25,0.02585,0.0,0.2,confirm2-0174-box-rho13-sp2.2x1x1-rot0,exceeds 1%
+confirm2_n480_predeclared,"in gate, class=capsule",24,0.00269,1e-05,0.0,confirm2-0164-capsule-rho11-sp2.2x1x1-rot0,met
+confirm2_n480_predeclared,"in gate, class=cylinder",24,0.03202,-0.00016,0.2083,confirm2-0160-cylinder-rho11-sp2.2x1x1-rot0,exceeds 1%
+confirm2_n480_predeclared,"in gate, class=ellipsoid",24,0.0008,3e-05,0.0,confirm2-0063-ellipsoid-rho11-sp1.2x1x1-rot1,met
+confirm2_n480_predeclared,"in gate, class=sphere",24,0.00105,0.00011,0.0,confirm2-0156-sphere-rho11-sp2.2x1x1-offset0,met
+confirm2_n480_predeclared,"in gate, class=torus",24,0.00761,6e-05,0.0,confirm2-0178-torus-rho13-sp2.2x1x1-rot0,met
