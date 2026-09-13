@@ -95,9 +95,14 @@ provenance as a covariate and requires the domain flag to be reported
 stratified rather than used as a silent exclusion. The SG-6 proposal is new:
 traceable lateral and axial standards imaged in the specimen's mounting medium,
 strata per instrument and objective, imaging session as the independent unit,
-scale deviations propagated into area and volume. A 3 % lateral scale error is
-a ~3 % area and ~9 % volume error on every object, invisible to every check in
-this repository — larger than the qualified estimator's whole in-domain budget.
+scale deviations propagated into area and volume. A 3 % *lateral* scale error is
+a +6.09 % volume error and a +3 % to +6.09 % area error depending on object
+orientation (+4.02 % for a sphere); a 3 % error in all three axes is +9.27 %
+volume and +6.09 % area. Either way it lands on every object, is invisible to
+every check in this repository, and exceeds the qualified estimator's whole
+in-domain budget. (The figures in the first issue of this report, "~3 % area and
+~9 % volume" for a lateral error, were wrong — see
+`docs/evidence/2026-09-13-volume-audit/ERRATA.md`, E-5.)
 Calibration is recommended before the segmentation study, since a scale error
 and a mask bias both appear as a systematic volume discrepancy.
 

@@ -407,3 +407,62 @@ decision, analysed with four options in
 [gate semantics](GATE_SEMANTICS_ANALYSIS.md). Until a decision is recorded
 there, the gate keeps its current unrestricted behaviour and both items remain
 FAIL.
+
+### Round 4 — 2026-09-13: intended use frozen, no new measurement
+
+This round produced specifications, study designs and corrections only. No
+algorithm, threshold, criterion or item status changed, and the scientific gate's
+output is unchanged.
+
+**What may be claimed is now frozen in one place.**
+[Intended use and estimands](INTENDED_USE_AND_ESTIMANDS.md) fixes a five-term
+status vocabulary, defines the three intended-use areas (organoid morphology;
+exploratory nuclear morphology; marker-signal state), and carries a claim
+register with one row per estimand. The register splits each operating domain
+into the part software can check from a mask and the part it cannot, because only
+the first is enforceable at run time — and the surface claim's criterion is met
+only because the scope assumption excludes the creased classes that pass the
+machine-checkable gate.
+
+**The volume estimand is resolved by decision.** The primary organoid size
+estimand is the total enclosed volume `V_env` (envelope after topological hole
+filling), with segmented-material volume and enclosed void fraction as required
+accompaniments rather than optional extras. One consequence is a newly
+identified failure mode: because the fill operator is topological, a cavity open
+to the exterior is not filled, so `V_env` changes discontinuously with mask
+topology and the same organoid can move between behaviours across time points
+or through a crop. The void fraction cannot distinguish that case from a solid
+object, so a topology diagnostic is a design requirement
+(`ROADMAP.md` R-2) and an owner decision on the open-cavity behaviour blocks the
+volume study.
+
+**Five defects in the round-3 documents are corrected**, with the superseded
+wording quoted in
+[errata](evidence/2026-09-13-volume-audit/ERRATA.md): the `ρ_in` definition
+(it divides by the largest single spacing, not the voxel diagonal), a
+shape-class overstatement, an anisotropy framing claim, and the calibration
+propagation figures — twice, the second time to the exact `(4/3)e` sphere-area
+sensitivity.
+
+**Two invariance results now constrain the calibration study.** Sphericity is
+exactly invariant to an isotropic scale error, and under a lateral-only error the
+cancellation is exact only for a sphere — so sphericity must not be described as
+calibration-free. `ρ_in` is invariant to an isotropic scale error, so absolute
+scale cannot move an object across the domain boundary; only the axis ratio can.
+The derived per-axis tolerance for the calibration contribution to stay inside
+the estimator's own error budget is demanding laterally and not plausibly
+achievable axially, so the acceptance criteria are tiered by the claim each
+licenses rather than loosened
+([study proposals](evidence/2026-09-13-volume-audit/STUDY_PROPOSALS_SG3_SG6.md)
+§2.1.1, §2.3.1).
+
+**Study designs added:** the volume qualification study (hollow, open-cavity and
+creased classes, plus an aperture sweep as characterisation), the viability
+validation study (four questions with owner-placeholder acceptance numbers that
+must be fixed before data are seen), the SG-3 addenda (reference masks must pass
+through the same measurement basis; topology agreement as a required stratum),
+and the SG-5 inferential-scope study (coverage under this project's replicate
+structure, with the branch-switching behaviour, the t(G−1) reference at G = 2–3,
+and the asymptotic omnibus as targeted sub-questions). The prioritized path,
+dependencies and outstanding owner decisions are in
+[the roadmap](ROADMAP.md).

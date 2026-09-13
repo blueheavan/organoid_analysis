@@ -182,3 +182,66 @@ If C or D is chosen, the implementing change must land as a single commit that
 (a) carries the confirmation evidence into a record contract, (b) adds the
 adversarial tests of §4.3, and (c) quotes this decision record. A change to gate
 semantics without that reference is out of process.
+
+---
+
+## 7. Specification of Option C — 2026-09-13
+
+Written so that signing the decision record above makes the implementation
+mechanical rather than a fresh design exercise. **The gate code is unchanged by
+this section**; `scripts/scientific_validation_gate.py` still implements Option
+A, and the overall verdict is unaffected either way (SG-3 to SG-6 are
+untouched). Statuses use the vocabulary in `docs/INTENDED_USE_AND_ESTIMANDS.md`.
+
+### 7.1 Item definitions
+
+| Item | Question it answers | Evidence it reads | Assertion | Status if implemented today |
+|---|---|---|---|---|
+| **SG-1a** qualification | Is the area estimator accurate inside the domain it claims? | confirmation set, cases with `surface_in_qualified_domain` true **and** in the declared smooth scope | every such case `\|area rel. err\| < 1%` | **SUPPORTED WITH LIMITATIONS** — met (worst 0.951%, n = 96), limited by the non-machine-checkable smoothness clause and by coverage of only `rho_in` 10.43–15.05 |
+| **SG-1b** characterisation | What does it do outside that domain? | the full analytical grid | reports worst case, per-`rho_in`-stratum maxima and the fraction above 1% — **no verdict** | reports 25.81% worst case; no PASS/FAIL |
+| **SG-2a** qualification | Is voxel-count volume accurate inside a declared volume domain? | confirmation set, in-domain in-scope cases | every such case `\|volume rel. err\| < 1%` | **INSUFFICIENT EVIDENCE** — the predeclared rule A2 was met (worst 0.761%, n = 96, `FREEZE_RECORD_V3.md`), but volume has no domain of its own: it currently inherits the surface constants, and the evidence contains no hollow or open-cavity object. See `evidence/2026-09-13-volume-audit/VOLUME_QUALIFICATION_PROTOCOL.md` §3 |
+| **SG-2b** characterisation | What does it do outside? | the full analytical grid | reports worst case, strata, fraction above 1% — no verdict | reports 18.26% worst case; 68.2% of the `rho_in < 3` stratum above 1% |
+
+### 7.2 Why SG-2a is not simply a PASS
+
+The number is met, and the earlier framing that no prospective volume evidence
+exists was itself corrected in round 3. But a qualification item must test a
+claim against *its own* declared domain, and the volume claim has never declared
+one — `DOMAIN_RHO_IN_MIN` and `DOMAIN_ANISO_MAX` were derived for the area
+estimator. Constructing SG-2a out of borrowed constants would create the
+appearance of an independently qualified volume claim where none has been
+defined. The correct order is: volume declares its domain (roadmap R-3), a
+volume confirmation set is built to it, then SG-2a tests it. Until then the item
+is INSUFFICIENT EVIDENCE, and reporting it as PASS would be exactly the
+gate-semantics change this repository refuses to make silently.
+
+Note that this is *not* a contradiction of the claim register, where M1 (total
+enclosed volume) is SUPPORTED WITH LIMITATIONS. M1 is a claim about the
+domain-restricted estimand and is supported by the met A2 rule with its
+limitations named; SG-2a is a gate item that would have to be constructed from a
+volume-specific domain that does not yet exist. One is a scoped scientific
+claim; the other is an automated assertion.
+
+### 7.3 Invariants any implementation must preserve
+
+1. The `b` items never carry PASS or FAIL. A characterisation item that can fail
+   is a qualification item with a hidden criterion.
+2. The `a` items must fail closed: a missing domain flag, a missing scope
+   declaration, an empty in-domain subset, or a record whose evidence files do
+   not match the head commit must produce FAIL, never PASS by absence. The
+   adversarial tests in §4.3 cover exactly these.
+3. Neither item may read a method-development directory. Development evidence
+   becomes a validation record by being wired into a gate, which is the
+   conversion this repository prohibits; the `a` items read confirmation
+   evidence only.
+4. The domain-restricted subset must be recorded as a count alongside the
+   verdict. "Every case passed" over an unstated n is not a reportable result.
+5. `surface_weights_origin` must be part of the `a` items' evidence contract: a
+   confirmation case measured with cached or solved weights is outside the
+   evidence-bearing configuration (see `INTENDED_USE_AND_ESTIMANDS.md` §2,
+   note 3) and must not count toward a qualification item. All 480 confirmation
+   cases resolve to packaged tables — their five spacings (`1.2x1x1`, `2.2x1x1`,
+   `2.4x0.6x0.6`, `3.5x1x1`, `5x1x1`) are all in the packaged ratio set, and the
+   55 packaged tables cover every stencil radius in
+   `M_CANDIDATES = (1, 2, 3, 4, 5)` — so this is a guard against future drift,
+   not a present exclusion.

@@ -1,0 +1,13 @@
+set,stratum,n,median_abs_vol_pct,max_abs_vol_pct,frac_ge_1pct
+frozen dev grid (n=188),very_small(<3),44,1.603,18.261,68.2
+frozen dev grid (n=188),small(3-6),44,0.451,2.739,15.9
+frozen dev grid (n=188),medium(6-12),44,0.133,2.567,4.5
+frozen dev grid (n=188),large(>=12),56,0.031,0.528,0.0
+"matched-resolution comparison, iso",rho 3 (matched),11,0.97,2.739,27.3
+"matched-resolution comparison, aniso",rho 3 (matched),22,0.37,1.633,13.6
+"matched-resolution comparison, iso",rho 6 (matched),11,0.356,2.567,18.2
+"matched-resolution comparison, aniso",rho 6 (matched),22,0.129,0.666,0.0
+"matched-resolution comparison, iso",rho 12 (matched),11,0.084,0.215,0.0
+"matched-resolution comparison, aniso",rho 12 (matched),25,0.029,0.528,0.0
+confirmation set (n=480),"smooth in-scope, inside machine gate",96,0.02,0.761,0.0
+confirmation set (n=480),"creased, inside machine gate",49,0.056,3.202,20.4
