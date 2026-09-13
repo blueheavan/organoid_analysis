@@ -1,5 +1,11 @@
 # Scientific parameter registry — 2026-09-10
 
+2026-09-13 morphology maintenance changes no scientific parameter: rho_in >=10,
+anisotropy <=4, stencil candidates 1–5 and frozen weights remain fixed.
+One-voxel exterior padding for EDT repairs a boundary condition; it is not a
+smoothing/calibration parameter. Reporting introduces no object-size cutoff.
+Existing raw/filled defaults remain explicit; see SCIENTIFIC_SPEC §17.
+
 Values below are recovered from current code, not justified by prior reports. The machine-readable [registry](evidence/2026-09-10/parameters.json) contains every row's calibration, data role, independence, held-out validation, sensitivity and uncertainty fields. Shared defaults for those fields: **no project calibration artifact; calibration role, independent unit, held-out support, scientifically justified sensitivity range and uncertainty are NOT ASSESSED**. This is a limitation, not evidence of adequacy. Numerical regression tests verify behavior, not suitability of a default.
 
 Origin, basis strength and evidence status are separate. `HEURISTIC` denotes a project rule with no calibration record; historical attribution of an exact value to a paper/manufacturer is not invented. Model-library defaults have `SOFTWARE_OR_MODEL_DEFAULT` origin and likewise lack project validation. User configuration does not establish scientific validity. `NOT APPLICABLE` applies only to inactive 3D flow thresholds and display/persistence/seed settings as scientific cutoffs; stochastic reproducibility remains separately assessed.

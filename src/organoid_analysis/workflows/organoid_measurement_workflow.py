@@ -33,6 +33,7 @@ from organoid_analysis.quantification.features import (
     SURFACE_AREA_METHOD,
     measure_instances,
 )
+from organoid_analysis.quantification.measurement_policy import measurement_policy
 from organoid_analysis.result_export.report import (
     plot_morphology_viability,
     plot_qc,
@@ -142,6 +143,7 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
                   "source_code_sha256": source_code_hashes(),
                   "packages": {package: importlib.metadata.version(package) for package in ["numpy", "scipy", "scikit-image", "tifffile", "pandas", "matplotlib", "PyYAML"]},
                   "surface_area_method": dict(SURFACE_AREA_METHOD),
+                  "measurement_policy": measurement_policy("organoid", "filled_envelope"),
                   "input_files": input_files, "sample_metadata": sample_metadata}
     paths = sorted({row[field] for row in design.to_dict("records") for field in PATH_FIELDS if row[field]})
     for path in paths:

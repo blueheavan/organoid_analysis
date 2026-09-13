@@ -238,7 +238,13 @@ def write_html(out: Path, objects: pd.DataFrame, samples: pd.DataFrame, conditio
         if qc.is_file():
             details.append(f'<details><summary>{html.escape(sid)} · {html.escape(str(row["condition"]))} · {row["n_included"]} included / {row["n_detected"]} detected</summary><img alt="Orthogonal slices, marker MIP and physical 3D surfaces" src="{_image_data(qc)}"></details>')
     object_columns = ["sample_id","condition","organoid_id","volume_um3","surface_area_um2","sphericity","viability_state","morphology_flags"]
+    from organoid_analysis.quantification.features import SURFACE_METADATA_COLUMNS
+    from organoid_analysis.quantification.measurement_policy import MEASUREMENT_INTERPRETATION
+
+    object_columns += [name for name in ("measurement_basis", "equivalent_diameter_um", *SURFACE_METADATA_COLUMNS)
+                       if name in objects.columns]
     object_html = objects[object_columns].head(100).to_html(index=False,escape=True,na_rep="—",float_format=lambda x:f"{x:,.3f}")
+    object_html = f"<p>{html.escape(MEASUREMENT_INTERPRETATION)}</p>" + object_html
     failure_html = "" if not failures else pd.DataFrame(failures).to_html(index=False,escape=True)
     links = ["organoids.csv","sample_summary.csv","unit_summary.csv","replicate_summary.csv","condition_summary.csv","calibration.csv","provenance.json"]
     qc_path = out / "segmentation_qc.csv"

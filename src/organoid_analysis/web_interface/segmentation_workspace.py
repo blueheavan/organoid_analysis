@@ -684,7 +684,10 @@ def render_results_tab(config: SegmentationConfig) -> None:
     mcols[0].metric("Objects", summary.n_objects)
     mcols[1].metric("Total volume (µm³)", f"{summary.total_volume_um3:,.1f}")
     mcols[2].metric("Mean volume (µm³)", f"{summary.mean_volume_um3:,.1f}")
-    mcols[3].metric("Mean sphericity", f"{summary.mean_sphericity:.3f}")
+    mcols[3].metric("Mean sphericity (conditional)", f"{summary.mean_sphericity:.3f}")
+    from organoid_analysis.quantification.measurement_policy import MEASUREMENT_INTERPRETATION
+
+    st.caption(MEASUREMENT_INTERPRETATION)
 
     if result is not None and result.archive_path.exists():
         st.download_button(
@@ -707,7 +710,7 @@ def render_analysis_tab() -> None:
         st.markdown(
             "This tab summarizes labels from the current uploaded image only. It is descriptive and does "
             "not compare treatments or estimate viability. **Volume** uses the selected raw-label or filled-envelope geometry in "
-            "µm³; **surface area** is a marching-cubes estimate in µm²; **sphericity** compares the mask "
+            "µm³; **surface area** is a versioned Crofton estimate in µm²; **sphericity** compares the mask "
             "with an equal-volume sphere; **solidity** compares the labeled object with its convex hull; "
             "and principal axes describe a moment-equivalent ellipsoid. Values depend on the entered voxel "
             "spacing and mask quality. QC flags remain in the exported table and these summaries include "
@@ -730,7 +733,7 @@ def render_analysis_tab() -> None:
     with chart_col:
         st.bar_chart(features["volume_um3"].sort_values().reset_index(drop=True))
 
-    st.markdown("**Sphericity vs solidity (segmentation quality)**")
+    st.markdown("**Sphericity vs solidity (descriptive mask shape)**")
     st.scatter_chart(
         features[["sphericity", "solidity"]],
         x="sphericity",

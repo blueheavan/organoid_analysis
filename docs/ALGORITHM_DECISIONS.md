@@ -161,3 +161,21 @@ estimator is now identified by `SURFACE_AREA_METHOD`
 feature provenance, and a version-lock test detects silent changes. Options
 that need an owner decision are listed in
 [the selection record](evidence/2026-09-11-measurement-vv/SURFACE_SELECTION.md).
+
+## D3b. Reporting contract and cropped-mask EDT repair — 2026-09-13
+
+Retain the D3a method and frozen parameters. `geometry()` supplies numerical
+values and surface metadata; adapters supply IDs/support/legacy names;
+`measurement_policy` supplies primary/conditional interpretation. No separate
+object geometry or smoothness classifier is introduced.
+
+Tight crops lacked exterior zeros for EDT, inflating the radius and changing
+stencil selection. One-voxel background padding repairs the boundary condition,
+consistent with transition counting's exterior. Revision `padded_edt_v1` is
+separate from mathematical method `crofton_minimax_sym_v3`. Basis: ESTABLISHED
+for voxel arithmetic, moments and the exterior background contract;
+CONTEXT_DEPENDENT for surface suitability within the existing smooth-surface
+scope. Crop invariance, hand-computable voxel-box moments and frozen phantom
+reexecution constrain the repair. Actual results are recorded in
+`MORPHOLOGY_ARCHITECTURE_REVIEW.md`. Segmentation/biological validity remains
+NOT ASSESSED; neither old PASS records nor criteria are rewritten to accept it.

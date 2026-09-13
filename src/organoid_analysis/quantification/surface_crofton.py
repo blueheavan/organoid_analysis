@@ -66,13 +66,14 @@ from __future__ import annotations
 import itertools
 import json
 import os
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
-from scipy import ndimage as ndi
-from scipy.optimize import linprog
+from numpy.typing import ArrayLike
+from scipy import ndimage as ndi  # type: ignore[import-untyped]
+from scipy.optimize import linprog  # type: ignore[import-untyped]
 
 METHOD_NAME = "crofton_minimax_sym_v3"
 SCHEME = "lp_sym"
@@ -102,8 +103,9 @@ DOMAIN_ANISO_MAX = 4.0          # max(spacing) / min(spacing)
 
 # rho_in >= 10 is set by the VOLUME criterion (<1%), not the area criterion:
 # area is comfortable from rho_in ~ 5, while voxel-count volume quantisation is
-# the binding term. Area and volume share one gate so that sphericity, which
-# combines them, is qualified wherever both inputs are.
+# the binding term on those phantoms. This historical selection rationale
+# does not qualify volume accuracy on an arbitrary mask: the lattice-aligned
+# counterexample can pass this gate while failing the volume criterion.
 DOMAIN_RHO_IN_MIN_VOLUME = 10.0
 
 # SCOPE OF INTENDED USE -- not machine-checkable.
@@ -125,8 +127,8 @@ DOMAIN_RHO_IN_MIN_VOLUME = 10.0
 # therefore rests with the caller, and ``in_domain()`` does not pretend to
 # enforce it.
 #
-# For organoid envelopes this is a weak constraint -- they are smooth closed
-# surfaces. It is a real constraint for faceted or polyhedral objects.
+# Object identity (including an organoid envelope) does not establish smoothness
+# or a biologically accurate segmentation boundary.
 DOMAIN_SCOPE = "smooth closed surfaces (no dihedral creases)"
 DOMAIN_NOT_QUALIFIED = "surfaces with dihedral creases, at any resolution"
 
@@ -160,7 +162,7 @@ LP_TIME_BUDGET_S = 600.0
 
 
 # --------------------------------------------------------------- directions
-@lru_cache(maxsize=None)
+@cache
 def primitive_directions(m: int) -> tuple[tuple[int, int, int], ...]:
     """Primitive integer vectors in [-m, m]^3, one per +/- pair, sorted.
 
@@ -176,8 +178,9 @@ def primitive_directions(m: int) -> tuple[tuple[int, int, int], ...]:
             continue
         if tuple(-np.asarray(k)) in seen:
             continue
-        out.append(k)
-        seen.add(k)
+        direction = cast(tuple[int, int, int], k)  # product(..., repeat=3)
+        out.append(direction)
+        seen.add(direction)
     return tuple(sorted(out, key=lambda v: (sum(abs(x) for x in v), v)))
 
 
@@ -193,7 +196,7 @@ def fibonacci_sphere(n: int) -> np.ndarray:
                             np.sin(phi) * np.cos(theta)])
 
 
-def transition_counts(mask: np.ndarray, dirs) -> np.ndarray:
+def transition_counts(mask: np.ndarray, dirs: ArrayLike) -> np.ndarray:
     """N_k for each direction: adjacent-along-k voxel pairs of differing state."""
     directions = np.asarray(dirs, int)
     pad = int(np.abs(directions).max()) + 1
@@ -228,13 +231,13 @@ def metric_symmetry_group(ratios: tuple[float, float, float]) -> list[np.ndarray
     return group
 
 
-def _canonical(k) -> tuple[int, int, int]:
+def _canonical(k: np.ndarray) -> tuple[int, int, int]:
     """Representative of the +/- pair {k, -k}."""
     forward = tuple(int(x) for x in k)
-    return max(forward, tuple(-x for x in forward))
+    return cast(tuple[int, int, int], max(forward, tuple(-x for x in forward)))
 
 
-def direction_orbits(ratios: tuple[float, float, float], m: int):
+def direction_orbits(ratios: tuple[float, float, float], m: int) -> tuple[np.ndarray, np.ndarray, int]:
     """Partition ``primitive_directions(m)`` into G-orbits.
 
     Returns ``(K, labels, n_orbits)`` where ``labels[i]`` is the orbit index of
@@ -260,7 +263,7 @@ def direction_orbits(ratios: tuple[float, float, float], m: int):
 
 
 # ------------------------------------------------------------------- solve
-def _ratios(spacing) -> tuple[float, float, float]:
+def _ratios(spacing: ArrayLike) -> tuple[float, float, float]:
     """The LP depends only on the spacing ratios, so normalise by the maximum."""
     values = np.asarray(spacing, float)
     normalised = values / values.max()
@@ -341,7 +344,7 @@ def _solve_orbit_weights(ratios: tuple[float, float, float], m: int,
     return expanded, diagnostics
 
 
-@lru_cache(maxsize=None)
+@cache
 def _weights_for_ratios(ratios: tuple[float, float, float], m: int
                         ) -> tuple[tuple[float, ...], tuple[tuple[str, Any], ...]]:
     """Dimensionless orbit-symmetric weights for a spacing ratio, with caching.
@@ -371,7 +374,7 @@ def _weights_for_ratios(ratios: tuple[float, float, float], m: int
     return tuple(float(x) for x in weights), tuple(sorted(diagnostics.items()))
 
 
-def crofton_weights_sym(spacing, m: int) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
+def crofton_weights_sym(spacing: ArrayLike, m: int) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
     """Minimax weights for ``spacing`` and stencil radius ``m``.
 
     Returns ``(directions, w_times_area, diagnostics)``. The returned weights
@@ -394,25 +397,28 @@ def crofton_weights_sym(spacing, m: int) -> tuple[np.ndarray, np.ndarray, dict[s
     return directions, weights * area_element, diagnostics
 
 
-def apriori_bound(spacing, m: int, r_in: float) -> float:
+def apriori_bound(spacing: ArrayLike, m: int, r_in: float) -> float:
     """Plane-response deviation plus grazing deficit, before any measurement."""
     diagnostics = crofton_weights_sym(spacing, m)[2]
-    return (diagnostics["plane_response_max_abs_dev"]
-            + diagnostics["grazing_constant_D_um2"] / r_in ** 2)
+    return float(diagnostics["plane_response_max_abs_dev"]
+                 + diagnostics["grazing_constant_D_um2"] / r_in ** 2)
 
 
 # ------------------------------------------------------------------ measure
-def inscribed_radius(mask: np.ndarray, spacing) -> float:
+def inscribed_radius(mask: np.ndarray, spacing: ArrayLike) -> float:
     """Largest inscribed sphere radius, from the mask and spacing alone.
 
     The local feature size, not the volume-equivalent radius: the latter
     overstates resolution for elongated or creased objects, which is what made
     an earlier volume-equivalent domain declaration fail its confirmation set.
     """
-    return float(ndi.distance_transform_edt(mask, sampling=spacing).max())
+    # Instance adapters crop to the bounding box. The exterior is background,
+    # including when a cropped box contains only foreground; EDT otherwise
+    # sees no exterior on some faces and overestimates the inscribed radius.
+    return float(ndi.distance_transform_edt(np.pad(mask, 1), sampling=spacing).max())
 
 
-def measure(mask: np.ndarray, spacing, *, force_m: int | None = None) -> dict[str, Any]:
+def measure(mask: np.ndarray, spacing: tuple[float, float, float], *, force_m: int | None = None) -> dict[str, Any]:
     """Surface area, volume and the domain variables for a 3D mask.
 
     Applies no domain gating: a measurement is always returned, and

@@ -1,7 +1,7 @@
 # Scientific Specification — Organoid Pipeline
 
-Version: 1.3.0
-Date: 2026-09-11
+Version: 1.4.0
+Date: 2026-09-13
 Classification: S3 (Inferential) for the pipeline as a whole, because `src/organoid_analysis/statistics/inference.py`'s condition-comparison hypothesis testing (linear mixed-effects model + Benjamini-Hochberg FDR-corrected pairwise contrasts; `cfg["stats"]["enabled"]` defaults to `true`) is exactly the "hypothesis testing, differential analysis" example category the S3 rubric names. Core measurement/QC (morphology, hierarchy, topology, viability-state gating) is S2 (Analytical) on its own; see docs/ALGORITHM_DECISIONS.md D11 for the S3 component's method, validation status, and known small-sample-inference limitation. The bundled exploratory UI tutorial workflows (`src/organoid_analysis/statistics/exploration.py`: trained classifiers, clustering) are also S3-shaped but are explicitly out of scope of this specification's measurement claims (see docs/PARAMETERS.md, "Exploratory statistics/ML parameters").
 
 ## 1. Scientific Objective and Question
@@ -320,3 +320,49 @@ bias of voxel-count volume. The superseded estimator is preserved under its own
 identity (`legacy_surface_area()`, `marching_cubes_binary_lewiner_v1`) with the
 evidence that it fails. Details:
 [validation update](VALIDATION_UPDATE_2026-09-12.md).
+
+## 17. Common geometry and reporting policy — 2026-09-13
+
+One `features.geometry()` engine supplies all numerical morphology;
+`measurement_policy` and existing object adapters supply reporting policies.
+
+| Object | Primary mask metrics | Conditional metrics |
+|---|---|---|
+| Organoid | voxel-count volume, equivalent diameter, moment axes/ratios, elongation | Crofton area, sphericity, surface-to-volume ratio |
+| Cell | same metrics on cell support | same conditional metrics |
+| Nucleus / nuclear-only | same metrics on nuclear support | same conditional metrics |
+
+Volume is `N_voxel * sz * sy * sx`, never mesh volume; equivalent diameter is
+`(6V/pi)^(1/3)`. Moment axes include intrinsic voxel covariance `diag(s²/12)`;
+elongation is `1-minor/major`, prolate ratio `major/intermediate`, oblate ratio
+`intermediate/minor`. Primary means reported independently of the surface gate,
+not biologically validated or necessarily accurate against a continuous solid.
+
+`measurement_basis` identifies `raw_label` (multilevel/Web default) versus
+`filled_envelope` (classical organoid/legacy cell default). Web and the new
+`cell_geometry(..., fill_holes=False)` option permit explicit support selection.
+Legacy `cell_volume_um3` remains raw, `cell_envelope_volume_um3` remains envelope,
+and new cell `volume_um3` matches the selected shape support. Equal support,
+spacing and origin give equal geometry across object types. Different support
+choices are different estimands. Existing segmentation/pairing filters remain.
+
+All levels retain rho_in, anisotropy, stencil radius, a priori budget, numerical
+domain boolean, domain flags, estimator/method/implementation versions, weight
+origin and evidence location. `surface_qualification_scope` explicitly limits
+the boolean to numerical resolution and anisotropy. Sphericity and area/volume
+inherit that gate via `sphericity_in_qualified_domain` and
+`surface_to_volume_in_qualified_domain`; their accuracy also depends on volume.
+The budget is predictive, not a guaranteed bound. Volume accuracy needs separate
+evidence and is never certified by the surface gate.
+
+Smoothness/scope conditions, segmentation validation and biological validity
+remain separate NOT ASSESSED statuses. Object type cannot establish them; no
+automatic smoothness classifier is used. Real-data validity is INSUFFICIENT
+EVIDENCE without qualified references. Surface-domain flags never remove rows
+or primary metrics. Inclusive summaries remain descriptive.
+
+`crofton_minimax_sym_v3` is retained with implementation revision `padded_edt_v1`:
+one-voxel exterior background fixes the inscribed radius of tight crops. Exact
+weights, directions, stencil candidates, thresholds and acceptance criteria are
+unchanged. Only affected crop surface/domain values change; voxel volume,
+diameter and moments do not. See [review and validation](MORPHOLOGY_ARCHITECTURE_REVIEW.md).

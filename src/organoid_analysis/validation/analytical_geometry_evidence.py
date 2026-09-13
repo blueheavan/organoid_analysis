@@ -103,7 +103,7 @@ DEPENDENCY_SCOPE = (
                "any table the grid uses breaks re-execution against the recorded per-case areas at "
                "rtol 1e-9, which is a stronger check than a hash."),
     ScopeEntry("src/organoid_analysis/quantification/features.py", "estimator_core",
-               "geometry(): voxel-count volume, marching-cubes surface area and sphericity; surface_mesh(): "
+               "geometry(): voxel-count volume, Crofton surface area and sphericity; surface_mesh(): "
                "isosurface level, padding and physical spacing; outer_envelope(): filled support; "
                "SURFACE_AREA_METHOD identity. Executed for every phantom."),
     ScopeEntry("src/organoid_analysis/quantification/mask_features.py", "support_and_spacing_semantics",

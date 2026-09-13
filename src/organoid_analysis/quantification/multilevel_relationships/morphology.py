@@ -5,7 +5,11 @@ import numpy as np
 import pandas as pd
 from scipy import ndimage as ndi
 
-from organoid_analysis.quantification.features import geometry
+from organoid_analysis.quantification.features import (
+    DERIVED_GEOMETRY_COLUMNS,
+    SURFACE_METADATA_COLUMNS,
+    geometry,
+)
 from organoid_analysis.quantification.labels import (
     bbox_touches_volume_boundary,
     compact_instance_labels,
@@ -13,8 +17,9 @@ from organoid_analysis.quantification.labels import (
 
 MORPHOLOGY_COLUMNS = [
     "voxel_count", "volume_um3", "surface_area_um2", "sphericity", "centroid_z_um", "centroid_y_um",
-    "centroid_x_um", "major_axis_um", "intermediate_axis_um", "minor_axis_um", "elongation", "prolate_ratio",
-    "oblate_ratio", "surface_to_volume_ratio_um_inv", "touches_image_border", "fragmented_object",
+    "centroid_x_um", "major_axis_um", "intermediate_axis_um", "minor_axis_um",
+    "equivalent_diameter_um", "axis_ratio_minor_to_major", "measurement_basis",
+    *DERIVED_GEOMETRY_COLUMNS, *SURFACE_METADATA_COLUMNS, "touches_image_border", "fragmented_object",
     "connected_component_count",
 ]
 
@@ -51,10 +56,10 @@ def measure_instances(labels: np.ndarray, spacing_zyx_um: tuple[float, float, fl
             "major_axis_um": axes[0],
             "intermediate_axis_um": axes[1],
             "minor_axis_um": axes[2],
-            "elongation": 1.0 - axes[2] / axes[0] if axes[0] else np.nan,
-            "prolate_ratio": axes[0] / axes[1] if axes[1] else np.nan,
-            "oblate_ratio": axes[1] / axes[2] if axes[2] else np.nan,
-            "surface_to_volume_ratio_um_inv": measured["surface_area_um2"] / volume if volume else np.nan,
+            **{name: measured[name] for name in (
+                "equivalent_diameter_um", "axis_ratio_minor_to_major", "measurement_basis",
+                *DERIVED_GEOMETRY_COLUMNS, *SURFACE_METADATA_COLUMNS,
+            )},
             "touches_image_border": bbox_touches_volume_boundary(bbox, labels.shape),
             "fragmented_object": components > 1,
             "connected_component_count": components,

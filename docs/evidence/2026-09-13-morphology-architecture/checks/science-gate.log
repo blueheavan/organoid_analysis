@@ -1,0 +1,29 @@
+✨ Pixi task (science-gate): python scripts/scientific_validation_gate.py
+SCIENTIFIC VALIDATION GATE (separate from the engineering regression gate)
+
+[FAIL] SG-1 Analytical surface area
+    criterion: every analytical case |error| < 5%
+    basis: EVIDENCE REJECTED (12 problems): dependency scope: src/organoid_analysis/quantification/surface_crofton.py changed after the validation run (SHA-256 mismatch); dependency scope: src/organoid_analysis/quantification/features.py changed after the validation run (SHA-256 mismatch); dependency scope: src/organoid_analysis/quantification/mask_features.py changed after the validation run (SHA-256 mismatch); dependency scope: src/organoid_analysis/quantification/cellular_measurements.py changed after the validation run (SHA-256 mismatch); ... 8 more. Repeat the analytical V&V (pixi run validation-record).
+    evidence: docs/evidence/2026-09-12-surface-crofton-v3/evidence_manifest.json
+    evidence: docs/evidence/2026-09-12-surface-crofton-v3/surface_vv_dev_summary.md
+    evidence: docs/evidence/2026-09-11-measurement-vv/SURFACE_VV_PLAN.md
+[FAIL] SG-2 Analytical voxel volume
+    criterion: every analytical case |error| < 1%
+    basis: EVIDENCE REJECTED (12 problems): dependency scope: src/organoid_analysis/quantification/surface_crofton.py changed after the validation run (SHA-256 mismatch); dependency scope: src/organoid_analysis/quantification/features.py changed after the validation run (SHA-256 mismatch); dependency scope: src/organoid_analysis/quantification/mask_features.py changed after the validation run (SHA-256 mismatch); dependency scope: src/organoid_analysis/quantification/cellular_measurements.py changed after the validation run (SHA-256 mismatch); ... 8 more. Repeat the analytical V&V (pixi run validation-record).
+    evidence: docs/evidence/2026-09-12-surface-crofton-v3/evidence_manifest.json
+    evidence: docs/evidence/2026-09-12-surface-crofton-v3/surface_vv_dev_summary.md
+    evidence: docs/evidence/2026-09-11-measurement-vv/SURFACE_VV_PLAN.md
+[INSUFFICIENT EVIDENCE] SG-3 Segmentation accuracy against independent annotation (detection, mask, downstream measurement bias)
+    criterion: predeclared per docs/evidence/2026-09-11-measurement-vv/SEGMENTATION_VALIDATION_PROTOCOL.md
+    basis: no qualified independent 3D annotation set exists
+[NOT ASSESSED] SG-4 Calcein/PI viability assay validity
+    criterion: orthogonal viability reference; control-based calibration evaluated on held-out batches
+    basis: no orthogonal assay or held-out control data
+[INSUFFICIENT EVIDENCE] SG-5 Statistical and study-design validity
+    criterion: predeclared design with an independent experimental unit; type-I error and CI coverage for the shipped models
+    basis: generic tools only; no study design or calibration evidence
+[INSUFFICIENT EVIDENCE] SG-6 Acquisition calibration and channel registration
+    criterion: independently verified voxel size and registration for the intended instruments
+    basis: metadata is read and traced but not independently verified
+
+GATE: NOT PASSED (0/6 items PASS)

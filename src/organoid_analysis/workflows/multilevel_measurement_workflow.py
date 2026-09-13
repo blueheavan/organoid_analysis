@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from organoid_analysis.quantification.features import SURFACE_AREA_METHOD
+from organoid_analysis.quantification.measurement_policy import measurement_policy
 from organoid_analysis.quantification.multilevel_relationships.config import Multilevel3DConfig
 from organoid_analysis.quantification.multilevel_relationships.hierarchy import (
     assign_parents_by_overlap,
@@ -233,7 +234,9 @@ def analyze_multilevel_3d(
     summary = {"status": "complete", "input_shape_zyx": list(organoid_labels.shape), "spacing_zyx_um": list(spacing),
                "organoid_count": int(len(organoids)), "cell_count": int(len(cells)), "nucleus_count": int(len(nuclei)),
                "topology_edge_count": int(len(edges)), "runtime_seconds": elapsed, "config": cfg.as_dict(),
-               "surface_area_method": dict(SURFACE_AREA_METHOD)}
+               "surface_area_method": dict(SURFACE_AREA_METHOD),
+               "measurement_policies": {level: measurement_policy(level, "raw_label")
+                                        for level in ("organoid", "cell", "nucleus")}}
     if metadata:
         summary["metadata"] = {key: value for key, value in metadata.items() if value not in (None, "")}
     return Multilevel3DResult(organoids, cells, nuclei, edges, qc_flags, summary)

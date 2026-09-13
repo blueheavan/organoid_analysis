@@ -262,6 +262,9 @@ def render_multilevel_results_section() -> None:
     columns[2].metric("Nuclei", summary.get("nucleus_count", 0))
     columns[3].metric("QC flags", len(tables["QC flags"]))
     st.caption(f"Input shape ZYX: {summary.get('input_shape_zyx')} | runtime: {summary.get('runtime_seconds', 0):.2f} s")
+    from organoid_analysis.quantification.measurement_policy import MEASUREMENT_INTERPRETATION
+
+    st.caption(MEASUREMENT_INTERPRETATION)
     selected = st.selectbox("Feature table", list(RESULT_TABLES), key="multilevel_table")
     table = tables[selected]
     filter_text = st.text_input("Filter rows (case-insensitive text)", key="multilevel_filter")

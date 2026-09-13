@@ -1,5 +1,10 @@
 # Validation Plan — Organoid Pipeline (Multilevel 3D Analysis)
 
+2026-09-13 maintenance plan: the predeclared S2 criteria for shared morphology
+reporting and cropped-mask EDT correction are in
+[MORPHOLOGY_ARCHITECTURE_REVIEW.md](MORPHOLOGY_ARCHITECTURE_REVIEW.md).
+All existing surface/volume acceptance criteria remain unchanged.
+
 Version: 1.0.0
 Date: 2026-09-02
 Scope: Scientific V&V plan for the `analyze-3d` multilevel 3D organoid analysis (hierarchy, morphology, topology, spatial, QC). The classical morphology/viability validation is documented in `docs/VALIDATION.md`.

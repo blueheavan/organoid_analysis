@@ -127,3 +127,29 @@ render_analysis_tab()
     with zipfile.ZipFile(io.BytesIO(app.session_state["feature_bundle"])) as archive:
         meta = json.loads(archive.read("measurement_provenance.json"))
     assert meta["object_type"] == "cell" and meta["measurement_basis"] == "filled_envelope"
+
+
+def test_nuclear_only_ui_retains_primary_metrics_and_explains_surface_status(monkeypatch):
+    from streamlit.testing.v1 import AppTest
+
+    from organoid_analysis.web_interface import segmentation_workspace as workspace
+
+    monkeypatch.setattr(workspace, "st_volume_viewer", lambda *args, **kwargs: None)
+    app = AppTest.from_string('''
+import numpy as np
+import streamlit as st
+from organoid_analysis.segmentation.cellpose_inference import SegmentationConfig
+from organoid_analysis.web_interface.segmentation_workspace import render_results_tab
+mask = np.zeros((5, 5, 5), np.uint32)
+mask[2, 2, 2] = 71
+st.session_state["nuclei_masks"] = mask
+render_results_tab(SegmentationConfig(xy_spacing_um=1., anisotropy=2.))
+''').run(timeout=30)
+    assert not app.exception
+    row = app.session_state["features"].loc[71]
+    assert row.volume_um3 == 2.
+    assert row.equivalent_diameter_um > 0 and row.least_axis_um > 0
+    assert not row.surface_in_qualified_domain
+    captions = " ".join(element.value for element in app.caption)
+    assert "numerical resolution and anisotropy only" in captions
+    assert "does not validate segmentation boundaries" in captions

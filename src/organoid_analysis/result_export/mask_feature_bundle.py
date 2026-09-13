@@ -16,6 +16,7 @@ from organoid_analysis.microscopy_io.tiff_contract import git_commit_hash, sourc
 from organoid_analysis.microscopy_io.voxel_spacing import validate_voxel_spacing_xyz
 from organoid_analysis.quantification.features import SURFACE_AREA_METHOD
 from organoid_analysis.quantification.mask_features import FEATURE_SCHEMA_VERSION, validate_mask
+from organoid_analysis.quantification.measurement_policy import measurement_policy
 
 
 def build_mask_feature_bundle(
@@ -59,6 +60,7 @@ def build_mask_feature_bundle(
         "packages": {name: importlib.metadata.version(name) for name in ("numpy", "scipy", "scikit-image", "pandas")},
         "object_type": object_type,
         "measurement_basis": basis,
+        "measurement_policy": measurement_policy(object_type, basis),
         "spacing_xyz_um": list(spacing),
         "calibration_sources": {name: segmentation_config.get(name, "unknown") for name in ("xy_spacing_source", "anisotropy_source")},
         "calibration_status": (

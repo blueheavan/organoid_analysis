@@ -1,0 +1,10 @@
+{"method": "re-executed the production estimator and closed-form oracles on every frozen-grid phantom and compared them with the raw CSV", "cases_reexecuted": 188, "rtol": 1e-09, "max_relative_difference": 4.621120395478837e-10, "mismatches": 0}
+Confirmation subset reexecuted: 12/96
+Confirmation subset reexecuted: 24/96
+Confirmation subset reexecuted: 36/96
+Confirmation subset reexecuted: 48/96
+Confirmation subset reexecuted: 60/96
+Confirmation subset reexecuted: 72/96
+Confirmation subset reexecuted: 84/96
+Confirmation subset reexecuted: 96/96
+{"status": "PASS", "confirmation_cases": 96, "confirmation_worst_absolute_relative_errors": {"area_rel_err": 0.009507790402217164, "volume_rel_err": 0.007613374269059059, "sphericity_rel_err": 0.009486919765193336}, "problems": []}

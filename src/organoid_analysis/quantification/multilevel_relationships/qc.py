@@ -47,6 +47,8 @@ def add_qc_flags(features: pd.DataFrame, *, object_type: str, config: Multilevel
     flags_by_row: list[list[str]] = []
     for row in frame.itertuples(index=False):
         flags = []
+        if not row.surface_in_qualified_domain:
+            flags.append("surface_outside_qualified_domain")
         for field, flag_name in (("touches_image_border", "touches_image_border"), ("fragmented_object", "fragmented_object"),
                                  ("too_small", "too_small"), ("volume_outlier", "volume_outlier")):
             if bool(getattr(row, field)):

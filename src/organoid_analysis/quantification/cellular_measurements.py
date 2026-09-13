@@ -11,12 +11,13 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import min_weight_full_bipartite_matching
 from scipy.spatial import cKDTree
 
-from .features import geometry
+from .features import DERIVED_GEOMETRY_COLUMNS, SURFACE_METADATA_COLUMNS, geometry, outer_envelope
 from .labels import (
     bbox_touches_volume_boundary,
     compact_instance_labels,
     relabel_from_source_ids,
 )
+from .measurement_policy import measurement_policy
 
 PAIR_COLUMNS = [
     "cell_id",
@@ -41,6 +42,7 @@ GEOMETRY_COLUMNS = [
     "enclosed_void_fraction", "touches_border", "nucleus_volume_um3", "nc_ratio",
     "nucleus_centroid_z_um", "nucleus_centroid_y_um", "nucleus_centroid_x_um",
     "cell_to_nucleus_centroid_um", "nucleus_centroid_to_cell_border_um",
+    "volume_um3", "measurement_basis", *DERIVED_GEOMETRY_COLUMNS, *SURFACE_METADATA_COLUMNS,
 ]
 
 
@@ -342,8 +344,14 @@ def pair_and_filter_cells(
 
 
 def cell_geometry(cell_labels: np.ndarray, nucleus_labels: np.ndarray | None,
-                  spacing: tuple[float, float, float]) -> pd.DataFrame:
-    """Measure cells with corrected physical centroids and principal axes."""
+                  spacing: tuple[float, float, float], *, fill_holes: bool = True) -> pd.DataFrame:
+    """Measure cells; preserve the legacy envelope default, allow explicit raw support.
+
+    cell_volume_um3 always counts raw cell voxels. The other shape measurements
+    use measurement_basis; cell_envelope_volume_um3 retains its envelope meaning.
+    """
+    if not isinstance(fill_holes, bool):
+        raise ValueError("fill_holes must be a boolean")
     if nucleus_labels is None:
         nucleus_labels = np.zeros_like(cell_labels)
     spacing = _validate_inputs(cell_labels, nucleus_labels, spacing)
@@ -369,13 +377,14 @@ def cell_geometry(cell_labels: np.ndarray, nucleus_labels: np.ndarray | None,
         cell_id = cell_mapping[compact_id]
         cell_mask = compact_cells[bbox] == compact_id
         origin = tuple(item.start for item in bbox)
-        measured, _ = geometry(cell_mask, spacing, origin)
+        measured, _ = geometry(cell_mask, spacing, origin, fill_holes=fill_holes)
         cell_volume = measured["segmented_volume_um3"]
         nucleus_volume = float(nucleus_sizes.get(cell_id, 0) * voxel_volume)
         row = {
             "cell_id": cell_id,
             "cell_volume_um3": cell_volume,
-            "cell_envelope_volume_um3": measured["volume_um3"],
+            "cell_envelope_volume_um3": (measured["volume_um3"] if fill_holes
+                                         else float(outer_envelope(cell_mask).sum() * voxel_volume)),
             "surface_area_um2": measured["surface_area_um2"],
             "sphericity": measured["sphericity"],
             "equivalent_diameter_um": measured["equivalent_diameter_um"],
@@ -391,6 +400,7 @@ def cell_geometry(cell_labels: np.ndarray, nucleus_labels: np.ndarray | None,
             "touches_border": bbox_touches_volume_boundary(bbox, cell_labels.shape),
             "nucleus_volume_um3": nucleus_volume,
             "nc_ratio": nucleus_volume / cell_volume if nucleus_volume and cell_volume else np.nan,
+            **{name: measured[name] for name in ("volume_um3", "measurement_basis", *DERIVED_GEOMETRY_COLUMNS, *SURFACE_METADATA_COLUMNS)},
         }
         if cell_id in nucleus_centers:
             center_voxels = np.asarray(nucleus_centers[cell_id])
@@ -404,7 +414,9 @@ def cell_geometry(cell_labels: np.ndarray, nucleus_labels: np.ndarray | None,
                 cell_mask, local_center, spacing
             )
         rows.append(row)
-    return pd.DataFrame(rows, columns=GEOMETRY_COLUMNS)
+    frame = pd.DataFrame(rows, columns=GEOMETRY_COLUMNS)
+    frame.attrs["measurement_policy"] = measurement_policy("cell", "filled_envelope" if fill_holes else "raw_label")
+    return frame
 
 
 def cell_neighborhood(cell_labels: np.ndarray, spacing: tuple[float, float, float],
@@ -490,4 +502,5 @@ def analyze_cells(cell_masks: np.ndarray, nuclei_masks: np.ndarray,
     measured = measured.merge(cell_neighborhood(cells, spacing, neighbor_radius_um), on="cell_id", how="left")
     summary["neighbor_radius_um"] = float(neighbor_radius_um)
     summary["qc"] = qc
+    summary["measurement_policy"] = measurement_policy("cell", "filled_envelope")
     return CellAnalysisResult(cells, nuclei, measured, pairing, summary)

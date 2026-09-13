@@ -1,0 +1,47 @@
+{
+  "sphere-False": {},
+  "sphere-True": {},
+  "sphere-cell": {},
+  "sphere-mask": {},
+  "sphere-multi": {},
+  "hollow-False": {},
+  "hollow-True": {},
+  "hollow-cell": {
+    "surface_area_um2": [
+      494.2647226557,
+      545.2241664359
+    ],
+    "sphericity": [
+      0.9836294688,
+      0.8916944195
+    ]
+  },
+  "hollow-mask": {
+    "surface_area_um2": [
+      497.4317087336,
+      575.7183470136
+    ],
+    "surface_rho_in": [
+      4.8989794856,
+      2.0
+    ],
+    "sphericity": [
+      0.9460878837,
+      0.8174381016
+    ]
+  },
+  "hollow-multi": {
+    "surface_area_um2": [
+      497.4317087336,
+      575.7183470136
+    ],
+    "sphericity": [
+      0.9460878837,
+      0.8174381016
+    ],
+    "surface_to_volume_ratio_um_inv": [
+      0.5181580299,
+      0.5997066115
+    ]
+  }
+}

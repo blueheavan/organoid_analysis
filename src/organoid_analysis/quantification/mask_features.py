@@ -39,17 +39,18 @@ import numpy as np
 import pandas as pd
 
 from organoid_analysis.microscopy_io import validate_voxel_spacing_xyz
+from organoid_analysis.quantification.features import SURFACE_METADATA_COLUMNS
 from organoid_analysis.quantification.labels import (
     bbox_touches_volume_boundary,
     compact_instance_labels,
 )
 
-# 2.1: qc_flags may contain sphericity_above_geometric_range (same limit as the
-# classical route). Columns and numeric definitions are unchanged from 2.0.
-FEATURE_SCHEMA_VERSION = "2.1"
+# 2.2: full surface-domain/provenance contract and shared derived shape fields.
+FEATURE_SCHEMA_VERSION = "2.2"
 FEATURE_COLUMNS = [
-    "volume_um3", "surface_area_um2", "surface_rho_in", "surface_anisotropy",
-    "surface_in_qualified_domain", "equivalent_disk_um", "equivalent_sphere_diameter_um",
+    "volume_um3", "surface_area_um2", *SURFACE_METADATA_COLUMNS,
+    "equivalent_disk_um", "equivalent_sphere_diameter_um", "equivalent_diameter_um",
+    "axis_ratio_minor_to_major", "prolate_ratio", "oblate_ratio", "surface_to_volume_ratio_um_inv",
     "sphericity", "solidity", "major_axis_um", "minor_axis_um", "least_axis_um", "elongation",
     "centroid_z_um", "centroid_y_um", "centroid_x_um", "voxel_count", "segmented_volume_um3",
     "filled_voxel_count", "measurement_basis", "touches_image_border", "fragmented_object",
@@ -174,16 +175,17 @@ def extract_mask_features(
         if not g["surface_in_qualified_domain"]:
             flags.append("surface_outside_qualified_domain")
         eq_disk = g["equivalent_diameter_um"]
-        elongation = 1.0 - least / major
+        elongation = g["elongation"]
         voxel_count = int(np.count_nonzero(binary))
         rows.append(
             {
                 "Label": source_ids[int(p.label)],
                 "volume_um3": volume,
                 "surface_area_um2": surface,
-                "surface_rho_in": g["surface_rho_in"],
-                "surface_anisotropy": g["surface_anisotropy"],
-                "surface_in_qualified_domain": g["surface_in_qualified_domain"],
+                **{name: g[name] for name in (
+                    *SURFACE_METADATA_COLUMNS, "equivalent_diameter_um", "axis_ratio_minor_to_major",
+                    "prolate_ratio", "oblate_ratio", "surface_to_volume_ratio_um_inv",
+                )},
                 "equivalent_disk_um": eq_disk,
                 "equivalent_sphere_diameter_um": eq_disk,
                 "sphericity": sphericity,

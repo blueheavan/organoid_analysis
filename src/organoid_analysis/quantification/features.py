@@ -40,6 +40,7 @@ MAD_TO_SIGMA = 1.4826
 SURFACE_AREA_METHOD: dict[str, str | int | float] = {
     "estimator": "crofton_minimax_sym",
     "method_version": surface_crofton.METHOD_NAME,
+    "implementation_version": "padded_edt_v1",
     "implementation": ("organoid_analysis.quantification.surface_crofton: weighted lattice "
                        "transition counts (discrete Cauchy/Crofton); weights from the "
                        "orbit-symmetry-reduced minimax LP over plane orientations"),
@@ -53,6 +54,7 @@ SURFACE_AREA_METHOD: dict[str, str | int | float] = {
                f"{surface_crofton.DOMAIN_SCOPE}"),
     "not_qualified": surface_crofton.DOMAIN_NOT_QUALIFIED,
     "evidence": "docs/evidence/2026-09-12-surface-crofton-v3",
+    "implementation_evidence": "docs/evidence/2026-09-13-morphology-architecture/revalidation.json",
 }
 
 # The superseded estimator, preserved under its own identity together with the
@@ -80,13 +82,23 @@ LEGACY_SURFACE_AREA_METHOD: dict[str, str | int | float] = {
 # review limit; see docs/PARAMETERS.md.
 SPHERICITY_REVIEW_LIMIT = 1.05
 
+# Shared output contract: adapters must preserve these fields together. The
+# boolean gate covers resolution/anisotropy only, never segmentation validity.
+SURFACE_METADATA_COLUMNS = [
+    "surface_rho_in", "surface_anisotropy", "surface_stencil_radius",
+    "surface_apriori_rel_bound", "surface_in_qualified_domain", "surface_domain_flags",
+    "surface_estimator", "surface_method_version", "surface_implementation_version",
+    "surface_weights_origin", "surface_evidence", "surface_implementation_evidence", "surface_qualification_scope",
+    "sphericity_in_qualified_domain", "surface_to_volume_in_qualified_domain",
+]
+DERIVED_GEOMETRY_COLUMNS = ["elongation", "prolate_ratio", "oblate_ratio", "surface_to_volume_ratio_um_inv"]
+
 GEOMETRY_COLUMNS = ["organoid_id", "original_label_id", "segmented_voxels", "envelope_voxels",
                     "segmented_volume_um3", "volume_um3", "surface_area_um2", "sphericity",
                     "equivalent_diameter_um", "enclosed_void_fraction", "centroid_z_um", "centroid_y_um",
                     "centroid_x_um", "extent_z_um", "extent_y_um", "extent_x_um", "principal_axis_major_um",
                     "principal_axis_intermediate_um", "principal_axis_minor_um", "axis_ratio_minor_to_major", "n_z_slices",
-                    "surface_rho_in", "surface_anisotropy", "surface_stencil_radius",
-                    "surface_apriori_rel_bound", "surface_in_qualified_domain", "surface_domain_flags",
+                    "measurement_basis", *DERIVED_GEOMETRY_COLUMNS, *SURFACE_METADATA_COLUMNS,
                     "touches_border", "morphology_eligible", "morphology_flags"]
 MARKER_COLUMNS = ["background_voxels"] + [f"{marker}_{field}" for marker in ["calcein", "pi"]
                   for field in ["mean_raw", "background_median", "background_noise_mad", "mean_bg_corrected",
@@ -178,6 +190,11 @@ def geometry(
               "enclosed_void_fraction": float((count - segmented) / count),
               "principal_axis_major_um": float(lengths[0]), "principal_axis_intermediate_um": float(lengths[1]),
               "principal_axis_minor_um": float(lengths[2]), "axis_ratio_minor_to_major": float(lengths[2]/lengths[0]),
+              "elongation": float(1.0 - lengths[2] / lengths[0]),
+              "prolate_ratio": float(lengths[0] / lengths[1]),
+              "oblate_ratio": float(lengths[1] / lengths[2]),
+              "surface_to_volume_ratio_um_inv": area / volume,
+              "measurement_basis": "filled_envelope" if fill_holes else "raw_label",
               "n_z_slices": int(np.any(envelope, axis=(1, 2)).sum()),
               # Applicability-domain variables of the surface estimator, exported
               # per object so a consumer can tell whether a given
@@ -190,7 +207,16 @@ def geometry(
               "surface_stencil_radius": int(surface["stencil_m"]),
               "surface_apriori_rel_bound": float(surface["apriori_bound"]),
               "surface_in_qualified_domain": bool(qualified),
-              "surface_domain_flags": ";".join(domain_flags)}
+              "surface_domain_flags": ";".join(domain_flags),
+              "surface_estimator": SURFACE_AREA_METHOD["estimator"],
+              "surface_method_version": surface["method"],
+              "surface_implementation_version": SURFACE_AREA_METHOD["implementation_version"],
+              "surface_weights_origin": surface["weights_origin"],
+              "surface_evidence": SURFACE_AREA_METHOD["evidence"],
+              "surface_implementation_evidence": SURFACE_AREA_METHOD["implementation_evidence"],
+              "surface_qualification_scope": "numerical_resolution_and_anisotropy_only",
+              "sphericity_in_qualified_domain": bool(qualified),
+              "surface_to_volume_in_qualified_domain": bool(qualified)}
     for axis, value, width in zip("zyx", center, extent):
         values[f"centroid_{axis}_um"] = float(value)
         values[f"extent_{axis}_um"] = float(width)
