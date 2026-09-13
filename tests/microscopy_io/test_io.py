@@ -125,14 +125,17 @@ def test_shared_multichannel_source_is_decoded_once_per_sample(tmp_path, monkeyp
         'axes':'CZYX','PhysicalSizeZ':2.,'PhysicalSizeY':1.,'PhysicalSizeX':1.})
     row={'image_path':str(p),'calcein_path':str(p),'pi_path':str(p),
          'calcein_channel':'1','pi_channel':'2','time_index':'','series_index':''}
-    original=analysis_io.read_tiff
+    # Counts the reader load_sample() actually calls: the per-axis one, since
+    # spacing resolution is per axis. The assertion is unchanged -- one decode
+    # per distinct series, however many roles select channels from it.
+    original=analysis_io.read_tiff_axis_spacing
     calls=[]
 
     def counted(*args):
         calls.append(args)
         return original(*args)
 
-    monkeypatch.setattr(analysis_io,'read_tiff',counted)
+    monkeypatch.setattr(analysis_io,'read_tiff_axis_spacing',counted)
     sample=load_sample(row,load_config())
     assert len(calls)==1
     assert (sample.calcein==11).all()

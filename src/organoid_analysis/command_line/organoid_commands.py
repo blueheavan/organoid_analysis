@@ -83,36 +83,34 @@ def _run_cells(arguments) -> dict:
     import importlib.metadata
     import platform
 
+    from organoid_analysis.microscopy_io.metadata import (
+        merge_axis_spacings,
+        resolve_zyx_spacing,
+    )
     from organoid_analysis.microscopy_io.tiff_contract import (
-        SPACING_ATOL_UM,
-        SPACING_RTOL,
         git_commit_hash,
-        read_tiff,
+        read_tiff_axis_spacing,
         sha256,
         source_code_hashes,
         write_labels,
     )
     from organoid_analysis.quantification.cellular_measurements import analyze_cells
 
-    cell_stack, cell_spacing, _ = read_tiff(arguments.cell_labels, arguments.axes)
-    nucleus_stack, nucleus_spacing, _ = read_tiff(arguments.nucleus_labels, arguments.axes)
+    cell_stack, cell_spacing, _ = read_tiff_axis_spacing(arguments.cell_labels, arguments.axes)
+    nucleus_stack, nucleus_spacing, _ = read_tiff_axis_spacing(arguments.nucleus_labels, arguments.axes)
     if cell_stack.shape[0] != 1 or nucleus_stack.shape[0] != 1:
         raise ValueError("Cell and nucleus label TIFFs must each contain exactly one channel")
-    metadata_spacings = [value for value in (cell_spacing, nucleus_spacing) if value is not None]
-    if len(metadata_spacings) == 2 and not np.allclose(metadata_spacings[0], metadata_spacings[1], rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
-        raise ValueError("Cell and nucleus OME voxel spacings differ")
+    # Compared and merged per axis: each file is checked on the axes it states,
+    # so a file calibrated on only some axes is neither ignored nor allowed to
+    # go unchecked against the other file or the explicit values.
+    metadata_spacing = merge_axis_spacings((cell_spacing, nucleus_spacing),
+                                           description="Cell and nucleus OME voxel spacings")
 
     explicit = (arguments.spacing_z_um, arguments.spacing_y_um, arguments.spacing_x_um)
     if any(value is not None for value in explicit) and not all(value is not None for value in explicit):
         raise ValueError("Provide all three spacing values or omit all three")
-    if all(value is not None for value in explicit):
-        spacing = explicit
-        if metadata_spacings and not np.allclose(spacing, metadata_spacings[0], rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
-            raise ValueError("Explicit spacing conflicts with OME metadata")
-    elif metadata_spacings:
-        spacing = metadata_spacings[0]
-    else:
-        raise ValueError("Voxel spacing is missing; provide OME metadata or all three --spacing-*-um values")
+    spacing = resolve_zyx_spacing(metadata_spacing, explicit,
+                                  metadata_label="OME", explicit_label="--spacing-*-um").zyx
 
     out = Path(arguments.out).resolve()
     if out.exists() and any(out.iterdir()):
@@ -161,11 +159,14 @@ def _run_multilevel(arguments) -> dict:
     import importlib.metadata
     import platform
 
+    from organoid_analysis.microscopy_io.metadata import (
+        AxisSpacingZYX,
+        merge_axis_spacings,
+        resolve_zyx_spacing,
+    )
     from organoid_analysis.microscopy_io.tiff_contract import (
-        SPACING_ATOL_UM,
-        SPACING_RTOL,
         git_commit_hash,
-        read_tiff,
+        read_tiff_axis_spacing,
         sha256,
         source_code_hashes,
     )
@@ -173,8 +174,8 @@ def _run_multilevel(arguments) -> dict:
     from organoid_analysis.result_export.measurement_tables import export_results
     from organoid_analysis.workflows.multilevel_measurement_workflow import analyze_multilevel_3d
 
-    def read_single(path: str, role: str) -> tuple[np.ndarray, tuple | None]:
-        stack, spacing, _ = read_tiff(path, arguments.axes)
+    def read_single(path: str, role: str) -> tuple[np.ndarray, AxisSpacingZYX]:
+        stack, spacing, _ = read_tiff_axis_spacing(path, arguments.axes)
         if stack.shape[0] != 1:
             raise ValueError(f"{role} TIFF must contain exactly one channel")
         return stack[0], spacing
@@ -186,20 +187,18 @@ def _run_multilevel(arguments) -> dict:
     intensity_spacing = None
     if arguments.nucleus_intensity:
         intensity, intensity_spacing = read_single(arguments.nucleus_intensity, "Nucleus intensity")
-    metadata_spacings = [item for item in (organoid_spacing, cell_spacing, nucleus_spacing, intensity_spacing) if item is not None]
-    if len(metadata_spacings) > 1 and any(not np.allclose(metadata_spacings[0], item, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM) for item in metadata_spacings[1:]):
-        raise ValueError("Input TIFF voxel spacings differ; register/resample before multilevel analysis")
+    # Per axis across every input: each file is checked on the axes it states,
+    # against the others and against the explicit values.
+    inputs = [item for item in (organoid_spacing, cell_spacing, nucleus_spacing, intensity_spacing)
+              if item is not None]
+    metadata_spacing = merge_axis_spacings(
+        inputs, description="Input TIFF voxel spacings",
+        remedy="; register/resample before multilevel analysis")
     explicit = (arguments.spacing_z_um, arguments.spacing_y_um, arguments.spacing_x_um)
     if any(value is not None for value in explicit) and not all(value is not None for value in explicit):
         raise ValueError("Provide all three spacing values or omit all three")
-    if all(value is not None for value in explicit):
-        spacing = explicit
-        if metadata_spacings and not np.allclose(spacing, metadata_spacings[0], rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
-            raise ValueError("Explicit spacing conflicts with OME metadata")
-    elif metadata_spacings:
-        spacing = metadata_spacings[0]
-    else:
-        raise ValueError("Voxel spacing is missing; provide OME metadata or all three --spacing-*-um values")
+    spacing = resolve_zyx_spacing(metadata_spacing, explicit,
+                                  metadata_label="OME", explicit_label="--spacing-*-um").zyx
     config = Multilevel3DConfig(
         minimum_voxels=arguments.minimum_voxels,
         low_parent_overlap_fraction=arguments.low_parent_overlap_fraction,

@@ -20,9 +20,8 @@ RESULT_TABLES = {
 def read_registered_organoid_labels(path: str | Path, expected_shape: tuple[int, ...],
                                    spacing_zyx_um: tuple[float, float, float]) -> np.ndarray:
     """Check uploaded mask axes and physical grid before joining hierarchies."""
+    from organoid_analysis.microscopy_io.metadata import SPACING_ATOL_UM, SPACING_RTOL
     from organoid_analysis.microscopy_io.tiff_contract import (
-        SPACING_ATOL_UM,
-        SPACING_RTOL,
         read_tiff,
     )
     stack, spacing, _ = read_tiff(path)

@@ -9,9 +9,13 @@ vs. one arbitrary uploaded file whose time axis is kept for the caller to
 pick from there) -- not because either duplicates the other's job.
 
 What *is* shared, deliberately, rather than reimplemented twice:
-* Physical-unit conversion and the OME/ImageJ spacing tolerance constants
-  (``metadata.to_um``, ``SPACING_RTOL``, ``SPACING_ATOL_UM``) -- imported
-  from ``metadata.py``, not redefined here.
+* Physical-unit conversion, the spacing tolerance constants and the per-axis
+  spacing resolution rules (``metadata.to_um``, ``SPACING_RTOL``,
+  ``SPACING_ATOL_UM``, ``metadata.resolve_zyx_spacing()`` and its helpers) --
+  defined in ``metadata.py``, not redefined here. This module states what each
+  source provides per axis and lets that one implementation decide whether the
+  sources agree, so the manifest path and the CLI paths cannot drift apart on
+  when a conflicting axis is rejected.
 * The nonuniform-Z-grid rejection and the "no ambiguous axis is silently
   dropped, regardless of size" rule are both enforced by *both* readers
   (this module's ``ome_spacing()``/``canonical_czyx()`` and the other
@@ -36,7 +40,14 @@ import numpy as np
 import pandas as pd
 import tifffile
 
-from .metadata import SPACING_ATOL_UM, SPACING_RTOL, to_um, validate_z_positions
+from .metadata import (
+    AXIS_NAMES_ZYX,
+    AxisSpacingZYX,
+    resolve_zyx_spacing,
+    spacing_axis_conflicts,
+    to_um,
+    validate_z_positions,
+)
 
 REQUIRED = ["sample_id", "condition", "biological_replicate", "image_path"]
 PATH_FIELDS = ["image_path", "structure_path", "calcein_path", "pi_path", "probability_path", "labels_path", "truth_labels_path"]
@@ -138,12 +149,20 @@ def canonical_czyx(array: np.ndarray, axes: str, time_index: int | None = None) 
     return array
 
 
-def ome_spacing(xml: str | None, series_index: int = 0, time_index: int | None = None) -> tuple | None:
+def ome_axis_spacing(xml: str | None, series_index: int = 0,
+                     time_index: int | None = None) -> AxisSpacingZYX:
+    """Per-axis OME physical spacing in ZYX order; ``None`` for absent axes.
+
+    An axis OME does not state is unknown; the axes it does state are returned
+    whatever the others do. A partial OME file is therefore still usable as
+    evidence about the axes it calibrates -- which is what
+    ``resolve_zyx_spacing()`` compares an external spacing against.
+    """
     if not xml:
-        return None
+        return (None, None, None)
     pixels = ET.fromstring(xml).findall(".//{*}Image/{*}Pixels")
     if series_index >= len(pixels):
-        return None
+        return (None, None, None)
     pixel = pixels[series_index]
     values: list[float | None] = []
     for axis in "ZYX":
@@ -163,13 +182,29 @@ def ome_spacing(xml: str | None, series_index: int = 0, time_index: int | None =
             if position_z is not None:
                 positions[int(plane.get("TheZ", "0"))] = to_um(float(position_z), plane.get("PositionZUnit", "reference frame"))
     validate_z_positions(positions, values[0])
-    if any(value is None for value in values):
-        return None
-    return tuple(values)
+    return (values[0], values[1], values[2])
 
 
-def read_tiff(path: str | Path, axes: str = "", time_index: int | None = None,
-              series_index: int = 0) -> tuple[np.ndarray, tuple | None, str]:
+def ome_spacing(xml: str | None, series_index: int = 0, time_index: int | None = None) -> tuple | None:
+    """Complete ZYX OME spacing, or ``None`` when any axis is unstated.
+
+    The all-or-nothing view, for callers that can only act on a complete
+    spacing and have no second source to complete it from. Callers that do have
+    one must use ``ome_axis_spacing()`` with ``resolve_zyx_spacing()`` instead:
+    collapsing a partial file to ``None`` here would discard the axes OME does
+    state, and an external spacing could then override them unchecked.
+    """
+    values = ome_axis_spacing(xml, series_index, time_index)
+    return None if any(value is None for value in values) else values
+
+
+def read_tiff_axis_spacing(path: str | Path, axes: str = "", time_index: int | None = None,
+                           series_index: int = 0) -> tuple[np.ndarray, AxisSpacingZYX, str]:
+    """Read a TIFF series, returning the OME spacing **per axis**.
+
+    The per-axis form is what any caller with a second spacing source needs;
+    ``read_tiff()`` wraps this for callers that require a complete spacing.
+    """
     if isinstance(series_index, bool) or not isinstance(series_index, (int, np.integer)) or series_index < 0:
         raise ValueError("series_index must be a nonnegative integer")
     with tifffile.TiffFile(path) as handle:
@@ -178,8 +213,41 @@ def read_tiff(path: str | Path, axes: str = "", time_index: int | None = None,
         series = handle.series[series_index]
         source_axes = axes or series.axes
         array = canonical_czyx(series.asarray(), source_axes, time_index)
-        spacing = ome_spacing(handle.ome_metadata, series_index, time_index)
+        spacing = ome_axis_spacing(handle.ome_metadata, series_index, time_index)
     return array, spacing, source_axes
+
+
+def read_tiff(path: str | Path, axes: str = "", time_index: int | None = None,
+              series_index: int = 0) -> tuple[np.ndarray, tuple | None, str]:
+    """Read a TIFF series; spacing is the complete ZYX tuple or ``None``.
+
+    Kept for callers that cannot act on a partial spacing at all. Where a
+    manifest or CLI can complete it, use ``read_tiff_axis_spacing()``.
+    """
+    array, spacing, source_axes = read_tiff_axis_spacing(path, axes, time_index, series_index)
+    complete = None if any(value is None for value in spacing) else spacing
+    return array, complete, source_axes
+
+
+def manifest_axis_spacing(row: dict) -> AxisSpacingZYX:
+    """Per-axis spacing stated by a manifest row; ``None`` for blank columns.
+
+    A blank column means "not stated", so a manifest may complete only the axes
+    the image file omits. Values are parsed here and range-checked by
+    ``resolve_zyx_spacing()``.
+    """
+    values: list[float | None] = []
+    for axis in AXIS_NAMES_ZYX:
+        raw = row.get(f"spacing_{axis}_um", "")
+        text = str(raw).strip() if raw is not None else ""
+        if not text:
+            values.append(None)
+            continue
+        try:
+            values.append(float(text))
+        except ValueError as error:
+            raise ValueError(f"manifest spacing_{axis}_um is not a number: {raw!r}") from error
+    return (values[0], values[1], values[2])
 
 
 @dataclass
@@ -197,16 +265,17 @@ def load_sample(row: dict, cfg: dict) -> Sample:
     time_index = int(row["time_index"]) if row.get("time_index") else None
     series_index = int(row.get("series_index") or 0)
     main_key = (row["image_path"], row.get("axes", ""), time_index, series_index)
-    main, metadata_spacing, source_axes = read_tiff(*main_key)
+    main, metadata_spacing, source_axes = read_tiff_axis_spacing(*main_key)
     # Different roles can select channels from one separate multichannel TIFF.
     # Cache each distinct series once per sample instead of decoding it per role.
     loaded = {main_key: (main, metadata_spacing, source_axes)}
-    explicit = [row.get(f"spacing_{axis}_um", "") for axis in "zyx"]
-    spacing = (float(explicit[0]), float(explicit[1]), float(explicit[2])) if all(explicit) else metadata_spacing
-    if spacing is None:
-        raise ValueError("Physical spacing is missing: provide OME metadata or all spacing_*_um columns")
-    if metadata_spacing and all(explicit) and not np.allclose(spacing, metadata_spacing, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
-        raise ValueError(f"Manifest spacing {spacing} conflicts with OME spacing {metadata_spacing}; correct the source metadata or manifest")
+    # Per axis, so that a manifest can complete what OME omits without being
+    # able to override what OME states. The manifest may supply all three, none,
+    # or only the axes OME is missing.
+    manifest_spacing = manifest_axis_spacing(row)
+    resolved = resolve_zyx_spacing(metadata_spacing, manifest_spacing,
+                                   metadata_label="OME", explicit_label="manifest")
+    spacing = resolved.zyx
     volumes = {}
     channel_sources: dict[str, tuple[str, int, int, int]] = {}
     # A separate TIFF without spacing metadata can only be matched by array
@@ -218,12 +287,18 @@ def load_sample(row: dict, cfg: dict) -> Sample:
         if separate:
             key = (separate, row.get(f"{role}_axes", ""), time_index, 0)
             if key not in loaded:
-                loaded[key] = read_tiff(*key)
+                loaded[key] = read_tiff_axis_spacing(*key)
             volume, other_spacing, _ = loaded[key]
             index = int(row.get(f"{role}_channel") or 0)
-            if other_spacing and not np.allclose(spacing, other_spacing, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
-                raise ValueError(f"{role} TIFF spacing differs from the primary image")
-            grid_status = "spacing_metadata_matches_primary" if other_spacing else "shape_only_no_spacing_metadata"
+            # Per axis: a secondary TIFF that states only some axes is still
+            # checked on those, instead of the whole check being skipped.
+            differing = spacing_axis_conflicts(other_spacing, spacing)
+            if differing:
+                raise ValueError(f"{role} TIFF spacing differs from the primary image on {'/'.join(differing)}")
+            stated = [axis for axis, value in zip(AXIS_NAMES_ZYX, other_spacing) if value is not None]
+            grid_status = ("spacing_metadata_matches_primary" if len(stated) == 3
+                           else f"spacing_metadata_matches_primary_on_{''.join(stated)}_only" if stated
+                           else "shape_only_no_spacing_metadata")
         else:
             index = cfg["channels"].get(role)
             volume = main
@@ -249,8 +324,16 @@ def load_sample(row: dict, cfg: dict) -> Sample:
         raise ValueError("probability mode requires a probability_path column")
     if cfg["segmentation"]["method"] == "labels" and volumes["labels"] is None:
         raise ValueError("labels mode requires a labels_path column")
+    # Per axis, because the sources can differ per axis: "OME" for an axis the
+    # file calibrated, "manifest" for one it did not, "OME+manifest" where both
+    # stated it and agreed. A single label cannot express a completed spacing.
+    sources = sorted({source.split("+")[0] if "+" in source else source
+                      for source in resolved.provenance})
     metadata = {"input_axes": source_axes, "shape_zyx": list(main.shape[1:]),
-                "spacing_source": "manifest" if all(explicit) else "OME", "spacing_zyx_um": list(spacing),
+                "spacing_source": resolved.provenance[0] if len(set(resolved.provenance)) == 1
+                else "mixed:" + "+".join(sources),
+                "spacing_source_by_axis": resolved.provenance_by_axis,
+                "spacing_zyx_um": list(spacing),
                 "channel_grid_verification": channel_grid}
     return Sample(volumes["structure"], volumes["calcein"], volumes["pi"], volumes["probability"], volumes["labels"], spacing, metadata)
 
@@ -267,8 +350,8 @@ def load_truth_labels(row: dict, expected_shape: tuple[int, int, int], spacing: 
         return None
     if path == row.get("labels_path", ""):
         raise ValueError("truth_labels_path must be independent from labels_path")
-    labels, annotation_spacing, _ = read_tiff(path, row.get("truth_labels_axes", ""),
-                                               int(row["time_index"]) if row.get("time_index") else None)
+    labels, annotation_spacing, _ = read_tiff_axis_spacing(path, row.get("truth_labels_axes", ""),
+                                                           int(row["time_index"]) if row.get("time_index") else None)
     if labels.shape[0] != 1:
         raise ValueError("truth_labels_path must contain exactly one instance-label channel")
     truth = labels[0]
@@ -276,8 +359,10 @@ def load_truth_labels(row: dict, expected_shape: tuple[int, int, int], spacing: 
         raise ValueError("truth_labels_path must be registered on the primary image ZYX grid")
     if not np.issubdtype(truth.dtype, np.integer) or (truth < 0).any():
         raise ValueError("truth_labels_path must contain nonnegative integer instance labels")
-    if annotation_spacing and not np.allclose(spacing, annotation_spacing, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
-        raise ValueError("truth_labels_path voxel spacing differs from the primary image")
+    differing = spacing_axis_conflicts(annotation_spacing, spacing)
+    if differing:
+        raise ValueError("truth_labels_path voxel spacing differs from the primary image on "
+                         f"{'/'.join(differing)}")
     return truth
 
 

@@ -15,6 +15,7 @@ OME-XML is parsed with ``ome_types`` -- never hand-rolled XML regex.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -120,6 +121,143 @@ def compare_registered_grid(a: Spacing, b: Spacing) -> str:
         for value_a, value_b in ((a.x, b.x), (a.y, b.y), (a.z, b.z))
     )
     return GRID_CONSISTENT if agrees else GRID_CONFLICT
+
+
+# ------------------------------------------------- per-axis spacing resolution
+# Physical measurement needs all three of Z/Y/X, but metadata is often partial
+# (a Z-step missing from an otherwise calibrated OME file is common). Two rules
+# keep a partial source honest, and they are separate rules:
+#
+#   completion  -- an axis the file does not state may be supplied externally;
+#   comparison  -- an axis the file *does* state is compared against any
+#                  external value for that same axis, and a disagreement beyond
+#                  SPACING_RTOL/SPACING_ATOL_UM is a rejection.
+#
+# Collapsing a partial source to "unknown" breaks the second rule: it lets an
+# external value override a known, conflicting one silently, which changes every
+# physical measurement downstream (volume, surface area, axes, sphericity) with
+# no diagnostic. Resolution is therefore always per axis, never all-or-nothing.
+AXIS_NAMES_ZYX = ("z", "y", "x")
+
+AxisSpacingZYX = tuple[float | None, float | None, float | None]
+
+
+@dataclass(frozen=True)
+class ResolvedSpacing:
+    """A complete ZYX spacing plus where each axis came from."""
+
+    zyx: tuple[float, float, float]
+    provenance: tuple[str, str, str]
+
+    @property
+    def provenance_by_axis(self) -> dict[str, str]:
+        return dict(zip(AXIS_NAMES_ZYX, self.provenance))
+
+
+def _validated_axis_values(values: AxisSpacingZYX | None, source: str) -> AxisSpacingZYX:
+    """Reject non-finite or non-positive stated values; pass ``None`` through."""
+    if values is None:
+        return (None, None, None)
+    checked: list[float | None] = []
+    for axis, value in zip(AXIS_NAMES_ZYX, values):
+        if value is None:
+            checked.append(None)
+            continue
+        number = float(value)
+        if not np.isfinite(number) or number <= 0:
+            raise ValueError(f"{source} spacing for {axis} is not a positive finite length: {value!r}")
+        checked.append(number)
+    return (checked[0], checked[1], checked[2])
+
+
+def spacing_axis_conflicts(reference: AxisSpacingZYX, candidate: AxisSpacingZYX) -> list[str]:
+    """Axes on which both sources state a value and the values disagree.
+
+    Axes either source leaves unknown are not compared -- absence is not
+    agreement, and it is not a conflict either.
+    """
+    conflicts = []
+    for axis, value_a, value_b in zip(AXIS_NAMES_ZYX, reference, candidate):
+        if value_a is None or value_b is None:
+            continue
+        if not np.isclose(value_a, value_b, rtol=SPACING_RTOL, atol=SPACING_ATOL_UM):
+            conflicts.append(axis)
+    return conflicts
+
+
+def merge_axis_spacings(sources: Sequence[AxisSpacingZYX],
+                        *,
+                        description: str = "Voxel spacings",
+                        remedy: str = "") -> AxisSpacingZYX:
+    """Union several per-axis spacings, rejecting any axis they disagree on.
+
+    Each source is compared against the running union rather than against the
+    first source only, so a conflict between any two of them is caught even
+    when the first states nothing for that axis.
+    """
+    merged: list[float | None] = [None, None, None]
+    for source in sources:
+        checked = _validated_axis_values(source, description)
+        conflicts = spacing_axis_conflicts((merged[0], merged[1], merged[2]), checked)
+        if conflicts:
+            raise ValueError(f"{description} differ on {'/'.join(conflicts)}{remedy}")
+        for index, value in enumerate(checked):
+            if merged[index] is None:
+                merged[index] = value
+    return (merged[0], merged[1], merged[2])
+
+
+def resolve_zyx_spacing(metadata: AxisSpacingZYX | None,
+                        explicit: AxisSpacingZYX | None,
+                        *,
+                        metadata_label: str = "OME",
+                        explicit_label: str = "manifest") -> ResolvedSpacing:
+    """Combine per-axis image metadata with externally supplied spacing.
+
+    ``metadata`` is what the image file states (``None`` per axis where it
+    states nothing); ``explicit`` is what the manifest or CLI supplies. Every
+    axis for which both provide a value is compared and a disagreement beyond
+    tolerance raises; axes the metadata omits are completed from ``explicit``;
+    an axis neither resolves raises. The metadata value wins where both agree,
+    so a rounded manifest entry cannot displace the measured one.
+
+    Raises ``ValueError`` -- never returns an incomplete or unverified spacing.
+    """
+    from_metadata = _validated_axis_values(metadata, metadata_label)
+    from_explicit = _validated_axis_values(explicit, explicit_label)
+
+    conflicts = spacing_axis_conflicts(from_metadata, from_explicit)
+    if conflicts:
+        detail = ", ".join(
+            f"{axis}: {metadata_label}={from_metadata[AXIS_NAMES_ZYX.index(axis)]!r} vs "
+            f"{explicit_label}={from_explicit[AXIS_NAMES_ZYX.index(axis)]!r}"
+            for axis in conflicts
+        )
+        raise ValueError(
+            f"{explicit_label} spacing conflicts with {metadata_label} spacing on "
+            f"{'/'.join(conflicts)} ({detail}); correct the source metadata or the {explicit_label}"
+        )
+
+    resolved: list[float] = []
+    provenance: list[str] = []
+    unresolved = []
+    for axis, meta_value, explicit_value in zip(AXIS_NAMES_ZYX, from_metadata, from_explicit):
+        if meta_value is not None:
+            resolved.append(meta_value)
+            provenance.append(f"{metadata_label}+{explicit_label}" if explicit_value is not None
+                              else metadata_label)
+        elif explicit_value is not None:
+            resolved.append(explicit_value)
+            provenance.append(explicit_label)
+        else:
+            unresolved.append(axis)
+    if unresolved:
+        raise ValueError(
+            f"Physical spacing is unresolved for {'/'.join(unresolved)}: supply {metadata_label} "
+            f"metadata or the {explicit_label} value for {'/'.join(unresolved)}"
+        )
+    return ResolvedSpacing((resolved[0], resolved[1], resolved[2]),
+                           (provenance[0], provenance[1], provenance[2]))
 
 
 def parse_spacing_ome(ome_metadata: str | None, time_index: int | None = None) -> Spacing:
