@@ -88,14 +88,15 @@ SURFACE_METADATA_COLUMNS = [
     "surface_rho_in", "surface_anisotropy", "surface_stencil_radius",
     "surface_apriori_rel_bound", "surface_in_qualified_domain", "surface_domain_flags",
     "surface_estimator", "surface_method_version", "surface_implementation_version",
-    "surface_weights_origin", "surface_evidence", "surface_implementation_evidence", "surface_qualification_scope",
+    "surface_weights_origin", "surface_weights_evidence_bearing", "surface_evidence", "surface_implementation_evidence", "surface_qualification_scope",
     "sphericity_in_qualified_domain", "surface_to_volume_in_qualified_domain",
 ]
+TOPOLOGY_COLUMNS = ["filled_void_voxels", "filled_void_components", "open_cavity_suspected", "topology_flags"]
 DERIVED_GEOMETRY_COLUMNS = ["elongation", "prolate_ratio", "oblate_ratio", "surface_to_volume_ratio_um_inv"]
 
 GEOMETRY_COLUMNS = ["organoid_id", "original_label_id", "segmented_voxels", "envelope_voxels",
                     "segmented_volume_um3", "volume_um3", "surface_area_um2", "sphericity",
-                    "equivalent_diameter_um", "enclosed_void_fraction", "centroid_z_um", "centroid_y_um",
+                    "equivalent_diameter_um", "enclosed_void_fraction", *TOPOLOGY_COLUMNS, "centroid_z_um", "centroid_y_um",
                     "centroid_x_um", "extent_z_um", "extent_y_um", "extent_x_um", "principal_axis_major_um",
                     "principal_axis_intermediate_um", "principal_axis_minor_um", "axis_ratio_minor_to_major", "n_z_slices",
                     "measurement_basis", *DERIVED_GEOMETRY_COLUMNS, *SURFACE_METADATA_COLUMNS,
@@ -166,6 +167,24 @@ def geometry(
     envelope = outer_envelope(mask) if fill_holes else mask.astype(bool, copy=False)
     segmented = int(mask.sum())
     count = int(envelope.sum())
+    padded = np.pad(np.asarray(mask, bool), 1)
+    background_labels, _ = ndi.label(~padded, structure=ndi.generate_binary_structure(3, 1))
+    border_labels = np.unique(np.concatenate([
+        background_labels[0].ravel(), background_labels[-1].ravel(),
+        background_labels[:, 0, :].ravel(), background_labels[:, -1, :].ravel(),
+        background_labels[:, :, 0].ravel(), background_labels[:, :, -1].ravel(),
+    ]))
+    foreground_coords = np.argwhere(mask)
+    bbox_slices = tuple(
+        slice(int(axis.min()), int(axis.max()) + 1) for axis in foreground_coords.T
+    )
+    interior_background = background_labels[1:-1, 1:-1, 1:-1][bbox_slices]
+    local_mask = np.asarray(mask, bool)[bbox_slices]
+    interior_labels = np.unique(interior_background[~local_mask])
+    interior_labels = interior_labels[interior_labels > 0]
+    open_cavity = bool(np.any(np.isin(interior_labels, border_labels)))
+    filled_void_components = int(np.count_nonzero(~np.isin(interior_labels, border_labels)))
+    topology_flags = ["open_cavity_suspected"] if open_cavity else []
     volume = float(count * np.prod(spacing_arr))
     # Surface area comes from the qualified Crofton estimator, not from the
     # mesh: the mesh is still built and returned for visualisation and PLY
@@ -188,6 +207,10 @@ def geometry(
               "surface_area_um2": area, "sphericity": sphericity,
               "equivalent_diameter_um": float(np.cbrt(6 * volume / np.pi)),
               "enclosed_void_fraction": float((count - segmented) / count),
+              "filled_void_voxels": int(count - segmented),
+              "filled_void_components": filled_void_components,
+              "open_cavity_suspected": open_cavity,
+              "topology_flags": ";".join(topology_flags),
               "principal_axis_major_um": float(lengths[0]), "principal_axis_intermediate_um": float(lengths[1]),
               "principal_axis_minor_um": float(lengths[2]), "axis_ratio_minor_to_major": float(lengths[2]/lengths[0]),
               "elongation": float(1.0 - lengths[2] / lengths[0]),
@@ -212,6 +235,7 @@ def geometry(
               "surface_method_version": surface["method"],
               "surface_implementation_version": SURFACE_AREA_METHOD["implementation_version"],
               "surface_weights_origin": surface["weights_origin"],
+              "surface_weights_evidence_bearing": bool(surface["weights_evidence_bearing"]),
               "surface_evidence": SURFACE_AREA_METHOD["evidence"],
               "surface_implementation_evidence": SURFACE_AREA_METHOD["implementation_evidence"],
               "surface_qualification_scope": "numerical_resolution_and_anisotropy_only",

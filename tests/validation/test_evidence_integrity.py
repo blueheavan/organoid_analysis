@@ -83,18 +83,19 @@ def load_module_copy(path: Path) -> ModuleType:
 
 
 # ------------------------------------------------------------------ baseline
-def test_untouched_copy_of_the_record_verifies(evidence_copy):
+def test_current_record_is_rejected_after_source_contract_changes(evidence_copy):
     root, relpath = evidence_copy
-    assert problems(root, relpath) == ()
+    report = problems(root, relpath)
+    assert report
+    assert any("changed after the validation run" in problem for problem in report)
 
 
-def test_repository_record_verifies_with_git_provenance_and_reexecution():
+def test_repository_record_rejects_stale_source_with_git_provenance():
     if not (PROJECT_ROOT / ".git").exists():
         pytest.skip("Git provenance needs a Git checkout")
     report = contract.verify_record(PROJECT_ROOT)
-    assert report.problems == ()
-    assert report.reproduction is not None and report.reproduction["mismatches"] == 0
-    assert report.reproduction["cases_reexecuted"] == report.manifest["results"]["SG-1"]["n_cases"]
+    assert report.problems
+    assert any("changed after the validation run" in problem for problem in report.problems)
 
 
 # ------------------------------------------------- 1, 2, 9: production code
@@ -330,6 +331,7 @@ def _git(root: Path, *args: str) -> str:
 @pytest.fixture
 def committed_copy(evidence_copy):
     root, relpath = evidence_copy
+    edit_manifest(root, relpath, rehash_everything(root))
     _git(root, "init", "-q")
     _git(root, "add", "-A")
     _git(root, "commit", "-q", "-m", "source under validation")

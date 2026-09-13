@@ -1,9 +1,9 @@
 # Gate semantics: should SG-1 and SG-2 be unrestricted or domain-restricted?
 
-**Status: ANALYSIS ONLY — DECISION REQUIRED. Nothing in the gate has been
-changed by this document, and nothing may be changed before the project owner
-records a decision below.** The current behaviour is unrestricted and is
-described in §1 exactly as it stands.
+**Status: OPTION C SELECTED BY PROJECT OWNER ON 2026-09-13.** The selection
+freezes the target architecture. The current gate remains fail-closed under its
+legacy implementation until the qualification-record contract and adversarial
+tests in §4.3 are implemented; this decision creates no PASS.
 
 Written 2026-09-13. Every number is re-derived from existing evidence
 (`docs/evidence/2026-09-13-analytical-geometry-record`, n = 188 production rows;
@@ -168,15 +168,16 @@ visible, and neither answer should be inferable only from the other's absence.
 
 ## 6. Decision record
 
-To be completed by the project owner. Until an option is recorded here with a
-date, **the gate keeps Option A behaviour** and both items remain unrestricted.
+Recorded from the project owner's 2026-09-13 scientific-validation directive.
+Until the prerequisites below are implemented, the gate keeps its legacy
+fail-closed behavior.
 
 - [ ] Option A — keep unrestricted
 - [ ] Option B — restrict to the declared domain
-- [ ] Option C — split qualification and characterization
+- [x] Option C — split qualification and characterization
 - [ ] Option D — Option C plus refusal to emit out-of-domain measurements
 
-Decided by: ______________  Date: ____________
+Decided by: project owner  Date: 2026-09-13
 
 If C or D is chosen, the implementing change must land as a single commit that
 (a) carries the confirmation evidence into a record contract, (b) adds the
@@ -188,16 +189,16 @@ semantics without that reference is out of process.
 ## 7. Specification of Option C — 2026-09-13
 
 Written so that signing the decision record above makes the implementation
-mechanical rather than a fresh design exercise. **The gate code is unchanged by
-this section**; `scripts/scientific_validation_gate.py` still implements Option
-A, and the overall verdict is unaffected either way (SG-3 to SG-6 are
-untouched). Statuses use the vocabulary in `docs/INTENDED_USE_AND_ESTIMANDS.md`.
+mechanical rather than a fresh design exercise. The gate now reports the four
+analytical items; qualification remains fail-closed until a dedicated
+domain-restricted canonical record exists. Statuses use the vocabulary in
+`docs/INTENDED_USE_AND_ESTIMANDS.md`.
 
 ### 7.1 Item definitions
 
 | Item | Question it answers | Evidence it reads | Assertion | Status if implemented today |
 |---|---|---|---|---|
-| **SG-1a** qualification | Is the area estimator accurate inside the domain it claims? | confirmation set, cases with `surface_in_qualified_domain` true **and** in the declared smooth scope | every such case `\|area rel. err\| < 1%` | **SUPPORTED WITH LIMITATIONS** — met (worst 0.951%, n = 96), limited by the non-machine-checkable smoothness clause and by coverage of only `rho_in` 10.43–15.05 |
+| **SG-1a** qualification | Is the area estimator accurate inside the domain it claims? | confirmation set, cases with `surface_in_qualified_domain` true **and** in the declared smooth scope | every such case `\|area rel. err\| < 5%` | **INSUFFICIENT EVIDENCE** — the historical 96-case result met the frozen `<5%` criterion, but the current source-changing schema migration invalidates the old record and requires a new domain-restricted canonical record |
 | **SG-1b** characterisation | What does it do outside that domain? | the full analytical grid | reports worst case, per-`rho_in`-stratum maxima and the fraction above 1% — **no verdict** | reports 25.81% worst case; no PASS/FAIL |
 | **SG-2a** qualification | Is voxel-count volume accurate inside a declared volume domain? | confirmation set, in-domain in-scope cases | every such case `\|volume rel. err\| < 1%` | **INSUFFICIENT EVIDENCE** — the predeclared rule A2 was met (worst 0.761%, n = 96, `FREEZE_RECORD_V3.md`), but volume has no domain of its own: it currently inherits the surface constants, and the evidence contains no hollow or open-cavity object. See `evidence/2026-09-13-volume-audit/VOLUME_QUALIFICATION_PROTOCOL.md` §3 |
 | **SG-2b** characterisation | What does it do outside? | the full analytical grid | reports worst case, strata, fraction above 1% — no verdict | reports 18.26% worst case; 68.2% of the `rho_in < 3` stratum above 1% |
@@ -215,12 +216,10 @@ volume confirmation set is built to it, then SG-2a tests it. Until then the item
 is INSUFFICIENT EVIDENCE, and reporting it as PASS would be exactly the
 gate-semantics change this repository refuses to make silently.
 
-Note that this is *not* a contradiction of the claim register, where M1 (total
-enclosed volume) is SUPPORTED WITH LIMITATIONS. M1 is a claim about the
-domain-restricted estimand and is supported by the met A2 rule with its
-limitations named; SG-2a is a gate item that would have to be constructed from a
-volume-specific domain that does not yet exist. One is a scoped scientific
-claim; the other is an automated assertion.
+The claim register now classifies M1 as `NOT QUALIFIED`: the met A2 rule is
+informative evidence, but no volume-specific domain or dedicated qualification
+record exists. SG-2a therefore remains `INSUFFICIENT EVIDENCE` in the gate
+architecture and must not borrow the surface domain constants.
 
 ### 7.3 Invariants any implementation must preserve
 

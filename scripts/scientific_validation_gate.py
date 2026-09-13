@@ -47,6 +47,7 @@ class GateItem:
     # Repository-relative evidence manifest backing this item; None when the
     # item has no verified validation record (and therefore cannot PASS).
     record: str | None = None
+    counts_toward_gate: bool = True
 
 
 Reports = dict[str, analytical.VerificationReport]
@@ -64,8 +65,14 @@ def _percent(value: float | None, signed: bool = False) -> str:
 
 def _analytical_items(root: Path, reports: Reports, check_git: bool, reproduce: bool) -> list[GateItem]:
     def rejected(reason: str, evidence: tuple[str, ...] = ()) -> list[GateItem]:
-        return [GateItem("SG-1", "Analytical surface area", SURFACE_CRITERION_TEXT, "FAIL", reason, evidence),
-                GateItem("SG-2", "Analytical voxel volume", VOLUME_CRITERION_TEXT, "FAIL", reason, evidence)]
+        return [GateItem("SG-1a", "Surface analytical qualification", SURFACE_CRITERION_TEXT,
+                         "FAIL", reason, evidence),
+                GateItem("SG-1b", "Surface unrestricted characterization", "descriptive only",
+                         "NOT APPLICABLE", reason, evidence, counts_toward_gate=False),
+                GateItem("SG-2a", "Volume analytical qualification", VOLUME_CRITERION_TEXT,
+                         "FAIL", reason, evidence),
+                GateItem("SG-2b", "Volume unrestricted characterization", "descriptive only",
+                         "NOT APPLICABLE", reason, evidence, counts_toward_gate=False)]
 
     try:
         manifest_path = analytical.current_manifest_relpath(root)
@@ -90,25 +97,40 @@ def _analytical_items(root: Path, reports: Reports, check_git: bool, reproduce: 
                for row in sg2["by_rho_stratum"] if row["status"] != "PASS"]
     volume_basis = f"fails for {', '.join(failing)}" if failing else "all strata < 1%"
     return [
-        GateItem("SG-1", "Analytical surface area (production estimator)", SURFACE_CRITERION_TEXT,
-                 sg1["status"], area_basis + record, evidence, manifest_path),
-        GateItem("SG-2", "Analytical voxel-count volume", VOLUME_CRITERION_TEXT,
-                 sg2["status"], volume_basis + record, evidence, manifest_path),
+        GateItem("SG-1a", "Surface analytical qualification", SURFACE_CRITERION_TEXT,
+                 "INSUFFICIENT EVIDENCE",
+                 "no domain-restricted canonical qualification record; unrestricted record is characterization only",
+                 evidence),
+        GateItem("SG-1b", "Surface unrestricted characterization", "descriptive only",
+                 "NOT APPLICABLE", area_basis + record, evidence, manifest_path, counts_toward_gate=False),
+        GateItem("SG-2a", "Volume analytical qualification", VOLUME_CRITERION_TEXT,
+                 "INSUFFICIENT EVIDENCE",
+                 "no volume-specific domain or canonical qualification record; unrestricted record is characterization only",
+                 evidence),
+        GateItem("SG-2b", "Volume unrestricted characterization", "descriptive only",
+                 "NOT APPLICABLE", volume_basis + record, evidence, manifest_path, counts_toward_gate=False),
     ]
 
 
 # Items with no computable oracle in this repository. They carry no validation
 # record, so evaluate() refuses PASS for them until one exists.
 STATIC_ITEMS = [
-    GateItem("SG-3", "Segmentation accuracy against independent annotation (detection, mask, downstream "
+    GateItem("SG-3A", "Brightfield segmentation accuracy against independent annotation (detection, mask, downstream "
              "measurement bias)", "predeclared per docs/evidence/2026-09-11-measurement-vv/SEGMENTATION_VALIDATION_PROTOCOL.md",
              "INSUFFICIENT EVIDENCE", "no qualified independent 3D annotation set exists", ()),
-    GateItem("SG-4", "Calcein/PI viability assay validity", "orthogonal viability reference; control-based calibration "
+    GateItem("SG-3B", "Membrane-fluorescence segmentation accuracy against independent annotation (detection, mask, downstream "
+             "measurement bias)", "predeclared per docs/evidence/2026-09-11-measurement-vv/SEGMENTATION_VALIDATION_PROTOCOL.md",
+             "INSUFFICIENT EVIDENCE", "no qualified independent 3D annotation set exists", ()),
+    GateItem("SG-4A", "Calcein/PI four-state analytical classification", "known-rule state and refusal contract with versioned denominator",
+             "PARTIAL", "state logic and classifiable-denominator contract are unit-tested; biological identity remains unvalidated", ()),
+    GateItem("SG-4B", "Calcein/PI biological validity", "orthogonal object-level reference; control-based calibration "
              "evaluated on held-out batches", "NOT ASSESSED", "no orthogonal assay or held-out control data", ()),
     GateItem("SG-5", "Statistical and study-design validity", "predeclared design with an independent experimental "
              "unit; type-I error and CI coverage for the shipped models", "INSUFFICIENT EVIDENCE",
              "generic tools only; no study design or calibration evidence", ()),
-    GateItem("SG-6", "Acquisition calibration and channel registration", "independently verified voxel size and "
+    GateItem("SG-6A", "Relative spacing-ratio verification", "independently verified X:Y and Z:XY ratios for domain stratification",
+             "NOT ASSESSED", "no ratio-standard study", ()),
+    GateItem("SG-6B", "Absolute acquisition calibration and channel registration", "independently verified voxel size and "
              "registration for the intended instruments", "INSUFFICIENT EVIDENCE",
              "metadata is read and traced but not independently verified", ()),
 ]
@@ -148,8 +170,11 @@ def main() -> int:
         print(f"[{item.status}] {item.item_id} {item.requirement}\n    criterion: {item.criterion}\n    basis: {item.basis}")
         for path in item.evidence:
             print(f"    evidence: {path}")
-    failed = [item.item_id for item in items if item.status != "PASS"]
-    print(f"\nGATE: {'PASS' if not failed else 'NOT PASSED'} ({len(items) - len(failed)}/{len(items)} items PASS)")
+    counted = [item for item in items if item.counts_toward_gate]
+    failed = [item.item_id for item in counted if item.status != "PASS"]
+    passed = len(counted) - len(failed)
+    print(f"\nGATE: {'PASS' if not failed else 'NOT PASSED'} ({passed}/{len(counted)} qualification items PASS; "
+          f"{len(items) - len(counted)} characterization items reported)")
     return 0 if not failed else 1
 
 

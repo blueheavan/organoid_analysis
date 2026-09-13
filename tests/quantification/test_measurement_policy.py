@@ -80,6 +80,7 @@ def test_numerical_gate_does_not_assert_surface_scope_or_volume_accuracy():
     assert g["sphericity_in_qualified_domain"] == g["surface_in_qualified_domain"]
     assert g["surface_qualification_scope"] == "numerical_resolution_and_anisotropy_only"
     assert g["surface_weights_origin"] == "packaged"
+    assert g["surface_weights_evidence_bearing"] is True
     assert g["surface_method_version"] == "crofton_minimax_sym_v3"
     assert g["surface_implementation_version"] == "padded_edt_v1"
     for level in ("organoid", "cell", "nucleus"):

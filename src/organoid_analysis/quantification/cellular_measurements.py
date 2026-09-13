@@ -11,7 +11,13 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import min_weight_full_bipartite_matching
 from scipy.spatial import cKDTree
 
-from .features import DERIVED_GEOMETRY_COLUMNS, SURFACE_METADATA_COLUMNS, geometry, outer_envelope
+from .features import (
+    DERIVED_GEOMETRY_COLUMNS,
+    SURFACE_METADATA_COLUMNS,
+    TOPOLOGY_COLUMNS,
+    geometry,
+    outer_envelope,
+)
 from .labels import (
     bbox_touches_volume_boundary,
     compact_instance_labels,
@@ -39,7 +45,7 @@ GEOMETRY_COLUMNS = [
     "sphericity", "equivalent_diameter_um", "centroid_z_um", "centroid_y_um",
     "centroid_x_um", "principal_axis_major_um", "principal_axis_intermediate_um",
     "principal_axis_minor_um", "axis_ratio_minor_to_major", "n_z_slices",
-    "enclosed_void_fraction", "touches_border", "nucleus_volume_um3", "nc_ratio",
+    "enclosed_void_fraction", *TOPOLOGY_COLUMNS, "touches_border", "nucleus_volume_um3", "nc_ratio",
     "nucleus_centroid_z_um", "nucleus_centroid_y_um", "nucleus_centroid_x_um",
     "cell_to_nucleus_centroid_um", "nucleus_centroid_to_cell_border_um",
     "volume_um3", "measurement_basis", *DERIVED_GEOMETRY_COLUMNS, *SURFACE_METADATA_COLUMNS,
@@ -397,6 +403,7 @@ def cell_geometry(cell_labels: np.ndarray, nucleus_labels: np.ndarray | None,
             "axis_ratio_minor_to_major": measured["axis_ratio_minor_to_major"],
             "n_z_slices": measured["n_z_slices"],
             "enclosed_void_fraction": measured["enclosed_void_fraction"],
+            **{name: measured[name] for name in TOPOLOGY_COLUMNS},
             "touches_border": bbox_touches_volume_boundary(bbox, cell_labels.shape),
             "nucleus_volume_um3": nucleus_volume,
             "nc_ratio": nucleus_volume / cell_volume if nucleus_volume and cell_volume else np.nan,

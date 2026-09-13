@@ -160,6 +160,20 @@ DOMAIN_ANISO_CONFIRMED = (1.2, 4.0)
 PACKAGED_WEIGHTS = Path(__file__).resolve().parent / "crofton_weights"
 LP_TIME_BUDGET_S = 600.0
 
+# This packaged table was added after the untouched confirmation set was
+# frozen.  It is conforming and reproducible, but it must not be presented as
+# confirmation evidence until a later V&V record exercises it.
+_POST_CONFIRMATION_PACKAGED_RATIO = (1.0, 2.0 / 3.0, 2.0 / 3.0)
+_POST_CONFIRMATION_PACKAGED_M = 5
+
+
+def _weights_are_evidence_bearing(origin: str, ratios: tuple[float, float, float], m: int) -> bool:
+    return not (
+        origin == "packaged"
+        and m == _POST_CONFIRMATION_PACKAGED_M
+        and np.allclose(ratios, _POST_CONFIRMATION_PACKAGED_RATIO, rtol=0.0, atol=1e-10)
+    )
+
 
 # --------------------------------------------------------------- directions
 @cache
@@ -360,6 +374,7 @@ def _weights_for_ratios(ratios: tuple[float, float, float], m: int
             stored = json.loads(path.read_text(encoding="utf-8"))
             diagnostics = dict(stored["diag"])
             diagnostics["weights_origin"] = origin
+            diagnostics["weights_evidence_bearing"] = _weights_are_evidence_bearing(origin, ratios, m)
             return tuple(float(x) for x in stored["w"]), tuple(sorted(diagnostics.items()))
 
     weights, diagnostics = _solve_orbit_weights(ratios, m, LP_TIME_BUDGET_S)
@@ -371,6 +386,7 @@ def _weights_for_ratios(ratios: tuple[float, float, float], m: int
     except OSError:
         pass  # an unwritable cache slows later calls; it never changes a result
     diagnostics["weights_origin"] = "solved"
+    diagnostics["weights_evidence_bearing"] = False
     return tuple(float(x) for x in weights), tuple(sorted(diagnostics.items()))
 
 
@@ -451,6 +467,7 @@ def measure(mask: np.ndarray, spacing: tuple[float, float, float], *, force_m: i
             "n_orbits": diagnostics["n_orbits"],
             "plane_response_max_abs_dev": diagnostics["plane_response_max_abs_dev"],
             "weights_origin": diagnostics.get("weights_origin", "packaged"),
+            "weights_evidence_bearing": bool(diagnostics.get("weights_evidence_bearing", False)),
             "apriori_bound": bound}
 
 

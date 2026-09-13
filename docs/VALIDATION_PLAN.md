@@ -5,6 +5,34 @@ reporting and cropped-mask EDT correction are in
 [MORPHOLOGY_ARCHITECTURE_REVIEW.md](MORPHOLOGY_ARCHITECTURE_REVIEW.md).
 All existing surface/volume acceptance criteria remain unchanged.
 
+## Governing qualification framework — frozen 2026-09-13
+
+This section and `SCIENTIFIC_VALIDATION_MASTER_PLAN.md` supersede conflicting
+acceptance or sequencing language below. It is a protocol amendment, not a
+validation result.
+
+| Gate | Reference / evaluation unit | Required metrics and strata | Acceptance framework | Current status |
+|---|---|---|---|---|
+| SG-1a | exact analytical surface / phantom case | per-case error; `rho_in`, anisotropy, smooth-scope and exact-weight evidence | every in-domain confirmation case meets the frozen criterion; missing scope or non-evidence-bearing weights fail closed | `SUPPORTED WITH LIMITATIONS` as a scientific claim; canonical gate-record migration pending |
+| SG-1b | exact analytical surface / phantom case | unrestricted worst, median, distribution and strata | characterization only; no verdict | characterized |
+| SG-2a | exact analytical volume / phantom case | dense phase/orientation/resolution/anisotropy and topology strata | volume-specific domain first; every in-domain confirmation case meets the engineering criterion | `NOT QUALIFIED` |
+| SG-2b | exact analytical volume / phantom case | unrestricted worst, median, distribution and strata | characterization only | characterized |
+| SG-3A/B | independent blinded annotation / biological sample is inferential unit | detection, Dice/IoU, boundaries, signed/absolute measurement errors, upper tail, catastrophic failure; size/depth/domain/topology strata | population metrics characterize; qualification separately controls systematic bias, tail and failure rate with precision-calculated N | `INSUFFICIENT EVIDENCE` |
+| SG-4A | known-rule synthetic tables / object | exact state and refusal behavior; versioned classifiable denominator | exact contract agreement | `PARTIAL` software evidence only |
+| SG-4B | independent object reference plus orthogonal well-level assay / biological replicate | confusion matrix, weighted kappa, macro-F1, per-class sensitivity/precision; indeterminate rate; size/depth/radial/batch/stain/acquisition strata | study-specific values and interval precision frozen before outcome review; correlation is characterization | `NOT ASSESSED` |
+| SG-5 | simulation truth / biological replicate cluster | branch-specific type-I error, CI coverage and estimand recovery over ICC, replicate N and imbalance | method frozen before implementation; only cells meeting frozen coverage tolerance support inferential CI | `INSUFFICIENT EVIDENCE` |
+| SG-6A | traceable ratio standard / imaging session | X:Y, Z:XY, uncertainty, session and field variation | stratum-specific values frozen from domain-misclassification tolerance | `NOT ASSESSED` |
+| SG-6B | traceable absolute/registration standards / imaging session | X/Y/Z bias and uncertainty, depth/field/session variation, channel offset | stratum-specific absolute-unit error budget | `NOT ASSESSED` |
+
+SG-3A and SG-3B are separate studies. SG-6A precedes final SG-3 domain
+stratification; SG-6B can run in parallel and is required before absolute-unit
+claims. The volume `<1%` rule is an engineering estimator target, not a real
+segmentation or biological requirement.
+
+For SG-3 through SG-6, a point estimate cannot PASS without a predeclared
+uncertainty/precision requirement at the correct independent-unit level. If N
+cannot resolve that requirement, status is `INSUFFICIENT EVIDENCE`.
+
 Version: 1.0.0
 Date: 2026-09-02
 Scope: Scientific V&V plan for the `analyze-3d` multilevel 3D organoid analysis (hierarchy, morphology, topology, spatial, QC). The classical morphology/viability validation is documented in `docs/VALIDATION.md`.

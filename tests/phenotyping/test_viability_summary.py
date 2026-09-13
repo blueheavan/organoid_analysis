@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from organoid_analysis.config import load_config
 from organoid_analysis.phenotyping.viability import calibrate, classify
@@ -119,6 +120,23 @@ def test_wells_are_weighted_equally_and_empty_replicates_are_not_deleted():
     assert conditions.iloc[0].n_biological_replicates_with_size_data==1
     assert np.isnan(conditions.iloc[0].ci95_low_volume_um3)
     assert samples[samples.sample_id=='EMPTY'].iloc[0].n_detected==0
+
+
+def test_viability_fractions_use_classifiable_denominator_and_report_indeterminate():
+    objects = pd.DataFrame([{
+        "morphology_eligible": True,
+        "viability_state": state,
+        "volume_um3": 1., "surface_area_um2": 1., "sphericity": 1.,
+        "equivalent_diameter_um": 1.,
+    } for state in ["viable_like", "viable_like", "mixed_signal", "compromised_like",
+                    "indeterminate", "indeterminate"]])
+    from organoid_analysis.statistics.aggregation import _describe
+
+    summary = _describe(objects)
+    assert summary["n_classifiable"] == 4
+    assert summary["fraction_viable_like"] == .5
+    assert summary["fraction_compromised_like"] == .25
+    assert summary["fraction_indeterminate"] == pytest.approx(1 / 3)
 
 
 def test_incomplete_wells_are_not_silently_included_in_replicate_summaries():

@@ -8,6 +8,7 @@ from scipy import ndimage as ndi
 from organoid_analysis.quantification.features import (
     DERIVED_GEOMETRY_COLUMNS,
     SURFACE_METADATA_COLUMNS,
+    TOPOLOGY_COLUMNS,
     geometry,
 )
 from organoid_analysis.quantification.labels import (
@@ -19,7 +20,7 @@ MORPHOLOGY_COLUMNS = [
     "voxel_count", "volume_um3", "surface_area_um2", "sphericity", "centroid_z_um", "centroid_y_um",
     "centroid_x_um", "major_axis_um", "intermediate_axis_um", "minor_axis_um",
     "equivalent_diameter_um", "axis_ratio_minor_to_major", "measurement_basis",
-    *DERIVED_GEOMETRY_COLUMNS, *SURFACE_METADATA_COLUMNS, "touches_image_border", "fragmented_object",
+    *DERIVED_GEOMETRY_COLUMNS, *SURFACE_METADATA_COLUMNS, *TOPOLOGY_COLUMNS, "touches_image_border", "fragmented_object",
     "connected_component_count",
 ]
 
@@ -58,7 +59,7 @@ def measure_instances(labels: np.ndarray, spacing_zyx_um: tuple[float, float, fl
             "minor_axis_um": axes[2],
             **{name: measured[name] for name in (
                 "equivalent_diameter_um", "axis_ratio_minor_to_major", "measurement_basis",
-                *DERIVED_GEOMETRY_COLUMNS, *SURFACE_METADATA_COLUMNS,
+                *DERIVED_GEOMETRY_COLUMNS, *SURFACE_METADATA_COLUMNS, *TOPOLOGY_COLUMNS,
             )},
             "touches_image_border": bbox_touches_volume_boundary(bbox, labels.shape),
             "fragmented_object": components > 1,

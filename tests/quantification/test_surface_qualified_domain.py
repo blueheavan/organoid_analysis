@@ -171,6 +171,13 @@ def test_under_resolved_object_is_flagged_out_of_domain():
     assert "rho_in" in measured["surface_domain_flags"]
 
 
+def test_post_confirmation_packaged_weights_are_marked_non_evidence_bearing():
+    mask = np.ones((31, 31, 31), bool)
+    measurement = sc.measure(mask, (1.5, 1.0, 1.0), force_m=5)
+    assert measurement["weights_origin"] == "packaged"
+    assert measurement["weights_evidence_bearing"] is False
+
+
 def test_anisotropy_beyond_the_declared_limit_is_flagged():
     spacing = (5.0, 1.0, 1.0)
     measured, _ = geometry(sphere(60.0, spacing), spacing)

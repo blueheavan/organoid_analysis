@@ -23,9 +23,13 @@ def _describe(objects: pd.DataFrame) -> dict:
     for metric in MORPHOLOGY:
         result[f"median_{metric}"] = float(eligible[metric].median()) if len(eligible) else np.nan
     result["total_volume_um3"] = float(eligible.volume_um3.sum())
+    classifiable = eligible[eligible.viability_state != "indeterminate"]
+    result["n_classifiable"] = len(classifiable)
     for state in STATES:
         result[f"n_{state}"] = int((eligible.viability_state == state).sum())
-        result[f"fraction_{state}"] = result[f"n_{state}"] / len(eligible) if len(eligible) else np.nan
+        denominator = len(eligible) if state == "indeterminate" else len(classifiable)
+        result[f"fraction_{state}"] = result[f"n_{state}"] / denominator if denominator else np.nan
+    result["fraction_indeterminate_denominator"] = len(eligible)
     return result
 
 

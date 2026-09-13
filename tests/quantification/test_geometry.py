@@ -102,6 +102,23 @@ def test_hollow_structure_reports_outer_envelope_and_void():
     assert measured['enclosed_void_fraction']==pytest.approx(729/3375)
 
 
+def test_geometry_records_closed_and_open_cavity_topology():
+    solid = np.ones((9, 9, 9), dtype=bool)
+    closed = solid.copy()
+    closed[2:7, 2:7, 2:7] = False
+    opened = closed.copy()
+    opened[:3, 4, 4] = False
+
+    closed_geometry, _ = geometry(closed, (1., 1., 1.), fill_holes=True)
+    open_geometry, _ = geometry(opened, (1., 1., 1.), fill_holes=True)
+    assert closed_geometry["filled_void_voxels"] == 125
+    assert closed_geometry["filled_void_components"] == 1
+    assert closed_geometry["open_cavity_suspected"] is False
+    assert open_geometry["filled_void_voxels"] == 0
+    assert open_geometry["filled_void_components"] == 0
+    assert open_geometry["open_cavity_suspected"] is True
+
+
 def test_translation_does_not_change_shape_or_surface():
     mask=np.ones((9,11,13),bool)
     a,(va,fa)=geometry(mask,(3.,1.,2.))

@@ -401,12 +401,10 @@ anisotropy ≤ 4 reach 3.20 %. No resolution threshold is declared a guarantee.
 Full audit and the qualification protocol:
 [volume audit](evidence/2026-09-13-volume-audit/VOLUME_QUALIFICATION_PROTOCOL.md).
 
-**Gate semantics are unresolved by design.** Whether SG-1 and SG-2 should be
-evaluated unrestricted or restricted to the declared domain is an owner
-decision, analysed with four options in
-[gate semantics](GATE_SEMANTICS_ANALYSIS.md). Until a decision is recorded
-there, the gate keeps its current unrestricted behaviour and both items remain
-FAIL.
+**Gate semantics are frozen as Option C.** Qualification and unrestricted
+characterization are separate items as specified in
+[gate semantics](GATE_SEMANTICS_ANALYSIS.md). This owner decision does not
+retroactively qualify volume or convert characterization into evidence.
 
 ### Round 4 — 2026-09-13: intended use frozen, no new measurement
 
@@ -466,3 +464,13 @@ structure, with the branch-switching behaviour, the t(G−1) reference at G = 2�
 and the asymptotic omnibus as targeted sub-questions). The prioritized path,
 dependencies and outstanding owner decisions are in
 [the roadmap](ROADMAP.md).
+
+### Governing 2026-09-13 amendment
+
+The [scientific validation master plan](SCIENTIFIC_VALIDATION_MASTER_PLAN.md)
+supersedes conflicting sequencing, acceptance and claim wording in earlier
+sections. Volume `<1%` is a conservative engineering target, not a biologically
+required threshold. SG-6A ratio verification is the calibration condition for
+SG-3 stratification while SG-6B may run in parallel. Viability reference
+segmentation must be independent of the production branch. Statistical methods
+are frozen before implementation and simulation qualification.

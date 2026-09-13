@@ -39,16 +39,17 @@ import numpy as np
 import pandas as pd
 
 from organoid_analysis.microscopy_io import validate_voxel_spacing_xyz
-from organoid_analysis.quantification.features import SURFACE_METADATA_COLUMNS
+from organoid_analysis.quantification.features import SURFACE_METADATA_COLUMNS, TOPOLOGY_COLUMNS
 from organoid_analysis.quantification.labels import (
     bbox_touches_volume_boundary,
     compact_instance_labels,
 )
 
-# 2.2: full surface-domain/provenance contract and shared derived shape fields.
-FEATURE_SCHEMA_VERSION = "2.2"
+# 2.3: explicit filled-void and open-cavity provenance.
+# 2.4: evidence-bearing status for the exact packaged Crofton vector.
+FEATURE_SCHEMA_VERSION = "2.4"
 FEATURE_COLUMNS = [
-    "volume_um3", "surface_area_um2", *SURFACE_METADATA_COLUMNS,
+    "volume_um3", "surface_area_um2", *SURFACE_METADATA_COLUMNS, *TOPOLOGY_COLUMNS,
     "equivalent_disk_um", "equivalent_sphere_diameter_um", "equivalent_diameter_um",
     "axis_ratio_minor_to_major", "prolate_ratio", "oblate_ratio", "surface_to_volume_ratio_um_inv",
     "sphericity", "solidity", "major_axis_um", "minor_axis_um", "least_axis_um", "elongation",
@@ -183,7 +184,7 @@ def extract_mask_features(
                 "volume_um3": volume,
                 "surface_area_um2": surface,
                 **{name: g[name] for name in (
-                    *SURFACE_METADATA_COLUMNS, "equivalent_diameter_um", "axis_ratio_minor_to_major",
+                    *SURFACE_METADATA_COLUMNS, *TOPOLOGY_COLUMNS, "equivalent_diameter_um", "axis_ratio_minor_to_major",
                     "prolate_ratio", "oblate_ratio", "surface_to_volume_ratio_um_inv",
                 )},
                 "equivalent_disk_um": eq_disk,

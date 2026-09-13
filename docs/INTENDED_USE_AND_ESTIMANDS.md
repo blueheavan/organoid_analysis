@@ -81,23 +81,23 @@ WITH LIMITATIONS.
 
 | # | Estimand | Domain (machine-checkable) | Domain (scope assumption) | Reference standard | Record | Status |
 |---|---|---|---|---|---|---|
-| M1 | Total enclosed volume `V_env` of an organoid object, µm³ (§3) | `rho_in ≥ 10`, anisotropy ≤ 4, QC-eligible (not border-truncated, ≥ min Z slices, within volume limits) | solid or enclosed-lumen object; correct voxel spacing (SG-6); correct segmentation (SG-3) | analytical rasterised solids, exact volume | `2026-09-13-analytical-geometry-record` (grid, FAIL unrestricted); `vv_confirm2.csv` (confirmation, in-scope smooth cases ≤ 0.76%) | **SUPPORTED WITH LIMITATIONS** — see §3.5 for exactly what is and is not covered |
+| M1 | Total enclosed volume `V_env` of an organoid object, µm³ (§3) | volume-specific domain not yet frozen; the surface constants must not be borrowed as a volume domain | solid or enclosed-lumen object; correct voxel spacing (SG-6); correct segmentation (SG-3) | analytical rasterised solids, exact volume | existing smooth cases are informative development/confirmation evidence, but no dedicated volume qualification record exists | **NOT QUALIFIED** — `<1%` is a conservative engineering target, not a demonstrated biological requirement |
 | M2 | Segmented material volume `V_seg`, µm³ (§3) | same as M1 | segmentation resolves the inner lumen boundary — **unevidenced** | none | none | **NOT ASSESSED** |
 | M3 | Enclosed void fraction `f_void` (§3) | same as M1 | as M2 | none | none | **NOT ASSESSED** |
 | M4 | Surface area of an organoid object, µm² | `rho_in ≥ 10`, anisotropy ≤ 4 (`surface_in_qualified_domain`) | smooth closed surface, no crease at the voxel scale — **not machine-checkable** | analytical rasterised solids, exact area | `2026-09-12-surface-method-development` (development), `vv_confirm2.csv` (confirmation, in-scope smooth cases ≤ 0.95%) | **SUPPORTED WITH LIMITATIONS**; unrestricted SG-1 is **NOT QUALIFIED** (25.81% worst case on the grid) |
-| M5 | Sphericity, surface-to-volume ratio | `sphericity_in_qualified_domain`, `surface_to_volume_in_qualified_domain` | as M4 | as M4 | as M4 | **SUPPORTED WITH LIMITATIONS** (inherits M1 and M4) |
+| M5 | Sphericity, surface-to-volume ratio | surface numerical-domain flags exist; no volume-specific qualification domain exists | inherits both M1 and M4 assumptions | analytical geometry for both component estimators | surface evidence only; dedicated volume qualification absent | **NOT QUALIFIED** as a combined measurement claim; values remain descriptive |
 | M6 | Equivalent diameter, principal axes, elongation, axis ratios | `rho_in ≥ 10`, QC-eligible | as M1 | analytical solids (exact axes) | grid record | **INSUFFICIENT EVIDENCE** — axis-length accuracy has not been extracted from the record as a criterion-bearing item |
-| M7 | Physical scale of every µm-valued output | none — spacing is read from metadata and never verified against a standard | metadata spacing equals true voxel size | traceable stage micrometer / axial standard | none | **NOT ASSESSED** (SG-6). Binds *every* row above: a scale error is systematic across all objects and is invisible to all checks in this repository |
+| M7 | Physical scale of every µm-valued output | SG-6A checks spacing ratios for domain stratification; absolute spacing is read from metadata and not verified | metadata spacing equals true voxel size | traceable lateral/axial standards and multispectral registration beads | none | **NOT ASSESSED** (SG-6A/SG-6B). SG-6B binds absolute-unit claims; SG-6A binds `rho_in`/anisotropy assignment |
 | M8 | Segmentation correspondence: does the mask boundary coincide with the biological object boundary | none | modality, marker, model checkpoint, preprocessing all fixed to the validated configuration | expert manual annotation on real specimens | none | **INSUFFICIENT EVIDENCE** (SG-3) |
 | N1 | Nuclear volume, axes, intensity summaries, CV of chromatin | `rho_in ≥ 10` etc. for the conditional metrics | nuclear segmentation validity — unevidenced | none | none | **NOT ASSESSED**, exploratory only (§4) |
-| V1 | Per-object marker-signal state (§5) | calibration available for the batch; object QC-eligible for intensity | markers report the intended biology; controls are representative | independent viability assay (§5.4) | none | **INSUFFICIENT EVIDENCE** |
-| V2 | Well-level state fractions (§5.3) | as V1, ≥ 1 classified object | as V1 | as V1 | none | **INSUFFICIENT EVIDENCE** |
-| S1 | Condition-level contrasts (LMM/OLS-clustered, BH-FDR) and the condition-level percentile-bootstrap interval | replicate structure declared in the design table | the replicate hierarchy in the design table matches the experiment | simulation under known truth; independent reanalysis | none | **NOT ASSESSED** (SG-5) |
+| V1 | Per-object marker-signal state (§5) | calibration available for the batch; object QC-eligible for intensity | markers report the intended biology; controls are representative | independent blinded/manual or separately validated dead-stain path (§5.4) | none | analytical state logic exists; biological meaning **NOT ASSESSED** (SG-4B) |
+| V2 | Well-level target fractions (§5.3) | as V1, ≥ 1 classifiable object | as V1 | V1 reference plus an orthogonal well-level assay | none | target denominator frozen; implementation migration and biological validity **NOT ASSESSED** |
+| S1 | Condition-level contrasts and intervals | replicate structure declared in the design table | the replicate hierarchy matches the experiment | branch-specific simulation under known truth; external implementation cross-check where applicable | none | **INSUFFICIENT EVIDENCE** (SG-5); method must be frozen before implementation and qualification |
 
 Three properties of this table are load-bearing and easy to lose:
 
-1. **A declared domain is not a covered range.** M1 and M4 declare
-   `rho_in ≥ 10` with *no upper bound*; the confirmation set covers
+1. **A declared domain is not a covered range.** M4 declares `rho_in ≥ 10`
+   with *no upper bound*; the confirmation set covers
    `rho_in` 10.43–15.05 and anisotropy {1.2, 2.2, 3.5, 4.0}. Above `rho_in` 15.05
    the claim rests on an extrapolation argument recorded in
    `surface_crofton.py:135`, not on measurement. Any report that quotes the
@@ -105,10 +105,10 @@ Three properties of this table are load-bearing and easy to lose:
 2. **The scope-assumption column is where the surface claim actually lives.**
    Inside the machine-checkable gate, the creased analytical classes (box,
    cylinder; n = 49) reach 9.10% area and 3.20% volume error against 0.95% and
-   0.76% for the smooth in-scope classes. The criterion is met because the
-   *scope assumption* excludes them, and no mask-computable crease indicator
-   exists (`crease_indicator_rejected.md`). A user cannot be told the software
-   checked this.
+   0.76% for the smooth in-scope classes. These values are informative evidence
+   from the historical record, not a current qualification: the volume domain
+   was never independently declared, and the record must be regenerated after
+   the current schema and topology changes.
 3. **The evidence covers a discrete set of voxel spacings.** The frozen Crofton
    weight tables exist for 11 z:xy ratios {1, 1.2, 1.5, 2, 2.2, 2.857, 3, 3.125,
    3.5, 4, 5} with equal lateral spacings. Every spacing in both evidence sets is
@@ -193,7 +193,7 @@ rather than assume away.
 | **Necrotic core** | dead material is usually still segmented, so it is neither a void nor distinguishable; `f_void ≈ 0` | `V_env` includes the necrotic core. Distinguishing it requires marker evidence, not geometry. **NOT ASSESSED.** |
 | **Fragmented object** (one biological organoid split into several labels, or several organoids merged into one) | one label is one object, so fragmentation/merging changes the object set, not the estimand | handled by QC (`morphology_flags`: `encloses_other_instance`, `excess_foreground_review_segmentation`) and by SG-3, not by the volume definition |
 
-### 3.4 Required additions before M1 can move above SUPPORTED WITH LIMITATIONS
+### 3.4 Required additions before M1 can be qualified
 
 These are the open items the estimand decision creates. They are design
 requirements, recorded here and carried into the roadmap; none is implemented by
@@ -212,9 +212,8 @@ this document.
    The decision is the owner's and must be made before the volume qualification
    study fixes its case list, because the study's phantom families follow from it.
 3. **Hollow and open-cavity phantoms in the volume study.** The present evidence
-   contains no hollow object of any kind. Until it does, M1's domain carries
-   "solid or enclosed-lumen" as a *scope assumption*, exactly parallel to the
-   smoothness assumption on M4 — and equally unverifiable from a mask.
+   contains no hollow object of any kind. Until a volume-specific domain and
+   confirmation record exist, these cases are characterization only.
 4. **Spacing calibration (M7/SG-6).** `V_env` inherits the full three-axis scale
    error: a 3% error in all three spacings is +9.27% volume, and a lateral-only
    3% error is +6.09%. Derivation in
@@ -335,22 +334,24 @@ as a requirement: no object may be forced into live or dead. `mixed_signal` and
 
 ### 5.3 The aggregate estimand
 
-> **V2.** For an imaging unit (well), `fraction_<state>` is the number of
-> objects in that state divided by the number of **morphology-QC-eligible
-> objects** in that unit (`aggregation.py:19, 28-29`); unit values are then
-> averaged over units within a biological replicate and over replicates within a
-> condition.
+The project-owner decision freezes the target primary aggregate as
 
-The denominator is objects, not cells, not area, not volume. Three consequences
-that must be stated wherever V2 appears. The fraction is **unweighted by object
-size**, so one large and one small organoid count equally. Objects failing
-morphology QC leave the denominator entirely, so `n_excluded` must be reported
-with the fraction (it is exported). And an object that passes morphology QC but
-fails *intensity* QC stays in the denominator as `indeterminate` — so
-`fraction_viable_like` is diluted by measurement failures rather than being
-computed over classifiable objects only, which is why the state breakdown, not
-`fraction_viable_like` alone, is the reportable result. A size-weighted variant is a *different* estimand and would
-need its own definition and validation — it is not a presentation choice.
+`f_viable_like = N_viable_like / N_classifiable`, where
+`N_classifiable = N_viable_like + N_mixed_signal + N_compromised_like`.
+
+`f_indeterminate = N_indeterminate / N_morphology_QC_eligible` is reported
+separately. A predeclared excessive indeterminate rate blocks a biological
+viability claim.
+
+The current implementation predates this decision: `fraction_<state>` divides
+each state by all morphology-QC-eligible objects (`aggregation.py:19, 28-29`).
+Those fields retain their legacy descriptive semantics until a versioned schema
+migration is implemented; they are not the frozen V2 target estimand.
+
+The denominator remains objects, not cells, area or volume. One large and one
+small organoid count equally. Objects failing morphology QC are reported as
+excluded. A size-weighted variant is a different estimand and requires its own
+definition and validation.
 
 ### 5.4 Why V1/V2 are INSUFFICIENT EVIDENCE, not SUPPORTED
 
@@ -375,21 +376,16 @@ Design, for the owner to schedule. Acceptance numbers marked `[OWNER]` are
 placeholders: they must be fixed **before** any data are seen, and they cannot
 be chosen from this repository's existing observations.
 
-**Q1. Do the four states separate on an independent reference?**
-Reference standard: an independent viability readout on the same objects, in
-declared order of preference — (a) a cell-resolved live/dead stain with nuclear
-segmentation on the same objects, giving a per-object fraction of dead nuclei;
-(b) a destructive bulk assay (e.g. ATP) at the *well* level, which validates V2
-only, not V1; (c) a time-course with a known lethal insult as a positive control
-and vehicle as negative, which validates *direction* only. Design: ≥ `[OWNER]`
-biological replicates × ≥ `[OWNER]` wells, spanning a graded insult series so
-that intermediate states are populated rather than only the extremes. The
-biological replicate is the unit of inference. Criterion, predeclared:
-monotone association between the per-object dead-nucleus fraction and the state
-ordering `viable_like < mixed_signal < compromised_like`, with a `[OWNER]`
-minimum separation between the `viable_like` and `compromised_like` groups; and
-for the well-level readout, a `[OWNER]` minimum rank correlation with
-`fraction_viable_like` across the insult series.
+**Q1. Do the four states agree with an independent reference?** The primary
+object-level reference is blinded manual/semi-manual annotation, an independent
+nuclear dead-stain segmentation algorithm, or a separately validated reference
+pipeline. It must not depend on the production segmentation branch. The primary
+metrics are the confusion matrix, quadratically weighted Cohen's kappa,
+macro-F1, and class-specific sensitivity and precision with uncertainty. A 3D
+ATP assay is a secondary well-level reference and cannot validate V1. A graded
+insult series validates monotonicity/dynamic range, not class identity alone.
+Sample size follows a precision calculation at the biological-replicate level;
+no object-count precedent substitutes for independent replication.
 
 **Q2. Are the gates defensible, and how sensitive is the result to them?**
 Report the full two-dimensional `(c, p)` distribution with the gate lines drawn,
@@ -416,6 +412,10 @@ finding (loss of signal, over-fixation, penetration failure) and must not be
 treated as missing data. Criterion: none — this is characterisation. If the
 indeterminate rate exceeds `[OWNER]` in any condition, V2 is not reportable for
 that condition.
+
+Results are stratified by organoid size, imaging depth, radial location, batch,
+staining duration and acquisition settings. Spearman correlation is retained
+only as ordinal-trend characterization.
 
 **Ordering.** Q3 first (cheap, mechanical, no specimens). Q1 and Q2 from the
 same experiment. Q1 cannot be interpreted before segmentation validation (M8) at

@@ -102,6 +102,15 @@ Classical organoid geometry fills enclosed holes; multilevel geometry uses raw l
 
 Volume is log10 transformed; contrasts have effects, SE, t-based CIs and within-feature BH correction. [statsmodels' test API](https://www.statsmodels.org/stable/generated/statsmodels.regression.mixed_linear_model.MixedLMResults.t_test.html) and [multiple-testing API](https://www.statsmodels.org/stable/generated/statsmodels.stats.multitest.multipletests.html) document mechanics. They do not establish that manually using t(G−1) for MixedLM provides calibrated small-sample coverage. LMM omnibus remains asymptotic. Origin `HEURISTIC` for these project choices, basis `CONTEXT_DEPENDENT`, evidence `INSUFFICIENT EVIDENCE` for inferential validity. No type-I-error/CI-coverage simulation, independent study design, or power/precision target is available. No replacement statistical method was selected.
 
+**2026-09-13 governing decision.** The next inferential implementation is
+selected before qualification. The project first freezes one primary LMM
+small-sample method (Satterthwaite or between-within) and the clustered-OLS
+fallback. CR2 is acceptable only through a reliable external implementation or
+local code cross-checked against a published implementation and known cases.
+Engineering verification precedes branch-specific type-I-error and CI-coverage
+simulation. Inferential suitability remains `INSUFFICIENT EVIDENCE` until that
+sequence is complete.
+
 `statistics/exploration.py` retains its normality/variance-driven t/Mann–Whitney selection, object-level splits, RF/logistic/XGBoost and KMeans workflows. Undefined effects, assumption tests and insufficient-sample results now abstain. Learned imputation/scaling occurs within training folds; model selection uses training CV. This follows [scikit-learn's leakage guidance](https://scikit-learn.org/stable/common_pitfalls.html#data-leakage). It does not fix biological-unit leakage from object splits. Cluster ANOVA on the features used to form clusters and cluster-prediction accuracy are circular descriptive diagnostics, not independent phenotype discovery. Shapiro requires [at least three observations](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.shapiro.html); that numerical minimum is not a justified biological sample size.
 
 ## D12. Reader and preview contracts
