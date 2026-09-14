@@ -70,6 +70,13 @@ def main() -> None:
     except Exception:  # torch/Cellpose not importable -> preview-only mode
         accelerator = "unavailable"
     st.caption(f"Compute device: `{accelerator}`. {_summary_line()}")
+    if accelerator == "CPU":
+        st.warning(
+            "3D Cellpose foundation-model inference is running on CPU and can take an "
+            "impractically long time even for a small Z-stack. Use an MPS/CUDA-enabled "
+            "PyTorch environment for routine 3D segmentation; CPU runs are suitable only "
+            "for small engineering smoke tests."
+        )
     with st.expander("Analysis guide and interpretation limits", expanded=False):
         st.markdown(
             "**1. Upload and preview.** Confirm that the Z-stack has the correct orientation, "

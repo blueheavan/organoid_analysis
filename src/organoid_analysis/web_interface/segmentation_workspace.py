@@ -250,6 +250,20 @@ def _read_upload(
 
 def render_preview_tab(config: SegmentationConfig) -> None:
     st.subheader("Upload stacks")
+    with st.expander("Image suitability for 3D measurement", expanded=False):
+        st.markdown(
+            "Use the original quantitative Z-stack, not an RGB screenshot, MIP, or a "
+            "pre-contrast-adjusted display export. The selected nuclei channel must show "
+            "nuclei through the full depth of the object, with no widespread saturation and "
+            "with background and object signal visibly separable. Preserve OME/ImageJ voxel "
+            "spacing metadata, or supply measured Z/Y/X spacing before interpreting µm, µm², "
+            "or µm³ outputs.\n\n"
+            "For membrane/cytoplasm segmentation, acquire the companion channel on the same "
+            "physical grid and register it before upload. Do not infer 3D morphology from a "
+            "single slice or projection. Border-truncated, fragmented, low-SNR, or strongly "
+            "depth-attenuated objects require QC review and may be outside the validated use "
+            "domain. A successful segmentation run is not biological validation."
+        )
     left, right = st.columns(2)
     with left:
         nuclei_upload = st.file_uploader(

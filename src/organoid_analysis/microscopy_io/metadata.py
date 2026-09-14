@@ -275,8 +275,16 @@ def parse_spacing_ome(ome_metadata: str | None, time_index: int | None = None) -
         return Spacing(x, y, z)
 
     from ome_types import from_xml
+    from xsdata.formats.dataclass.parsers.config import ParserConfig
 
-    ome = from_xml(ome_metadata)
+    # Acquisition software may add valid OME annotation references that the
+    # installed ome-types schema does not model. They carry no spacing
+    # semantics, so ignore only unknown properties while retaining strict
+    # parsing of the Pixels fields used below.
+    ome = from_xml(
+        ome_metadata,
+        parser_kwargs={"config": ParserConfig(fail_on_unknown_properties=False)},
+    )
     if not ome.images:
         return Spacing(x, y, z)
 

@@ -26,6 +26,15 @@ def plane_xml(positions, unit='µm', size_z='2'):
     )
 
 
+def test_ome_annotation_reference_does_not_block_spacing_parse():
+    xml = plane_xml([0, 2, 4]).replace(
+        '</Image></OME>',
+        '<AnnotationRef ID="Annotation:0"/></Image></OME>',
+    )
+    spacing = parse_spacing_ome(xml)
+    assert (spacing.z, spacing.y, spacing.x) == pytest.approx((2, 1, 1))
+
+
 @pytest.mark.parametrize('unit,value', [('nm', 2000), ('mm', .002), ('um', 2), ('micron', 2)])
 def test_imagej_z_units_are_converted(unit, value):
     assert parse_spacing_imagej({'spacing': value, 'unit': unit}).z == pytest.approx(2, rel=1e-12)
