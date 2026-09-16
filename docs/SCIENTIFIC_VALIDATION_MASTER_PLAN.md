@@ -147,6 +147,19 @@ Sample size targets bias, upper quantile, failure rate and inter-rater
 variability. The biological sample/experiment is independent; objects describe
 within-sample distributions and do not inflate biological replication.
 
+**Recorded (D-5/D-6, 2026-09-16).** δ, the acceptance criteria C1–C6 and the
+precision-derived N are predeclared in
+`evidence/2026-09-11-measurement-vv/SEGMENTATION_VALIDATION_PROTOCOL.md` §5:
+δ = 0.20 relative for volume and area and 0.10 for diameter, sphericity and
+principal-axis length; per-case upper-quantile bias criteria; a detection
+criterion on the lower confidence bound of recall and precision; and ≥ 47
+biological samples per stratum, ≥ 20 per compared condition. **The inherited
+`1% / 5%` pair is not SG-3's criterion** — it governs SG-1a/SG-2a, which qualify
+the estimator on analytical cases. SG-3's load-bearing criterion is
+**differential**: the 95% CI of the difference in median relative bias between
+any two compared conditions must exclude ±2.5%, because a bias common to all
+objects cancels in a ratio while a bias that differs between arms does not.
+
 ## 9. SG-4 viability estimand and reference
 
 Object outputs remain `viable_like`, `mixed_signal`, `compromised_like` and
@@ -162,8 +175,13 @@ and
 
 where `N_classifiable` is viable-like + mixed-signal + compromised-like. An
 excessive predeclared indeterminate fraction blocks a biological claim. The
-current implementation uses all morphology-QC-eligible objects as the
-denominator and therefore retains explicit legacy semantics until migrated.
+implementation matches this estimand as of the 2026-09-13 schema migration: the
+three classifiable-state fractions divide by `N_classifiable`,
+`fraction_indeterminate` divides by `N_morphology_QC_eligible`, and that
+denominator is exported as `fraction_indeterminate_denominator`
+(`statistics/aggregation.py:19, 28-31`; contract test
+`tests/phenotyping/test_viability_summary.py:125`). The biological claim still
+requires the independent object-level reference below (owner decision D-8).
 
 The primary object reference is an independent blinded manual, semi-manual, or
 separately validated nuclear dead-stain measurement path. It cannot depend on
@@ -176,16 +194,49 @@ kappa, macro-F1, and class-specific sensitivity and precision with intervals.
 Spearman correlation is trend characterization only. Stratify by organoid size,
 imaging depth, radial location, batch, staining duration and acquisition.
 
+**Recorded (D-7, 2026-09-16).** Per-class sensitivity and precision must reach a
+**lower 95% CI bound of 0.80**, and macro-F1 a lower 95% bound of 0.80;
+**quadratic-weighted kappa and Spearman are reported but do not gate**, because
+kappa behaves incoherently under class imbalance and a worse classifier can score
+higher. A class with prevalence below 5% is reported `not evaluable`, not FAIL.
+The indeterminate ceiling is **`f_indeterminate ≤ 0.20` per condition together
+with a between-condition difference no larger than 5 percentage points on its
+upper 95% bound**; above either, V2 is not reportable for that condition. The
+differential half is load-bearing: `f_viable_like` divides by `N_classifiable`,
+so an indeterminate rate that differs between arms biases the contrast even when
+both arms are under the ceiling.
+
+**Recorded (D-8, 2026-09-16).** The primary object-level reference is **blinded
+human classification of the same objects**, on a predeclared stratified
+subsample, by two annotators, with the reference's own disagreement reported.
+The ATP assay remains the secondary well-level reference and R-13 stays out of
+scope. The annotation set is the same asset SG-3 requires, so the two studies
+share one campaign, and the claim V1 licenses is bounded by the reference's own
+accuracy.
+
 ## 10. SG-5 statistical inference
 
 Sequence: method freeze → implementation → engineering verification →
 simulation qualification. Do not qualify the shipped branch and then replace
 it.
 
-Select the primary LMM small-sample method between Satterthwaite and
-between-within degrees of freedom. A CR2 fallback needs a reliable external
-implementation or local code verified against a published implementation,
-known cases and simulation.
+**Recorded (D-9, 2026-09-16).** Satterthwaite degrees of freedom for the primary
+fixed-effect contrasts. **Between-within is used only for the omnibus test**,
+which is reported with a between-within df check and an explicit
+anti-conservative-at-`G < 10` statement. Kenward–Roger remains a sensitivity
+analysis where a verified implementation exists. The primary claim is a
+per-contrast claim, and Satterthwaite is a per-contrast approximation whereas
+between-within is an omnibus df defined for a balanced nested design.
+
+**Recorded (D-11, 2026-09-16).** The CR2 fallback is **implemented locally and
+verified against a published implementation**: golden values from `clubSandwich`
+with its version recorded, analytic cases where CR2 must equal CR0, the published
+cases and degrees-of-freedom values of Pustejovsky & Tipton (2016), and then the
+D-10 simulation run on the frozen implementation only. "Accept a reliable
+external implementation" is not available in the pinned environment —
+`statsmodels` 0.14.6 provides CR0-style `cov_type="cluster"` and no bias-reduced
+linearization — so the choice is between unverified and verified local code, and
+only the latter can carry a coverage claim.
 
 Evaluate LMM and fallback branches separately over ICC, replicate count,
 object-count imbalance and balanced/unbalanced designs:
@@ -200,20 +251,37 @@ Choose CI methods only from demonstrated coverage. Candidates are percentile,
 BCa, bootstrap-t and replicate-level t intervals. Cells missing the frozen
 coverage tolerance are descriptive only.
 
+**Recorded (D-10, 2026-09-16).** The frozen tolerance is **1 percentage point
+from nominal, against a simulation MCSE of at most 0.33 pp**, which fixes
+`n_sim = 5 000` per cell: `MCSE = sqrt(0.95 × 0.05 / 5 000) = 0.31` pp, so the
+tolerance is more than three Monte-Carlo standard errors wide and is a statement
+about the method rather than about the simulation. Type-I error at nominal 0.05
+must lie in [0.04, 0.06]. An interval may be reported only for cells that pass
+T2 coverage; the shipped floor of 3 replicates (`statistics/aggregation.py:15`)
+is retained as the computation floor but is **provisional**, so any interval
+reported at 2–3 replicates is labelled `provisional — coverage unqualified` and
+carries no claim. The study may raise the reportable floor; it may not lower it.
+
 ## 11. Dependencies
 
 ```text
 Volume V&V -----------------------------------+
                                                |
 SG-6A spacing-ratio check --> SG-3 ------------+--> real-object morphology
-                                |              |
-SG-6B absolute calibration --------------------+
-                                |
-                                +--> SG-4 biological viability
+                                               |     (relative comparison)
+SG-6B absolute calibration --------------------+--> absolute physical units
+                                               |
+                                               +--> SG-4 biological viability
 
 Statistics method freeze --> implementation --> simulation qualification
                                                 --> study-level inference
 ```
+
+SG-6A is the only calibration dependency of SG-3: the SG-3 downstream-bias
+metric is a same-grid ratio, so absolute scale cancels exactly for volume and to
+0.007 pp for area even at a 20% axial error (E-6 in
+`evidence/2026-09-13-volume-audit/ERRATA.md`). SG-6B governs absolute-unit
+claims and runs in parallel; it is not on the SG-3 critical path.
 
 SG-3 annotation preparation starts without waiting for SG-6B. Volume V&V,
 annotation design/training/sample-size planning, calibration work and
@@ -230,6 +298,16 @@ input's domain membership and uncovered errors. Missing answers retain
 ## 13. References
 
 These sources justify candidate methods, not project-specific thresholds.
+
+Traceability: the entries below are this repository's reference set, each with a
+DOI or stable URL. They are cited as *candidate-method anchors*; none supplies a
+threshold (see items 1–8). Full-text-reviewed versus abstract-only status is
+**not recorded** for these entries and must not be assumed: where a future study
+relies on a specific published figure, that study's design record must state the
+access depth next to the citation. The externally supplied solutions report
+reviewed in `docs/reviews/2026-09-13-solution-report-review.md` carried more
+than forty unresolved bracketed citations (review defect B1); it is **not** filed
+as an evidence document in this repository, and no claim here depends on it.
 
 1. Warfield SK, Zou KH, Wells WM. STAPLE. *IEEE TMI*. 2004;23:903-921.
    https://doi.org/10.1109/TMI.2004.828354

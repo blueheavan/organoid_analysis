@@ -13,3 +13,9 @@ data/images/*
 # Local, ephemeral git worktree checkouts created by the coding-agent harness
 # (not project configuration -- .claude/launch.json etc. remain tracked).
 .claude/worktrees/
+
+# Local agent scratch (subagent traces, tool output, undo snapshots). It is not
+# project configuration, and as an untracked path it would keep the working tree
+# dirty -- which in turn would block the whole-tree-clean `canonical` record class
+# that the scientific gate needs in order to grant PASS.
+.wisp/

@@ -85,17 +85,49 @@ def load_module_copy(path: Path) -> ModuleType:
 # ------------------------------------------------------------------ baseline
 def test_current_record_is_rejected_after_source_contract_changes(evidence_copy):
     root, relpath = evidence_copy
+    # Make the change here rather than inheriting it from the repository's tree:
+    # asserting rejection of an untouched copy would test today's tree state, not
+    # the mechanism this name claims.
+    with (root / FEATURES).open("a", encoding="utf-8") as handle:
+        handle.write("\n# edit\n")
     report = problems(root, relpath)
     assert report
     assert any("changed after the validation run" in problem for problem in report)
 
 
-def test_repository_record_rejects_stale_source_with_git_provenance():
+def test_scope_verdict_names_exactly_the_differing_files(evidence_copy):
+    """The scope verdict must name exactly the dependency-scope files whose content
+    differs from the record, and none when the tree matches.
+
+    The live repository currently matches its record, so the naming branch is
+    exercised on a tampered copy inside this test. It is deliberately NOT asserted
+    that the repository is stale: that is a transient property of the working tree
+    and was exactly what made the previous version of this test fail once the
+    record was regenerated.
+    """
+    # Branch 1 (naming): a tampered copy must be rejected, by name.
+    root, relpath = evidence_copy
+    tampered = contract.DEPENDENCY_SCOPE[0].path
+    with (root / tampered).open("a", encoding="utf-8") as handle:
+        handle.write("\n# edit\n")
+    named = [p for p in problems(root, relpath) if "changed after the validation run" in p]
+    assert len(named) == 1
+    assert tampered in named[0]
+
+    # Branch 2 (live): the same invariant against the repository's own record.
     if not (PROJECT_ROOT / ".git").exists():
         pytest.skip("Git provenance needs a Git checkout")
-    report = contract.verify_record(PROJECT_ROOT)
-    assert report.problems
-    assert any("changed after the validation run" in problem for problem in report.problems)
+    manifest = load_manifest(PROJECT_ROOT / contract.current_manifest_relpath(PROJECT_ROOT))
+    recorded = {entry["path"]: entry["sha256"] for entry in manifest["dependency_scope"]["files"]}
+    differing = sorted(path for path, digest in recorded.items()
+                       if sha256_file(PROJECT_ROOT / path) != digest)
+    stale = [problem for problem in contract.verify_record(PROJECT_ROOT).problems
+             if problem.startswith("dependency scope:") and "changed after the validation run" in problem]
+    assert len(stale) == len(differing)
+    for path in differing:
+        assert any(path in problem for problem in stale)
+    # Non-vacuous in either state: a clean tree names nothing, a stale tree must name.
+    assert (differing == []) == (stale == [])
 
 
 # ------------------------------------------------- 1, 2, 9: production code

@@ -184,6 +184,28 @@ If C or D is chosen, the implementing change must land as a single commit that
 adversarial tests of §4.3, and (c) quotes this decision record. A change to gate
 semantics without that reference is out of process.
 
+**Recorded — D-14, 2026-09-16.** The Option-C domain-restricted record contract
+is **authorised**, with its interface fixed so that implementation is
+mechanical:
+
+1. the manifest gains `record_class ∈ {canonical, scope-clean}` and a per-item
+   `results` map keyed by gate item id (`SG-1a`, `SG-1b`, `SG-2a`, `SG-2b`)
+   carrying `status`, `domain` and the confirmation-evidence hashes;
+2. `SG-1a` and `SG-2a` may report PASS only against domain-restricted
+   confirmation evidence, with the domain constants (`rho_in ≥ 10`,
+   anisotropy ≤ 4, the confirmation seed and artifact hashes) hash-bound into
+   the record;
+3. `SG-1b` and `SG-2b` carry the unrestricted characterization with
+   `counts_toward_gate = false`, so scope-restriction and scope-behaviour are
+   both visible and neither is inferable only from the other's absence;
+4. the change lands as one commit satisfying the paragraph above.
+
+The authorisation moves no gate status: until that commit lands the gate keeps
+its legacy fail-closed behaviour. It is also not executable on its own, because
+`VV_TOOLING` hash-binds `analytical_geometry_evidence.py`, so editing the
+contract invalidates the current analytical-geometry record until a new one is
+generated against a clean committed tree — which requires commit authority.
+
 ---
 
 ## 7. Specification of Option C — 2026-09-13

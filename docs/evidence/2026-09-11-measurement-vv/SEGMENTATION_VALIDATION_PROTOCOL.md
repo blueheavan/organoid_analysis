@@ -82,24 +82,62 @@ are not dropped silently.
 
 Dice alone never supports a claim that morphology measurements are validated.
 
-## 5. Acceptance framework (numbers set by the project owner before data are seen)
+## 5. Acceptance framework — recorded 2026-09-16 (D-5)
 
-For each claimed readout, predeclare:
-- the smallest biologically relevant effect δ;
-- the acceptance rule, for example an upper 95% CI bound on |bias| below δ/2
-  and limits of agreement within ±δ;
-- detection criteria on the lower CI bound of recall and of precision;
-- the minimum evaluable N at the sample level, derived from the required CI
-  half-width with a design effect for clustering.
+**Recorded** in `docs/OWNER_DECISIONS.md` D-5, derived in
+`docs/LITERATURE_BASIS_FOR_DECISIONS.md` §8, **before any annotation data were
+seen**. No criterion below is derived from this repository's observations, and
+none is a study result.
 
-**Illustrative only, not a criterion:** estimating recall of about 0.9 to ±0.05
-needs about 140 objects without clustering. With intra-sample correlation, the
-required count rises by the design effect 1 + (m − 1)·ICC.
+Smallest biologically relevant effect δ, predeclared as a convention (the
+smallest between-condition change this project treats as actionable), set
+conservatively because within-culture organoid heterogeneity is the operative
+limit on resolution:
+
+| readout | δ |
+|---|---|
+| `V_env`, `V_seg` (volume) | 0.20 relative |
+| surface area | 0.20 relative |
+| equivalent diameter | 0.10 relative |
+| sphericity | 0.10 relative |
+| principal-axis length | 0.10 relative |
+
+Acceptance, applied per matched object with uncertainty at the biological-sample
+level (cluster bootstrap over samples, per §3):
+
+| ID | criterion |
+|---|---|
+| **C1** | lower 95% CI bound on recall ≥ 0.90 **and** on precision ≥ 0.90, per stratum carrying the claim |
+| **C2** | upper one-sided 95% bound on the **median** absolute relative bias < δ/4 (5% for volume, 5% for area) |
+| **C3** | upper one-sided 95% bound on the **95th percentile** of absolute relative bias < δ/2 (10%) |
+| **C4** | upper 95% bound on the rate of catastrophic error (absolute relative bias > 0.5) < 0.02 |
+| **C5** | bias and limits of agreement are reported with intervals, never as point estimates; the 95th-percentile bound of C3 *is* the agreement criterion |
+| **C6** | **differential:** for any two compared conditions, the 95% CI of the difference in median relative bias must exclude ±δ/8 (2.5%), for volume and for surface area |
+
+C6 is the criterion that protects the intended use and no absolute per-case
+threshold replaces it: a bias common to every object cancels in a ratio, while a
+bias that differs between arms does not. C1–C5 and C6 are SG-3's own terms and
+are **not** the estimator's `1% / 5%` pair, which governs SG-1a/SG-2a
+(`SCIENTIFIC_VALIDATION_MASTER_PLAN.md` §8; D-6).
+
+**Minimum evaluable N**, derived from C1's precision and not from precedent
+object counts:
+
+- a lower bound of 0.90 to ±0.05 needs about 140 objects before clustering;
+- with a predeclared design effect `1 + (m − 1)·ICC = 1 + 19 × 0.30 = 6.7` at
+  `m = 20` objects per biological sample, about **940 objects**, i.e. **≥ 47
+  biological samples per stratum**;
+- at the level of the contrast, **≥ 20 biological samples per compared
+  condition**, at which C6 is resolvable to ±2.5% for an assumed between-sample
+  SD of 0.05.
 
 If N at the independent level cannot reach the predeclared precision, the
-outcome is INSUFFICIENT EVIDENCE, not PASS on a point estimate. No numeric
-criterion is invented here, because the effect sizes depend on the study
-question.
+outcome is `INSUFFICIENT EVIDENCE`, not PASS on a point estimate. If the
+achieved CI is wider than the criterion width, the same applies.
+
+**Reference ceiling.** C1–C6 may not demand agreement better than the annotators
+achieve with each other: if inter-rater disagreement exceeds C2 or C3 for a
+readout, the outcome for that readout is `INSUFFICIENT EVIDENCE`, not FAIL.
 
 ## 6. Reporting
 

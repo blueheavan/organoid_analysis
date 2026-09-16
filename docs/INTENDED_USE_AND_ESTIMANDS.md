@@ -107,8 +107,11 @@ Three properties of this table are load-bearing and easy to lose:
    cylinder; n = 49) reach 9.10% area and 3.20% volume error against 0.95% and
    0.76% for the smooth in-scope classes. These values are informative evidence
    from the historical record, not a current qualification: the volume domain
-   was never independently declared, and the record must be regenerated after
-   the current schema and topology changes.
+   was never independently declared, and the unrestricted record is
+   characterization only — it was regenerated 2026-09-16
+   (`docs/evidence/2026-09-16-analytical-geometry-record/`) to restore the binding
+   between record and source, which changes no number, and domain-restricted
+   qualification still awaits the D-14 record contract.
 3. **The evidence covers a discrete set of voxel spacings.** The frozen Crofton
    weight tables exist for 11 z:xy ratios {1, 1.2, 1.5, 2, 2.2, 2.857, 3, 3.125,
    3.5, 4, 5} with equal lateral spacings. Every spacing in both evidence sets is
@@ -189,7 +192,7 @@ rather than assume away.
 |---|---|---|
 | **Solid organoid** | segmented volume; `f_void ≈ 0` | covered by M1 within its domain |
 | **Enclosed lumen** (single or multiple, fully interior) | lumen included; `f_void > 0` | the intended behaviour, and the reason for the decision in §3.1 |
-| **Cystic / lumen open to the exterior** (a cup, or a lumen breached by the crop or by a segmentation gap) | the void is connected to the border, so it is **not** filled, and `V_env` collapses to `V_seg` | **defect risk, unresolved.** The measured quantity changes discontinuously with topology. The same organoid can move between the two behaviours between time points, or through a Z-truncation, producing an apparent volume change of the lumen's whole size with no biological change. |
+| **Cystic / lumen open to the exterior** (a cup, or a lumen breached by the crop or by a segmentation gap) | the void is connected to the border, so it is **not** filled, and `V_env` collapses to `V_seg` | **resolved by D-1 (2026-09-16).** The estimand is defined per topology and no object is excluded: `V_env` stays primary, the object carries the flag `open_cavity`, and its `f_void` is reported as `0 (by construction)` — never as a lumen measurement. `open_cavity` is a declared stratum, and every result is reported with and without it. |
 | **Necrotic core** | dead material is usually still segmented, so it is neither a void nor distinguishable; `f_void ≈ 0` | `V_env` includes the necrotic core. Distinguishing it requires marker evidence, not geometry. **NOT ASSESSED.** |
 | **Fragmented object** (one biological organoid split into several labels, or several organoids merged into one) | one label is one object, so fragmentation/merging changes the object set, not the estimand | handled by QC (`morphology_flags`: `encloses_other_instance`, `excess_foreground_review_segmentation`) and by SG-3, not by the volume definition |
 
@@ -343,10 +346,18 @@ The project-owner decision freezes the target primary aggregate as
 separately. A predeclared excessive indeterminate rate blocks a biological
 viability claim.
 
-The current implementation predates this decision: `fraction_<state>` divides
-each state by all morphology-QC-eligible objects (`aggregation.py:19, 28-29`).
-Those fields retain their legacy descriptive semantics until a versioned schema
-migration is implemented; they are not the frozen V2 target estimand.
+The implementation now matches this decision (schema migration applied
+2026-09-13, `VALIDATION_UPDATE_2026-09-13.md`): `fraction_<state>` for the three
+classifiable states divides by `N_classifiable`, and `fraction_indeterminate`
+divides by `N_morphology_QC_eligible` with the denominator exported as
+`fraction_indeterminate_denominator`
+(`src/organoid_analysis/statistics/aggregation.py:19, 28-31`); the contract test
+is `tests/phenotyping/test_viability_summary.py:125`. The earlier text in this
+section (legacy semantics pending migration) is superseded by the code and is
+retained only as history. **This migration changes the analysable fraction, not
+the biological claim**: V1/V2 remain `INSUFFICIENT EVIDENCE` because no
+independent object-level reference has been applied (D-8), not because of the
+denominator.
 
 The denominator remains objects, not cells, area or volume. One large and one
 small organoid count equally. Objects failing morphology QC are reported as
@@ -372,9 +383,11 @@ There is no validation record. Specifically missing:
 
 ### 5.5 The validation study (Task 9)
 
-Design, for the owner to schedule. Acceptance numbers marked `[OWNER]` are
-placeholders: they must be fixed **before** any data are seen, and they cannot
-be chosen from this repository's existing observations.
+Design, for the owner to schedule. The acceptance numbers were **recorded
+2026-09-16** (D-7 and D-8 in `docs/OWNER_DECISIONS.md`; derivation in
+`docs/LITERATURE_BASIS_FOR_DECISIONS.md` §8) — fixed before any data were seen,
+and not chosen from this repository's existing observations. Nothing in this
+section is a study result, and nothing here changes a gate status.
 
 **Q1. Do the four states agree with an independent reference?** The primary
 object-level reference is blinded manual/semi-manual annotation, an independent
@@ -386,6 +399,33 @@ ATP assay is a secondary well-level reference and cannot validate V1. A graded
 insult series validates monotonicity/dynamic range, not class identity alone.
 Sample size follows a precision calculation at the biological-replicate level;
 no object-count precedent substitutes for independent replication.
+
+The circularity to avoid explicitly: the pipeline's *own* nuclear segmentation
+is R-13, which is `NOT ASSESSED` and exploratory-only, and it is out of scope
+for this study. A "nuclear dead-stain segmentation" reference therefore does not
+qualify merely by using a dead-stain chemistry — the **measurement path** must
+be independent of the production branch (a blinded human count on a subsample,
+or a second tool) or R-13 must be brought into scope for the modality used.
+Choosing among these is owner decision D-8 in `docs/OWNER_DECISIONS.md`; until
+it is made, V1 is not interpretable and any per-object viability claim stays
+`INSUFFICIENT EVIDENCE`. Rank correlation is retained only as ordinal-trend
+characterization for the well-level comparison; it is not a per-object
+classification metric (see `docs/reviews/2026-09-13-solution-report-review.md`
+M2 and the metric module `validation/agreement_metrics.py`).
+
+**Recorded — D-8, 2026-09-16.** The **first** exit is adopted: the primary
+object-level reference is a blinded human classification of the same objects, on
+a predeclared stratified subsample, by two annotators, with the reference's own
+disagreement reported. The ATP assay remains the secondary well-level reference
+and R-13 stays out of scope. Exit (2) would re-qualify the production nuclear
+branch that V1 already depends on, which is the circularity being removed; exit
+(3) would leave the per-object states permanently `INSUFFICIENT EVIDENCE`. Two
+consequences are recorded with the decision rather than discovered afterwards:
+the annotation set is the same asset SG-3 requires, so the two studies share one
+annotation campaign; and the claim V1 licenses becomes *agreement with blinded
+human classification of calcein/PI signal*, bounded by the reference's own
+accuracy, with marker specificity established separately by the graded-insult
+series.
 
 **Q2. Are the gates defensible, and how sensitive is the result to them?**
 Report the full two-dimensional `(c, p)` distribution with the gate lines drawn,
@@ -409,9 +449,13 @@ be reported as such and never as biological validation.
 Report the rate of `indeterminate` and `mixed_signal` per condition with the
 reason breakdown. A high `both_markers_low` rate in a condition is itself a
 finding (loss of signal, over-fixation, penetration failure) and must not be
-treated as missing data. Criterion: none — this is characterisation. If the
-indeterminate rate exceeds `[OWNER]` in any condition, V2 is not reportable for
-that condition.
+treated as missing data. **Recorded — D-7, 2026-09-16:** the ceiling is
+`f_indeterminate ≤ 0.20` per condition, **and** the between-condition difference
+in `f_indeterminate` must not exceed 5 percentage points on its upper 95% bound.
+Above either, V2 is not reportable for that condition. The differential half is
+the load-bearing one: `f_viable_like` divides by `N_classifiable`, so an
+indeterminate rate that differs between arms biases the contrast even when both
+arms are under the ceiling.
 
 Results are stratified by organoid size, imaging depth, radial location, batch,
 staining duration and acquisition settings. Spearman correlation is retained

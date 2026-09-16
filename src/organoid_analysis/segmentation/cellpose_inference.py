@@ -170,6 +170,12 @@ def normalize_preview(image: np.ndarray) -> np.ndarray:
 
 
 def get_accelerator() -> str:
+    # Torch is imported lazily, and only after this module's top-level numpy
+    # import. On macOS this pixi environment links both PyTorch's bundled
+    # libomp and the conda-forge OpenMP runtime; importing torch before the
+    # scientific stack initialises the second runtime first and aborts with
+    # OpenMP error #15 (exit 134). Do not hoist this import above numpy, and
+    # do not reintroduce the unsafe KMP_DUPLICATE_LIB_OK workaround.
     import torch
 
     return detect_torch_acceleration(torch)[0]

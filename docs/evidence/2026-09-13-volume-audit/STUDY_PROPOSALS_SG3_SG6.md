@@ -269,12 +269,45 @@ result means: because `rho_in` is invariant to isotropic scale error (§2.1.1),
 domain membership is a T1-type question about the z:xy ratio's stability, while
 absolute size is a T2 question.
 
+**Recorded — D-12, 2026-09-16.** The `0.25%` per-axis figure is confirmed as the
+**total** calibration contribution to the volume error (`e_x + e_y + e_z ≤
+0.76%`) and is **split, not reused**. Splitting by axis and by tier, each tier
+gated on the upper 95% confidence bound:
+
+| tier | quantity | lateral (x, y) | axial (z) |
+|---|---|---|---|
+| **T1 stability** | between-session and field-position scale variation | ≤ 0.10% | ratio stability ≤ 0.25% |
+| **T2 accuracy** | deviation from a traceable standard | ≤ 0.15% | **not qualified**; reported as a stated systematic uncertainty ±X% |
+| combined per axis | quadrature sum | `sqrt(0.10² + 0.15²) ≈ 0.18%` | stability only |
+| **T3 transferability** | cross-instrument / long-gap bias | ≤ 0.8% per axis | reported, not gated |
+
+Lateral and axial are separated because the axial term is dominated by
+sample-induced refractive-index-mismatch aberration, whose correction is a
+property of the configuration rather than of the instrument. T1 lateral is
+0.10% rather than 0.15% because stability is the term that does **not** cancel
+across arms and therefore deserves the larger share of the quadrature budget.
+T2 axial is refused rather than loosened: the claim "this organoid's volume is
+X µm³ to within 1%" is not made, and absolute axial units are reported with the
+measured systematic term stated alongside. T3's 0.8% is derived from the
+contrast budget δ/8 = 2.5%. The ratio-stability requirement of 0.25% has
+sixteenfold margin against the smallest relative gap in the eleven predeclared
+z:xy strata (4.17%, between 3 and 3.125).
+
 ### 2.4 What this study cannot do
 
 - It cannot qualify specimens, only instrument configurations. Drift after the
   qualification date is uncontrolled unless the study is repeated; the record
   should therefore state a re-qualification interval, which is an owner
-  decision.
+  decision. **Recorded — D-13, 2026-09-16:** the initial interval is **6 months**
+  from the qualification date, extending to 12 months if the first interval shows
+  drift within T1, with the observed drift governing the next interval.
+  Re-verification of T1 is forced before any further physical-unit claim by a
+  change of objective, immersion or mounting medium, Z step, camera, filter cube
+  or acquisition software version, by an instrument move, or by a monitoring
+  point outside the control limits. Ongoing monitoring images a standard specimen
+  at a predeclared frequency against the qualified T1 value with ±2·`e_stab`
+  limits; its purpose is to detect drift *between* formal re-qualifications, not
+  to replace them.
 - It cannot detect a specimen-induced axial distortion (mounting medium,
   clearing, depth-dependent aberration) beyond what the standard imaged in the
   same medium captures.

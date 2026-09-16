@@ -173,6 +173,39 @@ by the claim each licenses.
 
 ---
 
+## E-6 — the SG-6B → real-object-morphology dependency was overstated
+
+**Claimed** (`ROADMAP.md` §5 and `SCIENTIFIC_VALIDATION_MASTER_PLAN.md` §11
+dependency diagrams):
+
+> `SG-6B absolute calibration ---> real-object morphology`
+> `SG-3 --> real-object morphology`, with SG-6 as a general upstream dependency
+
+**Wrong because** the SG-3 downstream-bias metric is a *ratio of two masks
+measured on the same voxel grid*. With `V = s_z s_y s_x N`, the relative
+discrepancy `(V_prod − V_ref) / V_ref = (N_prod − N_ref) / N_ref` is exactly
+independent of the spacings — for any diagonal spacing error, isotropic or not
+— because the spacing product is a common factor of numerator and denominator.
+Measured on two concentric spheres standing in for production and reference
+(`docs/reviews/spacing_invariance_check.py`): the volume discrepancy is
+bit-identical across no error, +3% common, ×2 common, +3% axial-only and +20%
+axial-only; the area discrepancy moves by 0.007 percentage points even at a 20%
+axial error. Absolute scale therefore does not contaminate SG-3's bias metric.
+What `rho_in` and the anisotropy flag respond to is the z:xy *ratio*, so the
+real dependency is `SG-6A ratio -> SG-3`, and only through stratum assignment
+and the domain flag. `SG-6B` (absolute calibration and registration) governs
+*absolute* µm, µm² and µm³ claims — it must be evidenced before physical-unit
+reporting, but it is not on the SG-3 critical path.
+
+**Corrected in** `ROADMAP.md` §5 and `SCIENTIFIC_VALIDATION_MASTER_PLAN.md`
+§11, whose diagrams now show `SG-6A -> SG-3` for stratification and route
+`SG-6B` to absolute-unit claims only. `ROADMAP.md` Track B already stated
+"Final domain stratification requires SG-6A, not SG-6B"; the diagrams now agree
+with it. This is a documentation correction only: SG-3A/SG-3B remain
+`INSUFFICIENT EVIDENCE`, SG-6A/6B unchanged, and no threshold moved.
+
+---
+
 ## Consistency items checked and found already correct
 
 Recorded so the review is not repeated:

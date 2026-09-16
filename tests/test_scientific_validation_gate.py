@@ -41,15 +41,21 @@ def test_gate_exits_nonzero_while_scientific_items_lack_pass_evidence():
 def test_current_analytical_evidence_is_accepted_and_backs_the_items():
     gate = _load_gate()
     items = gate.evaluate()
+    # The record the pointer names verifies, so the estimator's unrestricted
+    # characterization is readable from it. Qualification is still out of reach:
+    # SG-1a/SG-2a have no domain-restricted qualification record to cite, so they
+    # stay non-PASS, while the characterization items are backed by the record and
+    # never count toward the gate.
     for item_id in ("SG-1a", "SG-2a"):
         item = _item(items, item_id)
-        assert item.status == "FAIL"
-        assert item.basis.startswith("EVIDENCE REJECTED")
+        assert item.status == "INSUFFICIENT EVIDENCE"
         assert item.record is None
+        assert item.counts_toward_gate
     for item_id in ("SG-1b", "SG-2b"):
         item = _item(items, item_id)
         assert item.status == "NOT APPLICABLE"
-        assert item.record is None
+        assert item.record is not None
+        assert not item.counts_toward_gate
 
 
 def test_tampered_evidence_turns_the_analytical_items_into_rejections(evidence_copy):

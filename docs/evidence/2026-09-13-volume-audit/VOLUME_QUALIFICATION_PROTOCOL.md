@@ -229,17 +229,28 @@ for it.
 
 ## 5. Decisions required from the project owner
 
-1. **Is the volume domain the same domain as the surface domain?** §2.2 shows
-   smooth in-scope cases meet 1% while creased in-gate cases do not, so the
-   scope clause carries volume as well as area. If volume is to be reported for
-   creased objects at any resolution, a new development study is needed before
-   any confirmation set is built.
-2. **Analytical qualification now, or only alongside SG-3?** Step 3's phantom
-   extension is the bulk of the work and needs no imaging data.
-3. **Is the 1% criterion the biological requirement, or inherited?** A criterion
-   stricter than needed will fail a scientifically adequate domain — but it may
-   only be loosened **before** the confirmation set is measured, with the
-   biological justification recorded.
+**Recorded 2026-09-16** (register `docs/OWNER_DECISIONS.md`, basis
+`docs/LITERATURE_BASIS_FOR_DECISIONS.md` §8). The three questions below are
+answered; the questions are kept so the answers can be checked against what was
+asked.
+
+1. **Is the volume domain the same domain as the surface domain?** — **Yes, plus
+   the open-cavity stratum (D-2).** §2.2 shows smooth in-scope cases meet 1%
+   while creased in-gate cases do not, so the scope clause carries volume as well
+   as area. A looser creased volume domain is not adopted and would require its
+   own development and confirmation set before it could be. Open cavities are
+   handled by **D-1**: the estimand is defined per topology, no object is
+   excluded, and `open_cavity` is a declared stratum reported with and without.
+2. **Analytical qualification now, or only alongside SG-3?** — **Now (D-3).**
+   Step 3's phantom extension is the bulk of the work, needs no imaging data,
+   and is a precondition for SG-3's downstream-bias analysis rather than a
+   neighbour of it.
+3. **Is the 1% criterion the biological requirement, or inherited?** —
+   **Inherited engineering target, retained unchanged (D-4).** It is not
+   loosened, because no biological requirement looser than 1% has been derived
+   and the intended use does not require absolute single-object accuracy; and it
+   is explicitly **not** SG-3's criterion, which is governed by D-5/D-6 on its
+   own terms.
 
 ---
 

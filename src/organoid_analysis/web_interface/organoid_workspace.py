@@ -14,15 +14,9 @@ Run:
 
 from __future__ import annotations
 
-import os
-
-# torch can abort at import if two OpenMP runtimes are linked; allow it so the
-# app (and Cellpose segmentation) can start from any shell / launcher.
-os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
-
 import streamlit as st
 
-from organoid_analysis.segmentation.cellpose_inference import get_accelerator  # noqa: E402
+from organoid_analysis.segmentation.cellpose_inference import get_accelerator
 
 try:  # noqa: E402  (importable from the organoid_analysis.web_interface package)
     from organoid_analysis.web_interface.segmentation_workspace import (

@@ -229,3 +229,27 @@ Two gates are now separate. The regression tolerance in `test_geometry.py`
 (`pixi run regression`; `pixi run ci` adds the mypy debt ratchet). The scientific acceptance items are
 verified against a sealed evidence record (docs/VALIDATION_RECORDS.md) and reported by
 `pixi run science-gate`.
+
+## Recorded decision D-6 — SG-3 downstream-bias threshold (2026-09-16)
+
+Recorded in `docs/OWNER_DECISIONS.md` D-6, derived in
+`docs/LITERATURE_BASIS_FOR_DECISIONS.md` §8.
+
+`VALIDATION_PLAN.md` predeclares acceptance for this pass only; the `1% / 5%`
+pair quoted elsewhere in this repository is the claim register's criterion for
+M1 and M4 and is the **estimator's** criterion on analytical cases (SG-1a /
+SG-2a). It is **not** SG-3's criterion.
+
+SG-3 is governed by D-5's C1–C6 in
+`evidence/2026-09-11-measurement-vv/SEGMENTATION_VALIDATION_PROTOCOL.md` §5:
+per-case upper-quantile bias bounds derived from δ = 0.20 relative for volume
+and area, detection criteria on the lower confidence bound of recall and
+precision, and — the load-bearing criterion — **differential bias**: between any
+two compared conditions, the 95% CI of the difference in median relative bias
+must exclude ±2.5%. A bias common to all objects cancels in a ratio
+(`reviews/spacing_invariance_check.py` measures this for spacing error); a bias
+that differs between arms does not, and no absolute per-case threshold detects
+it.
+
+Nothing here changes this document's own predeclared acceptances, its item
+statuses, or any gate status.

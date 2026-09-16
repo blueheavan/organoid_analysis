@@ -27,7 +27,7 @@ Overall release verdict: **NOT READY FOR THE SPECIFIED RESEARCH USE**.
 | P0-1 | Correct `rho_in`, production-error, shape/resolution and per-axis calibration wording | recorded in `evidence/2026-09-13-volume-audit/ERRATA.md` and the master plan |
 | P0-2 | Freeze IU-1/IU-2/IU-3 | complete in `INTENDED_USE_AND_ESTIMANDS.md` and the master plan |
 | P0-3 | Freeze `V_env` primary, `V_seg` secondary and `f_void` companion | complete |
-| P0-4 | Select Option C gate semantics | owner decision recorded; code migration awaits a dedicated record contract |
+| P0-4 | Select Option C gate semantics | record contract authorised as D-14 (2026-09-16); code migration is blocked only by commit authority, since the tooling hash-binds the current record |
 | P0-5 | Classify volume `<1%` | conservative engineering target, not biological necessity |
 | P0-6 | Require independent viability reference | complete in the estimand and validation plan |
 | P0-7 | Remove SG-6B as an SG-3 hard prerequisite | complete; SG-6A ratio verification remains required for stratification |
@@ -70,6 +70,11 @@ SG-6A, not SG-6B.
 
 ### Track D — statistical inference
 
+The audit of the shipped path, and the constraints any SG-5 claim must satisfy,
+are in `docs/STATISTICAL_INFERENCE_AUDIT.md`. The required sequence is
+freeze → implement → verify → simulate; no branch is qualified before it is
+frozen.
+
 1. Select and freeze Satterthwaite or between-within as the primary LMM method.
 2. Select an external CR2 implementation or specify an independently checked
    local implementation.
@@ -105,10 +110,12 @@ noncanonical records or changed dependencies.
 Volume V&V -----------------------------------+
                                                |
 SG-6A spacing-ratio check --> SG-3 ------------+--> real-object morphology
-                                |              |
-SG-6B absolute calibration --------------------+
-                                |
-                                +--> SG-4B biological viability
+   (stratification only)                       |     (relative comparison)
+                                               |
+SG-6B absolute calibration --------------------+--> absolute µm/µm²/µm³ claims
+   (same-grid ratios cancel; E-6)              |     (physical-unit reporting)
+                                               |
+                                               +--> SG-4 biological viability
 
 Statistics method freeze --> implementation --> simulation qualification
                                                 --> study-level inference
@@ -118,18 +125,41 @@ Volume V&V and SG-6B are independent. SG-3 preparation and SG-6B run in
 parallel. SG-4B follows a stable SG-3 object definition. Statistical
 qualification cannot compensate for biased measurement or invalid objects.
 
-## 6. Remaining owner/study decisions
+SG-6B is **not** on the SG-3 critical path: the SG-3 downstream-bias metric is
+a ratio of two masks on the same voxel grid, so the spacing product cancels
+exactly for volume (and to 0.007 pp for area even at a 20% axial error; see
+`evidence/2026-09-13-volume-audit/ERRATA.md` E-6 and
+`reviews/spacing_invariance_check.py`). SG-3 depends on SG-6A only: the z:xy
+ratio must be trustworthy enough to assign `rho_in`/anisotropy strata.
 
-| Decision | Blocks |
-|---|---|
-| open-cavity behavior: exclude, flag-only, or a newly defined closing estimand | volume domain and confirmation |
-| volume-specific applicability domain | SG-2a |
-| SG-3 bias, upper-tail and catastrophic-failure criteria | SG-3A/SG-3B |
-| indeterminate-rate ceiling and SG-4 class-performance criteria | SG-4B |
-| Satterthwaite versus between-within primary LMM method | SG-5 implementation |
-| simulation coverage tolerance | SG-5 qualification |
-| SG-6A/SG-6B uncertainty and stability acceptance values by instrument stratum | physical-unit claims |
-| calibration requalification interval | maintained SG-6 status |
+## 6. Owner/study decisions — recorded 2026-09-16
+
+All fourteen decisions live in one register, `docs/OWNER_DECISIONS.md`
+(D-1 … D-14), so there is a single source of truth. **All fourteen are now
+recorded**, with their derivation, the document that carries each one, and the
+condition that reverses it; the literature basis is
+`docs/LITERATURE_BASIS_FOR_DECISIONS.md`.
+
+Summary of what was recorded: open cavities are defined per topology and no
+object is excluded (D-1); the volume domain is the surface domain plus the
+open-cavity stratum (D-2); analytical volume qualification is resourced now
+(D-3); `<1%` is retained as an inherited engineering target and is not SG-3's
+criterion (D-4, D-6); SG-3 predeclares δ = 0.20 relative for volume and area
+with per-case criteria C1–C5 and precision-derived N at the biological-sample
+level (D-5); SG-4B predeclares per-class lower confidence bounds, a
+non-gating kappa, and a two-part indeterminate ceiling (D-7) against a blinded
+human object-level reference (D-8); SG-5 freezes Satterthwaite for contrasts
+and between-within for the omnibus (D-9), a 1 pp coverage tolerance against a
+simulation MCSE of at most 0.33 pp (D-10), and a locally implemented CR2
+verified against the published reference implementation (D-11); SG-6 splits the
+`0.25%` per-axis budget by axis and by tier instead of reusing it (D-12) and
+sets a 6-month first re-qualification interval with event triggers and
+monitoring (D-13); the Option-C record contract is authorised (D-14).
+
+Recording a decision here moves **no gate status** and changes no estimator,
+threshold in code, default or domain constant. The critical path is unchanged
+from §2 P0-7: SG-6B is not on the SG-3 path, and SG-6A ratio verification
+remains required for stratification.
 
 ## 7. Evidence sequence for release
 

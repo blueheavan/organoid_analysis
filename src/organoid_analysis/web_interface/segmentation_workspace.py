@@ -19,12 +19,6 @@ Run:
 
 from __future__ import annotations
 
-import os
-
-# torch can abort at import if two OpenMP runtimes are linked; allow it so the
-# app (and Cellpose segmentation) can start from any shell / launcher.
-os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
-
 import hashlib
 import json
 import queue
