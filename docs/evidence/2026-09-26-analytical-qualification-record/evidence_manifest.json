@@ -1,0 +1,284 @@
+{
+  "schema_version": "organoid-analysis/evidence-manifest/1",
+  "contract_id": "analytical-qualification/1",
+  "validation_run_id": "2026-09-26-analytical-qualification-record",
+  "validation_scope": "SG-1a surface-area and SG-2a voxel-count-volume qualification of the production geometry estimator inside their declared domains, on prospectively frozen confirmation grids",
+  "record_class": "canonical",
+  "generated_utc": "2026-09-26T07:42:29Z",
+  "source": {
+    "validated_source_commit": "c6312720a0976de7fe7a057aeba8b6c7416df161",
+    "validated_source_tree": "ec2e4d4979467c5a62592fbb1a180e55cb0c59df",
+    "whole_tree_clean_at_execution": true,
+    "dirty_paths_at_execution": [],
+    "scope_clean_at_execution": true,
+    "record_storage": "This record is stored in a commit made after validated_source_commit. The storing commit is deliberately not named inside the record (a commit cannot contain its own hash); find it with `git log --format=%H -1 -- <manifest path>`. validated_source_commit identifies the source under validation, never the commit that stores this record."
+  },
+  "dependency_scope": {
+    "files": [
+      {
+        "path": "src/organoid_analysis/quantification/surface_crofton.py",
+        "sha256": "e419c1e435cea1ee9ae4302853cee549cd13e126a2f1824e5982965e806a54cb",
+        "role": "estimator_core",
+        "rationale": "measure(): the production surface-area estimator -- primitive direction set, stencil-radius selection, minimax orbit weights and the grazing constant. Also in_domain() and the frozen domain constants, which decide what the validated area means. Executed for every phantom. The packaged weight tables under crofton_weights/ are not hashed individually; a change to any table the grid uses breaks re-execution against the recorded per-case areas at rtol 1e-9, which is a stronger check than a hash."
+      },
+      {
+        "path": "src/organoid_analysis/quantification/features.py",
+        "sha256": "ed44ffc92bb36d51fbdc6d89e6a6321b8ced64e731f0600dc1a321b8500789e8",
+        "role": "estimator_core",
+        "rationale": "geometry(): voxel-count volume, Crofton surface area and sphericity; surface_mesh(): isosurface level, padding and physical spacing; outer_envelope(): filled support; SURFACE_AREA_METHOD identity. Executed for every phantom."
+      },
+      {
+        "path": "src/organoid_analysis/quantification/mask_features.py",
+        "sha256": "77aeb37bbdcc7dc38890f92e6c4790eec49d8a9371326f6e60b33563f753abf0",
+        "role": "support_and_spacing_semantics",
+        "rationale": "Web/mask-feature route: raw-label default versus optional filled support handed to geometry(), and the (x, y, z) to (z, y, x) spacing conversion."
+      },
+      {
+        "path": "src/organoid_analysis/quantification/cellular_measurements.py",
+        "sha256": "eaff63b2435ff39a10ab7b43eb066f11c515824a027428390b4fd67b98a0df5d",
+        "role": "support_semantics",
+        "rationale": "cell_geometry() calls geometry() with the filled-envelope default for cell objects."
+      },
+      {
+        "path": "src/organoid_analysis/quantification/multilevel_relationships/morphology.py",
+        "sha256": "821d0d731a391c8fa3db7dbb4c57c9dbf86c8c2c4616a8ae27d9be71e465d756",
+        "role": "support_semantics",
+        "rationale": "Multilevel morphology calls geometry() on raw labels (fill_holes=False)."
+      },
+      {
+        "path": "src/organoid_analysis/microscopy_io/voxel_spacing.py",
+        "sha256": "afe94e5c298c2e5e95aeb5b55f3ef40e394ae501537960300ff2b2e6f7f52ab4",
+        "role": "spacing_interpretation",
+        "rationale": "validate_voxel_spacing_xyz(): axis order, finiteness and positivity of the spacing that the mask-feature route passes to geometry()."
+      }
+    ]
+  },
+  "environment": {
+    "lockfile": {
+      "path": "pixi.lock",
+      "sha256": "fdba57d5d030dc0c72eaae1e3f1d950f4b58c44f1ab471aa54ce193308f9ae8c"
+    },
+    "python": "3.12.14",
+    "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "packages": {
+      "numpy": "2.5.2",
+      "scipy": "1.17.1",
+      "scikit-image": "0.26.0",
+      "pandas": "2.3.3"
+    }
+  },
+  "protocol": [
+    {
+      "path": "docs/evidence/2026-09-26-analytical-qualification-protocol/PROTOCOL.md",
+      "sha256": "ba51ba79ccbe4ee4f4951cec81cf6ca6a5e8990c6d21c4fbf70d01ae6f04f6f3"
+    },
+    {
+      "path": "docs/evidence/2026-09-26-analytical-qualification-protocol/qualification_harness.py",
+      "sha256": "321d2f6856fe727921bf032416d0fc22e7050f61607f7d1db263876419ee5e0e"
+    },
+    {
+      "path": "docs/evidence/2026-09-26-analytical-qualification-protocol/freeze.json",
+      "sha256": "4115850022ab107d11eb076d3fef1044bce0738c6fba446c5e500680b4edb579"
+    },
+    {
+      "path": "docs/evidence/2026-09-12-surface-method-development/freeze_record_v3.json",
+      "sha256": "9972c1b5303a7afed9a65c15aa25578d65cb1965dcf1cd85534b9ec03404ccf8"
+    },
+    {
+      "path": "docs/evidence/2026-09-12-surface-method-development/code/common.py",
+      "sha256": "4af41ecfb9adaec215a50c62f1ded951b4d230f879e181f51c635a287e45c6fd"
+    },
+    {
+      "path": "docs/evidence/2026-09-12-surface-method-development/code/common2.py",
+      "sha256": "1bd8c4f721ab768721a99b2573266c58ef8ba1e4dd52011728cdcb8d9bdbbf0c"
+    }
+  ],
+  "vv_implementation": [
+    {
+      "path": "src/organoid_analysis/validation/analytical_qualification_evidence.py",
+      "sha256": "cd1920807a2a72c9e6493ba9080c3cec9b1d89493214663a1bbc6beb81680a36"
+    },
+    {
+      "path": "src/organoid_analysis/validation/record_contract.py",
+      "sha256": "c822047ca6ef1318349a2ad509d9406455242738bc065e9cd1c86651082e0876"
+    },
+    {
+      "path": "src/organoid_analysis/validation/evidence_manifest.py",
+      "sha256": "7397f2f124fc84089b49e1a0f55696e735ec279df698bbdf4b640509da0de335"
+    },
+    {
+      "path": "src/organoid_analysis/validation/analytical_geometry_evidence.py",
+      "sha256": "bc3afc3dcfbbf706a9a3cb059369917f5912ea587fe93e714bcf933ebc9e1a79"
+    },
+    {
+      "path": "scripts/record_qualification_evidence.py",
+      "sha256": "404ceecff21d0c4183c5f8e244356be9b3f7b3aaa3c5d49b33f72ac84d568414"
+    }
+  ],
+  "raw_artifacts": [
+    {
+      "path": "docs/evidence/2026-09-26-analytical-qualification-record/qualification_cases.csv",
+      "sha256": "f407eda05782f373a2c5fe6fcfa32576284b6b5fea950717f880a5716fbb5926"
+    },
+    {
+      "path": "docs/evidence/2026-09-26-analytical-qualification-record/qualification_run.log",
+      "sha256": "58cd047ee8755802c8dfb908ce1242642ad744a7ffcae65b0e638c978618d043"
+    }
+  ],
+  "derived_artifacts": [],
+  "commands": [
+    {
+      "command": "python docs/evidence/2026-09-26-analytical-qualification-protocol/qualification_harness.py --out docs/evidence/2026-09-26-analytical-qualification-record/qualification_cases.csv --processes 3",
+      "cwd": ".",
+      "exit_code": 0,
+      "started_utc": "2026-09-26T07:09:27Z",
+      "finished_utc": "2026-09-26T07:42:29Z"
+    }
+  ],
+  "invocation": "pixi run qualification-record --contract analytical --run-id 2026-09-26-analytical-qualification-record --processes 3",
+  "results": {
+    "SG-1a": {
+      "status": "PASS",
+      "criterion": "every adjudicated case |area_rel_err| < 0.05",
+      "domain": {
+        "rho_in_min": 10.0,
+        "anisotropy_max": 4.0,
+        "scope": "smooth closed surfaces (no dihedral creases)",
+        "weights": "evidence-bearing packaged tables only"
+      },
+      "validity_problems": [],
+      "by_grid": {
+        "confirm2": {
+          "n": 96,
+          "max_abs_rel_error": 0.009507790402,
+          "worst_case": "confirm2-0284-capsule-rho15-sp3.5x1x1-rot0",
+          "classes": [
+            "capsule",
+            "ellipsoid",
+            "sphere",
+            "torus"
+          ],
+          "pose_types": [
+            "random"
+          ]
+        },
+        "confirm3": {
+          "n": 870,
+          "max_abs_rel_error": 0.01408271258,
+          "worst_case": "confirm3-0003-sphere-rhovol11-sp0.4x0.4x0.4-sym-edge",
+          "classes": [
+            "capsule",
+            "ellipsoid",
+            "sphere",
+            "torus"
+          ],
+          "pose_types": [
+            "random",
+            "symmetric"
+          ]
+        }
+      },
+      "excluded_non_evidence_bearing_weights": 0,
+      "not_adjudicated": {
+        "creased_confirm2": {
+          "n": 160,
+          "max_abs_rel_error": 0.1377165147,
+          "worst_case": "confirm2-0100-cylinder-rho4-sp2.2x1x1-rot0",
+          "classes": [
+            "box",
+            "cylinder"
+          ],
+          "pose_types": [
+            "random"
+          ]
+        }
+      }
+    },
+    "SG-2a": {
+      "status": "PASS",
+      "criterion": "every adjudicated case |volume_rel_err| < 0.01",
+      "domain": {
+        "rho_in_min": 10.0,
+        "anisotropy_max": 4.0,
+        "rho_vol_min": 36.0,
+        "rho_vol_definition": "inscribed radius / cbrt(voxel volume)",
+        "scope": "smooth closed surfaces (no dihedral creases)"
+      },
+      "validity_problems": [],
+      "confirm3": {
+        "n": 325,
+        "max_abs_rel_error": 0.002414238715,
+        "worst_case": "confirm3-0582-torus-rhovol42-sp0.8x0.4x0.4-sym-corner",
+        "classes": [
+          "capsule",
+          "ellipsoid",
+          "sphere",
+          "torus"
+        ],
+        "pose_types": [
+          "random",
+          "symmetric"
+        ]
+      },
+      "not_adjudicated": {
+        "confirm3_in_surface_domain_below_volume_domain": {
+          "n": 545,
+          "max_abs_rel_error": 0.01349867761,
+          "worst_case": "confirm3-0029-sphere-rhovol15-sp0.4x0.4x0.4-sym-corner",
+          "classes": [
+            "capsule",
+            "ellipsoid",
+            "sphere",
+            "torus"
+          ],
+          "pose_types": [
+            "random",
+            "symmetric"
+          ]
+        },
+        "confirm2_in_volume_domain_post_hoc": {
+          "n": 8,
+          "max_abs_rel_error": 0.0003428192774,
+          "worst_case": "confirm2-0478-torus-rho15-sp2.4x0.6x0.6-rot0",
+          "classes": [
+            "capsule",
+            "ellipsoid",
+            "sphere",
+            "torus"
+          ],
+          "pose_types": [
+            "random"
+          ]
+        }
+      }
+    }
+  },
+  "resulting_status": {
+    "SG-1a": "PASS",
+    "SG-2a": "PASS"
+  },
+  "domain": {
+    "surface": {
+      "rho_in_min": 10.0,
+      "anisotropy_max": 4.0,
+      "scope": "smooth closed surfaces (no dihedral creases)",
+      "weights": "evidence-bearing packaged tables only"
+    },
+    "volume": {
+      "rho_in_min": 10.0,
+      "anisotropy_max": 4.0,
+      "rho_vol_min": 36.0,
+      "rho_vol_definition": "inscribed radius / cbrt(voxel volume)",
+      "scope": "smooth closed surfaces (no dihedral creases)"
+    }
+  },
+  "reproduction": {
+    "method": "re-executed a deterministic subset (worst adjudicated cases of each item and every 120th case) through the production estimator",
+    "cases_reexecuted": 20,
+    "rtol": 1e-09,
+    "max_relative_difference": 4.6119814927546123e-10,
+    "mismatches": 0
+  },
+  "manifest_content_sha256": "9b5fbff10bed55cf46d776c443970205ef0e80c87b84dc006107315fd6a274b7"
+}
