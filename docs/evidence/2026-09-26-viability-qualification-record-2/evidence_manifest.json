@@ -1,0 +1,124 @@
+{
+  "schema_version": "organoid-analysis/evidence-manifest/1",
+  "contract_id": "viability-analytical/1",
+  "validation_run_id": "2026-09-26-viability-qualification-record-2",
+  "validation_scope": "SG-4A analytical conformance of the four-state Calcein/PI rule, its refusal reasons, its control calibration arithmetic and its versioned denominators to the frozen specification. Not a biological validation (SG-4B).",
+  "record_class": "canonical",
+  "generated_utc": "2026-09-26T10:19:33Z",
+  "source": {
+    "validated_source_commit": "1da1919bbf7a1a0cb4f690e95bf6a3e0da8e765e",
+    "validated_source_tree": "ce7aba454214e260555a5814266201039439d6c0",
+    "whole_tree_clean_at_execution": true,
+    "dirty_paths_at_execution": [],
+    "scope_clean_at_execution": true,
+    "record_storage": "This record is stored in a commit made after validated_source_commit. The storing commit is deliberately not named inside the record (a commit cannot contain its own hash); find it with `git log --format=%H -1 -- <manifest path>`. validated_source_commit identifies the source under validation, never the commit that stores this record."
+  },
+  "dependency_scope": {
+    "files": [
+      {
+        "path": "src/organoid_analysis/phenotyping/viability.py",
+        "sha256": "245d5b53db5216910918c22280a46de26917c442fb5b9058f2f9c820ae2697c0",
+        "role": "rule_core",
+        "rationale": "calibrate() and classify(): control medians, separation SNR, refusal reasons, gates and states."
+      },
+      {
+        "path": "src/organoid_analysis/statistics/aggregation.py",
+        "sha256": "73382d7d6d905efadd192c2953241e67224c8aafa7b6e995840ce87f31309677",
+        "role": "denominator_core",
+        "rationale": "_describe(): classifiable and indeterminate denominators and the fraction-definition id."
+      },
+      {
+        "path": "src/organoid_analysis/config.py",
+        "sha256": "490838eace213dba4bb87fd61207447d461b7f9d7745bb9d5327d166e484820f",
+        "role": "defaults",
+        "rationale": "Default gates, replicate floor and separation threshold, and the low<high validation."
+      }
+    ]
+  },
+  "environment": {
+    "lockfile": {
+      "path": "pixi.lock",
+      "sha256": "fdba57d5d030dc0c72eaae1e3f1d950f4b58c44f1ab471aa54ce193308f9ae8c"
+    },
+    "python": "3.12.14",
+    "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "packages": {
+      "numpy": "2.5.2",
+      "scipy": "1.17.1",
+      "scikit-image": "0.26.0",
+      "pandas": "2.3.3"
+    }
+  },
+  "protocol": [],
+  "vv_implementation": [
+    {
+      "path": "src/organoid_analysis/validation/viability_rule_evidence.py",
+      "sha256": "5e39c8ea3533020db1c06286adbca4308e1563fdd8f67dd18159e4d2d4536c78"
+    },
+    {
+      "path": "src/organoid_analysis/validation/record_contract.py",
+      "sha256": "c822047ca6ef1318349a2ad509d9406455242738bc065e9cd1c86651082e0876"
+    },
+    {
+      "path": "src/organoid_analysis/validation/evidence_manifest.py",
+      "sha256": "7397f2f124fc84089b49e1a0f55696e735ec279df698bbdf4b640509da0de335"
+    },
+    {
+      "path": "scripts/record_qualification_evidence.py",
+      "sha256": "9019a7008881ea814beb8710c030b4ca77532ad47fe184a39489f08784a551e9"
+    }
+  ],
+  "raw_artifacts": [
+    {
+      "path": "docs/evidence/2026-09-26-viability-qualification-record-2/viability_rule_cases.csv",
+      "sha256": "7e088225e35102734f4f6b61db2e2c3c975267b3fa5f9f81b12f269de208d04c"
+    }
+  ],
+  "derived_artifacts": [],
+  "commands": [
+    {
+      "command": "organoid_analysis.validation.viability_rule_evidence.run_cases",
+      "cwd": ".",
+      "exit_code": 0,
+      "started_utc": "2026-09-26T10:19:32Z",
+      "finished_utc": "2026-09-26T10:19:33Z"
+    }
+  ],
+  "invocation": "pixi run qualification-record --contract viability --run-id 2026-09-26-viability-qualification-record-2",
+  "results": {
+    "SG-4A": {
+      "status": "PASS",
+      "criterion": "every known-rule case equals the specification oracle; every required state and refusal reason is exercised",
+      "n_comparisons": 3987,
+      "n_cases": 991,
+      "n_mismatched_cases": 0,
+      "mismatched_cases": [],
+      "families": [
+        "calibration",
+        "defaults",
+        "denominator",
+        "refusal",
+        "state"
+      ],
+      "uncovered_required_reasons": [],
+      "fraction_definition": "classifiable-denominator/2",
+      "spec_conventions": {
+        "both_markers_low": "c < low_gate and p < low_gate (strict); equality to the low gate is not 'low' for this refusal, while viable_like/compromised_like accept equality (p <= low_gate, c <= low_gate)",
+        "outside_control_range": "flag appended when a finite scaled value is < 0 or > 1; classification uses the unclipped value, which is equivalent because both gates lie in [0, 1]"
+      },
+      "claim_boundary": "analytical rule conformance only; biological validity is SG-4B"
+    }
+  },
+  "resulting_status": {
+    "SG-4A": "PASS"
+  },
+  "specification": {
+    "source": "docs/INTENDED_USE_AND_ESTIMANDS.md sections 5.1-5.3",
+    "conventions": {
+      "both_markers_low": "c < low_gate and p < low_gate (strict); equality to the low gate is not 'low' for this refusal, while viable_like/compromised_like accept equality (p <= low_gate, c <= low_gate)",
+      "outside_control_range": "flag appended when a finite scaled value is < 0 or > 1; classification uses the unclipped value, which is equivalent because both gates lie in [0, 1]"
+    }
+  },
+  "manifest_content_sha256": "2cd9d6865177997d7bf70e90a7ba2a83cc46781b23cae71233f4e1e8eb30904d"
+}
