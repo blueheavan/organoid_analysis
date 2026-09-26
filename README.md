@@ -1,8 +1,8 @@
 # Organoid Pipeline — 3D 类器官分析
 
-> **Current local release assessment (2026-09-13): NOT READY FOR THE SPECIFIED RESEARCH USE.** The [current validation-plan update](docs/VALIDATION_UPDATE_2026-09-13.md) separates the engineering, analytical, real-object, biological and inferential evidence layers. `pixi run regression` is the engineering gate (`pixi run ci` adds the mypy debt ratchet). `pixi run science-gate` verifies the sealed [validation record](docs/VALIDATION_RECORDS.md) and remains not passed. Earlier records: [workflow optimization](docs/WORKFLOW_OPTIMIZATION_2026-09-11.md) and [full audit](docs/VALIDATION_REPORT.md).
+> **Current local release assessment (2026-09-26): NOT READY FOR THE SPECIFIED RESEARCH USE.** `pixi run science-gate` reports **3/9** qualification items PASS, all analytical: SG-1a surface area and SG-2a voxel-count volume inside their declared domains, and SG-4A conformance of the Calcein/PI rule to its specification ([2026-09-26 update](docs/VALIDATION_UPDATE_2026-09-26.md)). Segmentation (SG-3), biological viability (SG-4B), statistical design (SG-5) and instrument calibration (SG-6) still lack the specimen, annotation and instrument evidence they require. `pixi run regression` is the engineering gate (`pixi run ci` adds the mypy debt ratchet). Earlier records: [validation-plan update](docs/VALIDATION_UPDATE_2026-09-13.md), [workflow optimization](docs/WORKFLOW_OPTIMIZATION_2026-09-11.md) and [full audit](docs/VALIDATION_REPORT.md).
 >
-> **What may and may not be claimed** is frozen in the [scientific validation master plan](docs/SCIENTIFIC_VALIDATION_MASTER_PLAN.md) and [intended use and estimands](docs/INTENDED_USE_AND_ESTIMANDS.md). Qualification and unrestricted characterization are separate; surface support is restricted to its analytical domain, dedicated volume qualification remains outstanding, and real-object, absolute-unit, biological and inferential claims remain unsupported until their named studies pass.
+> **What may and may not be claimed** is frozen in the [scientific validation master plan](docs/SCIENTIFIC_VALIDATION_MASTER_PLAN.md) and [intended use and estimands](docs/INTENDED_USE_AND_ESTIMANDS.md). Qualification and unrestricted characterization are separate; surface area is qualified only inside its analytical domain (`surface_in_qualified_domain`), voxel-count volume only inside the narrower volume domain (`volume_in_qualified_domain`, `rho_vol ≥ 36`), and real-object, absolute-unit, biological and inferential claims remain unsupported until their named studies pass.
 
 用于 3D 显微镜 Z-stack 的本地类器官分析工具，提供 Cellpose 3D 分割、可审计的多层级测量、结果浏览与表格统计。项目面向 macOS Apple Silicon，使用 Pixi 管理运行环境。
 
@@ -67,7 +67,7 @@ pixi run web
 results/segmentation_output/run-*/
 ```
 
-在 **Segmentation results** 中选择 **Object layer** 可切换核/细胞。默认基于原始标签体素测量；勾选 **Measure filled outer envelopes** 后，体积、表面积、质心、主轴与 solidity 都基于填孔后的包络。历史网页的默认体积曾包含孔洞，新结果采用 feature schema `2.4`（新增拓扑、filled-void、open-cavity 与 Crofton 权重证据 provenance；数值定义不变），比较历史结果时须明确测量定义。
+在 **Segmentation results** 中选择 **Object layer** 可切换核/细胞。默认基于原始标签体素测量；勾选 **Measure filled outer envelopes** 后，体积、表面积、质心、主轴与 solidity 都基于填孔后的包络。历史网页的默认体积曾包含孔洞，新结果采用 feature schema `2.5`（2.4 新增拓扑、filled-void、open-cavity 与 Crofton 权重证据 provenance；2.5 新增体积专属合格域 `volume_rho_vol` / `volume_in_qualified_domain`；数值定义不变），比较历史结果时须明确测量定义。
 
 **Download feature CSV + provenance** 导出 `features.csv` 和 `measurement_provenance.json`，保留对象 ID、完整数值精度、QC、体素间距及其来源、选中掩膜的哈希与可用的分割运行信息。`qc_status=not_flagged` 仅表示未触发当前规则，汇总仍包含有 QC 标记的对象。采用默认体素间距时会显示警告，导出会标记 `assumed_or_unknown`；发表前须核实采集标定与实验重复结构。
 

@@ -150,7 +150,22 @@ Git provenance needs full history: CI uses `fetch-depth: 0`. The record also
 bounds numerical reproduction to this environment; a legitimate
 floating-point difference on another platform would be reported, not ignored.
 
-## 5. Current record
+## 5. Current records (2026-09-26)
+
+| Contract | Items | Record | Class | Status |
+|---|---|---|---|---|
+| `analytical-qualification/1` | SG-1a, SG-2a | `evidence/2026-09-26-analytical-qualification-record/` | canonical | PASS, PASS |
+| `viability-analytical/1` | SG-4A | `evidence/2026-09-26-viability-qualification-record/` | canonical | PASS |
+| `analytical-geometry/1` | SG-1b, SG-2b (characterization) | `evidence/2026-09-26-analytical-geometry-record/` | canonical | descriptive |
+
+The two qualification contracts share `validation/record_contract.py`; their
+pointers are `evidence/analytical_qualification_current_record.json` and
+`evidence/viability_rule_current_record.json`. Build them with
+`pixi run qualification-record --contract analytical|viability` from a clean,
+committed tree, then commit the record alone. See
+[VALIDATION_UPDATE_2026-09-26.md](VALIDATION_UPDATE_2026-09-26.md).
+
+### Historical: 2026-09-11 record
 
 `docs/evidence/2026-09-11-analytical-geometry-record/`:
 - class **scope-clean**;

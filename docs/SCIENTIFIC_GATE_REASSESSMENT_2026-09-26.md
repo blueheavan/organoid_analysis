@@ -1,5 +1,15 @@
 # Scientific gate reassessment — 2026-09-26
 
+> **Superseded in part the same day** by
+> [VALIDATION_UPDATE_2026-09-26.md](VALIDATION_UPDATE_2026-09-26.md): the
+> "restrict intended use to a better-resolved domain" option below was carried
+> out (development study, frozen protocol, new confirmation grid with
+> lattice-symmetric placements). SG-1a, SG-2a and SG-4A now PASS from canonical
+> records; the gate is 3/9. The counterexample and its conclusion — no universal
+> per-object guarantee over every placement from a binary mask — stand; the
+> volume claim is now bounded to `rho_vol ≥ 36`, where the same construction's
+> ambiguity is 0.35 %.
+
 ## Decision from the current evidence
 
 The request to change algorithms and pass the scientific gate authorizes a
