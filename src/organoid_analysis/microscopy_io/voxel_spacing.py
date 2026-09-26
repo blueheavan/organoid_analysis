@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
+from numbers import Real
 
 
 def validate_voxel_spacing_xyz(
@@ -14,6 +15,8 @@ def validate_voxel_spacing_xyz(
         raise ValueError(
             f"spacing_um must have exactly 3 values (x, y, z), got {spacing_um!r}"
         )
+    if any(isinstance(value, bool) or not isinstance(value, Real) for value in spacing_um):
+        raise ValueError(f"spacing_um entries must be real lengths, not flags or text: {spacing_um!r}")
     spacing = tuple(float(value) for value in spacing_um)
     if any(not math.isfinite(value) or value <= 0 for value in spacing):
         raise ValueError(f"spacing_um entries must be finite and > 0: {spacing_um!r}")

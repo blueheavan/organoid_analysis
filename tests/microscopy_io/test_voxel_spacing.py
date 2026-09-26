@@ -21,6 +21,7 @@ from organoid_analysis.microscopy_io import (
     isotropic_xy_size_um,
     resolve_spacing_source,
 )
+from organoid_analysis.microscopy_io.voxel_spacing import validate_voxel_spacing_xyz
 from organoid_analysis.quantification.mask_features import extract_mask_features
 from organoid_analysis.segmentation.cellpose_inference import SegmentationConfig, config_spacing
 
@@ -143,6 +144,13 @@ def test_override_differing_from_metadata_keeps_original_metadata_value():
 def test_unequal_xy_pixel_size_raises_instead_of_averaging():
     with pytest.raises(ValueError, match="equal X/Y pixel sizes"):
         isotropic_xy_size_um(0.5, 0.6)
+
+
+@pytest.mark.parametrize('invalid', [True, '1.0'])
+def test_spacing_rejects_flags_and_text_before_physical_measurement(invalid):
+    with pytest.raises(ValueError, match='real lengths'):
+        validate_voxel_spacing_xyz((invalid, 1.0, 2.0))
+    assert validate_voxel_spacing_xyz((np.float32(.5), np.float64(1), 2)) == (0.5, 1.0, 2.0)
 
 
 # --- compare_registered_grid (P1-2 audit finding) ---------------------------

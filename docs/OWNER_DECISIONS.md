@@ -1,5 +1,13 @@
 # Owner decisions — consolidated register
 
+> 2026-09-26 evidence note: the prospective D-2 volume domain is challenged by
+> an in-domain pair of smooth spheres with identical binary masks and disjoint
+> `<1%` continuous-volume acceptance intervals. See
+> [scientific gate reassessment](SCIENTIFIC_GATE_REASSESSMENT_2026-09-26.md).
+> This note does not silently reverse D-2 or change its acceptance criterion;
+> a continuous-volume qualification claim needs an additional information
+> source or a newly justified, prospectively confirmed intended-use boundary.
+
 Status: **ALL FOURTEEN DECISIONS RECORDED 2026-09-16.** Every outstanding
 `[OWNER]` placeholder and every "owner must set this before data are seen"
 criterion scattered across the validation documents is now resolved below, with

@@ -102,6 +102,29 @@ def test_hollow_structure_reports_outer_envelope_and_void():
     assert measured['enclosed_void_fraction']==pytest.approx(729/3375)
 
 
+def test_geometry_binary_mask_contract_preserves_voxel_count():
+    mask = np.zeros((5, 5, 5), dtype=np.uint8)
+    mask[1:4, 1:4, 1:4] = 1
+    measured, _ = geometry(mask, (2., 1., 1.), fill_holes=False)
+    assert measured['segmented_voxels'] == 27
+    assert measured['segmented_volume_um3'] == pytest.approx(54.)
+    assert measured['volume_um3'] == pytest.approx(54.)
+    assert geometry(mask.astype(bool), (2., 1., 1.), fill_holes=False)[0]['volume_um3'] == measured['volume_um3']
+
+
+def test_geometry_rejects_nonbinary_label_values():
+    mask = np.zeros((5, 5, 5), dtype=np.uint8)
+    mask[1:4, 1:4, 1:4] = 2
+    with pytest.raises(ValueError, match='binary instance mask'):
+        geometry(mask, (1., 1., 1.))
+
+
+@pytest.mark.parametrize('invalid', [True, '1.0'])
+def test_geometry_rejects_nonphysical_spacing_types(invalid):
+    with pytest.raises(ValueError, match='real-valued physical spacings'):
+        geometry(np.ones((5, 5, 5), bool), (invalid, 1., 1.))
+
+
 def test_geometry_records_closed_and_open_cavity_topology():
     solid = np.ones((9, 9, 9), dtype=bool)
     closed = solid.copy()

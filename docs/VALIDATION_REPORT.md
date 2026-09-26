@@ -1,6 +1,10 @@
 # Full scientific workflow audit and release assessment — 2026-09-10
 
-Latest update: [2026-09-11 measurement validation and release readiness](VALIDATION_UPDATE_2026-09-11.md)
+Latest scoped update: [2026-09-26 scientific gate reassessment](SCIENTIFIC_GATE_REASSESSMENT_2026-09-26.md).
+The [2026-09-25 scientific audit and repair](VALIDATION_UPDATE_2026-09-25.md)
+records the preceding code fixes and their tests.
+
+Earlier update: [2026-09-11 measurement validation and release readiness](VALIDATION_UPDATE_2026-09-11.md)
 records the systematic surface/volume V&V, segmentation/assay/statistical evidence
 status and separate engineering/scientific verdicts. Earlier scoped update:
 [2026-09-11 workflow optimization](WORKFLOW_OPTIMIZATION_2026-09-11.md)

@@ -1,6 +1,7 @@
 """Physical morphology and raw fluorescence readouts; no inferred cell fractions."""
 from __future__ import annotations
 
+from numbers import Real
 from pathlib import Path
 
 import numpy as np
@@ -159,8 +160,13 @@ def geometry(
     """
     if mask.ndim != 3 or not mask.any():
         raise ValueError("Geometry needs a nonempty 3D instance mask")
+    if not np.all((mask == 0) | (mask == 1)):
+        raise ValueError("Geometry needs a binary instance mask with values 0 and 1")
+    mask = mask.astype(bool, copy=False)
     # A distinct name from the `spacing` parameter (rather than reassigning
     # it to a different type) -- same values, only the static type changes.
+    if any(isinstance(value, bool) or not isinstance(value, Real) for value in spacing):
+        raise ValueError("Geometry needs real-valued physical spacings")
     spacing_arr = np.asarray(spacing, float)
     if spacing_arr.shape != (3,) or not np.isfinite(spacing_arr).all() or (spacing_arr <= 0).any():
         raise ValueError("Geometry needs three positive finite spacings")

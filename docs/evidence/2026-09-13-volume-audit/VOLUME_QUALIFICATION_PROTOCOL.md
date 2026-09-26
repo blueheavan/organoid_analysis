@@ -1,5 +1,14 @@
 # Voxel-count volume: evidence audit and qualification protocol
 
+**2026-09-26 limitation found after this protocol:** two smooth spheres at
+`rho_in > 10` can have the same centre-sampled binary mask while their true
+volumes differ by more than the two non-overlapping `<1%` acceptance intervals.
+The exact construction and regression check are in
+[`SCIENTIFIC_GATE_REASSESSMENT_2026-09-26.md`](../../SCIENTIFIC_GATE_REASSESSMENT_2026-09-26.md).
+This does not alter the frozen criterion or turn the old confirmation data into
+new evidence. It means the proposed binary-mask domain cannot support a
+universal continuous-volume accuracy guarantee without more input information.
+
 **Status: FAIL / NOT QUALIFIED (SG-2).** This document audits the evidence that
 already exists for the volume estimator and specifies what would have to be
 executed to qualify it. It declares no domain, changes no algorithm, weakens no
