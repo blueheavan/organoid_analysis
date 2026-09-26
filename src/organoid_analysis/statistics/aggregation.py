@@ -3,16 +3,45 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from scipy import stats as scipy_stats  # type: ignore[import-untyped]
 
 from organoid_analysis.phenotyping.viability import STATES
+from organoid_analysis.statistics import small_sample
 
 MORPHOLOGY = ["volume_um3", "surface_area_um2", "sphericity", "equivalent_diameter_um"]
 META = ["condition", "biological_replicate", "unit_id", "batch_id", "control"]
 
-# Minimum biological replicates with size data required before a bootstrap CI
-# is computed. Coincides with (but is a separate, non-configurable literal
-# from) stats.min_replicates_per_condition -- see docs/PARAMETERS.md.
-_MIN_REPLICATES_FOR_BOOTSTRAP_CI = 3
+# Minimum biological replicates with size data before a condition interval is
+# computed at all (computation floor). Intervals below
+# small_sample.QUALIFIED_MIN_REPLICATES are labelled provisional (D-10).
+_MIN_REPLICATES_FOR_CI = 3
+
+# Condition-level 95% interval (owner decision D-16, 2026-09-26): Student t on
+# the replicate-level summaries, the independent experimental unit. Positive size
+# metrics are summarised on the log scale, so their interval is for the
+# geometric mean of replicate medians; sphericity is bounded and stays linear.
+# Replaces the percentile bootstrap, which covered 75 % at 3 replicates and 85 %
+# at 6 under exact normality (docs/VALIDATION_UPDATE_2026-09-26-sg5.md).
+CONDITION_INTERVAL_METHOD = "replicate_t/1"
+LOG_SCALE_METRICS = {"volume_um3", "surface_area_um2", "equivalent_diameter_um"}
+
+
+def condition_interval(values: np.ndarray, log_scale: bool) -> tuple[float, float, float]:
+    """(centre, low, high) of the replicate-level t interval; centre is the geometric mean on the log scale."""
+    values = np.asarray(values, float)
+    if log_scale:
+        if (values <= 0).any():
+            return np.nan, np.nan, np.nan
+        values = np.log(values)
+    centre = float(values.mean())
+    if len(values) < _MIN_REPLICATES_FOR_CI:
+        low = high = np.nan
+    else:
+        half = float(scipy_stats.t.ppf(0.975, len(values) - 1) * values.std(ddof=1) / np.sqrt(len(values)))
+        low, high = centre - half, centre + half
+    if log_scale:
+        return float(np.exp(centre)), float(np.exp(low)), float(np.exp(high))
+    return centre, low, high
 
 # Versioned definition of the viability fractions (owner-frozen estimand,
 # docs/INTENDED_USE_AND_ESTIMANDS.md section 5.3; migrated 2026-09-13):
@@ -77,7 +106,6 @@ def make_summaries(objects: pd.DataFrame, samples: pd.DataFrame, cfg: dict) -> t
             row[f"mean_unit_fraction_{state}"] = float(nonempty[f"fraction_{state}"].mean()) if len(nonempty) else np.nan
         replicate_rows.append(row)
     replicates = pd.DataFrame(replicate_rows)
-    rng = np.random.default_rng(cfg["seed"])
     condition_rows = []
     for keys, reps in replicates.groupby(["condition", "control"], sort=False, dropna=False):
         available = reps[reps.n_nonempty_units > 0]
@@ -88,12 +116,17 @@ def make_summaries(objects: pd.DataFrame, samples: pd.DataFrame, cfg: dict) -> t
         for metric in MORPHOLOGY:
             values = available[f"median_of_unit_medians_{metric}"].dropna().to_numpy(float)
             row[f"mean_replicate_median_{metric}"] = float(values.mean()) if len(values) else np.nan
-            low, high = np.nan, np.nan
-            if len(values) >= _MIN_REPLICATES_FOR_BOOTSTRAP_CI:
-                bootstrap = rng.choice(values, (cfg["bootstrap_iterations"], len(values)), replace=True).mean(axis=1)
-                low, high = np.quantile(bootstrap, [.025, .975])
+            log_scale = metric in LOG_SCALE_METRICS
+            centre, low, high = condition_interval(values, log_scale) if len(values) else (np.nan, np.nan, np.nan)
+            row[f"ci95_centre_{metric}"] = centre
             row[f"ci95_low_{metric}"] = low
             row[f"ci95_high_{metric}"] = high
+            row[f"ci95_estimand_{metric}"] = ("geometric mean of replicate medians" if log_scale
+                                              else "mean of replicate medians")
+            row[f"ci95_qualification_{metric}"] = (
+                "qualified" if len(values) >= small_sample.QUALIFIED_MIN_REPLICATES
+                else "provisional - coverage unqualified")
+        row["ci95_method"] = CONDITION_INTERVAL_METHOD
         for state in STATES:
             row[f"mean_replicate_fraction_{state}"] = float(available[f"mean_unit_fraction_{state}"].mean()) if len(available) else np.nan
         condition_rows.append(row)

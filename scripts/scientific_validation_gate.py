@@ -38,6 +38,7 @@ from typing import Any
 
 from organoid_analysis.validation import analytical_geometry_evidence as analytical
 from organoid_analysis.validation import analytical_qualification_evidence as qualification
+from organoid_analysis.validation import statistical_qualification_evidence as statistical
 from organoid_analysis.validation import viability_rule_evidence as viability
 from organoid_analysis.validation.evidence_manifest import EvidenceError, load_manifest
 from organoid_analysis.validation.record_contract import current_manifest_relpath
@@ -77,7 +78,8 @@ def _verify(root: Path, manifest: str, reports: Reports, check_git: bool, reprod
     if manifest not in reports:
         contract = _contract_of(root, manifest)
         verifier = {qualification.CONTRACT_ID: qualification.verify_record,
-                    viability.CONTRACT_ID: viability.verify_record}.get(contract or "", analytical.verify_record)
+                    viability.CONTRACT_ID: viability.verify_record,
+                    statistical.CONTRACT_ID: statistical.verify_record}.get(contract or "", analytical.verify_record)
         reports[manifest] = verifier(root, manifest, check_git=check_git, reproduce=reproduce)
     return reports[manifest]
 
@@ -145,6 +147,16 @@ def _qualification_basis(item_id: str, result: dict[str, Any]) -> str:
         return (f"confirm3: n={row['n']}, max |error| {_percent(row['max_abs_rel_error'])} ({row['worst_case']}); "
                 f"domain rho_vol>={result['domain']['rho_vol_min']}, rho_in>={result['domain']['rho_in_min']}, "
                 f"aniso<={result['domain']['anisotropy_max']}, smooth")
+    if item_id == "SG-5":
+        contrast, interval = result["contrast"], result["condition_interval"]
+        env = result["envelope"]
+        return (f"{contrast['n_cells']} contrast cells: type-I {contrast['type1_range'][0]:.4f}-"
+                f"{contrast['type1_range'][1]:.4f}, coverage {contrast['coverage_range'][0]:.4f}-"
+                f"{contrast['coverage_range'][1]:.4f}; {interval['n_cells']} condition-interval cells: coverage "
+                f"{interval['coverage_range'][0]:.4f}-{interval['coverage_range'][1]:.4f}; reference verification "
+                f"{'passed' if result['reference_verification']['passed'] else 'FAILED'}; envelope "
+                f"{env['min_replicates']}-{env['max_replicates']} replicates/condition, <= {env['max_conditions']} "
+                f"conditions")
     return (f"{result['n_cases']} known-rule cases, {result['n_comparisons']} comparisons, "
             f"{result['n_mismatched_cases']} mismatched; denominator {result['fraction_definition']}; "
             f"{result['claim_boundary']}")
@@ -188,6 +200,12 @@ ANALYTICAL_QUALIFICATION = [
     QualifiedItem("SG-2a", "Volume analytical qualification (declared volume domain)", VOLUME_CRITERION_TEXT,
                   "INSUFFICIENT EVIDENCE", "no volume-domain canonical qualification record"),
 ]
+STATISTICAL_QUALIFICATION = [
+    QualifiedItem("SG-5", "Statistical and study-design validity",
+                  "predeclared design with an independent experimental unit; type-I error and CI coverage for the "
+                  "shipped models", "INSUFFICIENT EVIDENCE",
+                  "no canonical statistical qualification record"),
+]
 VIABILITY_QUALIFICATION = [
     QualifiedItem("SG-4A", "Calcein/PI four-state analytical classification",
                   "known-rule state and refusal contract with versioned denominator", "PARTIAL",
@@ -206,9 +224,6 @@ STATIC_ITEMS = [
              "INSUFFICIENT EVIDENCE", "no qualified independent 3D annotation set exists", ()),
     GateItem("SG-4B", "Calcein/PI biological validity", "orthogonal object-level reference; control-based calibration "
              "evaluated on held-out batches", "NOT ASSESSED", "no orthogonal assay or held-out control data", ()),
-    GateItem("SG-5", "Statistical and study-design validity", "predeclared design with an independent experimental "
-             "unit; type-I error and CI coverage for the shipped models", "INSUFFICIENT EVIDENCE",
-             "generic tools only; no study design or calibration evidence", ()),
     GateItem("SG-6A", "Relative spacing-ratio verification", "independently verified X:Y and Z:XY ratios for domain stratification",
              "NOT ASSESSED", "no ratio-standard study", ()),
     GateItem("SG-6B", "Absolute acquisition calibration and channel registration", "independently verified voxel size and "
@@ -238,6 +253,7 @@ def evaluate(root: Path = ROOT, *, check_git: bool = True, reproduce: bool = Tru
     items = (_qualified_items(root, qualification, ANALYTICAL_QUALIFICATION, reports, check_git, reproduce)
              + _characterization_items(root, reports, check_git, reproduce)
              + _qualified_items(root, viability, VIABILITY_QUALIFICATION, reports, check_git, reproduce)
+             + _qualified_items(root, statistical, STATISTICAL_QUALIFICATION, reports, check_git, reproduce)
              + STATIC_ITEMS)
     order = ["SG-1a", "SG-1b", "SG-2a", "SG-2b", "SG-3A", "SG-3B", "SG-4A", "SG-4B", "SG-5", "SG-6A", "SG-6B"]
     items.sort(key=lambda item: order.index(item.item_id) if item.item_id in order else len(order))

@@ -2,6 +2,7 @@
 
     pixi run qualification-record --contract analytical [--run-id RUN_ID] [--processes N]
     pixi run qualification-record --contract viability  [--run-id RUN_ID]
+    pixi run qualification-record --contract statistical [--run-id RUN_ID] [--processes N]
 
 ``analytical`` executes the frozen SG-1a/SG-2a confirmation grids
 (docs/evidence/2026-09-26-analytical-qualification-protocol) through the
@@ -20,6 +21,7 @@ import sys
 from pathlib import Path
 
 from organoid_analysis.validation import analytical_qualification_evidence as analytical
+from organoid_analysis.validation import statistical_qualification_evidence as statistical
 from organoid_analysis.validation import viability_rule_evidence as viability
 from organoid_analysis.validation.evidence_manifest import dumps_strict, sha256_file
 from organoid_analysis.validation.record_contract import (
@@ -38,11 +40,11 @@ def _fail(message: str) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--contract", choices=("analytical", "viability"), required=True)
+    parser.add_argument("--contract", choices=("analytical", "viability", "statistical"), required=True)
     parser.add_argument("--run-id")
     parser.add_argument("--processes", type=int, default=4)
     args = parser.parse_args(argv)
-    module = analytical if args.contract == "analytical" else viability
+    module = {"analytical": analytical, "viability": viability, "statistical": statistical}[args.contract]
     spec = module.SPEC
     run_id = args.run_id or f"{datetime.date.today().isoformat()}-{args.contract}-qualification-record"
     run_rel = f"docs/evidence/{run_id}"
@@ -74,6 +76,23 @@ def main(argv: list[str] | None = None) -> int:
         if problems:
             return _fail("; ".join(problems))
         extra = {"domain": analytical.domain_declaration(), "reproduction": reproduction}
+    elif module is statistical:
+        frozen = statistical.frozen_hashes(ROOT)
+        for path in (statistical.PROTOCOL_PATH, statistical.HARNESS_PATH, *statistical.REFERENCE_FILES):
+            if frozen.get(path) != sha256_file(ROOT / path):
+                return _fail(f"{path} is not the version frozen before execution")
+        reference = statistical.reference_check(ROOT)
+        done = statistical.run_harness(ROOT, run_dir, args.processes)
+        if done.returncode != 0:
+            return _fail(f"the harness exited {done.returncode}; see {run_rel}/{statistical.RAW_NAMES[2]}")
+        command = (f"python {statistical.HARNESS_PATH} --seed {statistical.SEED} --n-sim {statistical.N_SIM} "
+                   f"--processes {args.processes}")
+        results = statistical.derive_results(run_dir / statistical.RAW_NAMES[0], run_dir / statistical.RAW_NAMES[1],
+                                             reference)
+        problems, reproduction = statistical.reproduce_worst(ROOT, run_dir / statistical.RAW_NAMES[0])
+        if problems:
+            return _fail("; ".join(problems))
+        extra = {"reference_discrepancies": reference["worst"], "reproduction": reproduction}
     else:
         rows = viability.run_cases()
         (run_dir / viability.RAW_NAME).write_text(viability.to_csv(rows), encoding="utf-8")

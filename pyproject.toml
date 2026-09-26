@@ -127,7 +127,7 @@ ci = { depends-on = ["regression", "typecheck-ratchet"] }
 # See docs/VALIDATION_RECORDS.md.
 science-gate = "python scripts/scientific_validation_gate.py"
 validation-record = "python scripts/record_analytical_geometry_validation.py"
-# Item-keyed qualification records (SG-1a/SG-2a: --contract analytical; SG-4A: --contract viability).
+# Item-keyed qualification records (SG-1a/SG-2a: --contract analytical; SG-4A: --contract viability; SG-5: --contract statistical).
 qualification-record = "python scripts/record_qualification_evidence.py"
 web = "python scripts/streamlit_run.py src/organoid_analysis/web_interface/organoid_workspace.py"
 # --- data management ---

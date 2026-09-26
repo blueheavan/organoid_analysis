@@ -48,7 +48,7 @@ def test_current_analytical_evidence_is_accepted_and_backs_the_items():
         assert item.record is not None
         assert not item.counts_toward_gate
     # Qualification items are PASS only with a verified canonical record that reports PASS.
-    for item_id in ("SG-1a", "SG-2a", "SG-4A"):
+    for item_id in ("SG-1a", "SG-2a", "SG-4A", "SG-5"):
         item = _item(items, item_id)
         assert item.counts_toward_gate
         if item.status == "PASS":
@@ -57,7 +57,7 @@ def test_current_analytical_evidence_is_accepted_and_backs_the_items():
         else:
             assert item.record is None
     # Items that need specimens, annotation or instrument data cannot pass from software alone.
-    for item_id in ("SG-3A", "SG-3B", "SG-4B", "SG-5", "SG-6A", "SG-6B"):
+    for item_id in ("SG-3A", "SG-3B", "SG-4B", "SG-6A", "SG-6B"):
         assert _item(items, item_id).status != "PASS"
 
 

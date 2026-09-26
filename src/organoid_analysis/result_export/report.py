@@ -166,6 +166,8 @@ def plot_size_comparison(objects, units, replicates, conditions_table, out: Path
             summary = conditions_table[(conditions_table.condition == condition) & (conditions_table.control == "sample")].iloc[0]
             low, high = summary.ci95_low_volume_um3, summary.ci95_high_volume_um3
             if np.isfinite(low) and np.isfinite(high):
+                # The interval is for the geometric mean of replicate medians (D-16); mark its centre.
+                b.plot(index, summary.ci95_centre_volume_um3, marker="D", ms=5, color="#202D3C", zorder=5)
                 b.vlines(index,low,high,color="#202D3C",lw=1.2,zorder=2)
                 b.hlines([low,high],index-.07,index+.07,color="#202D3C",lw=1.2,zorder=2)
     if has_replicate_values:
@@ -228,7 +230,8 @@ def write_html(out: Path, objects: pd.DataFrame, samples: pd.DataFrame, conditio
     treatment = conditions[conditions.control == "sample"].copy()
     columns = ["condition","n_biological_replicates_total","n_biological_replicates_with_size_data",
                "n_included_organoids_complete_units","mean_replicate_median_volume_um3",
-               "ci95_low_volume_um3","ci95_high_volume_um3"]
+               "ci95_centre_volume_um3","ci95_low_volume_um3","ci95_high_volume_um3",
+               "ci95_qualification_volume_um3"]
     summary_html = treatment[columns].to_html(index=False,escape=True,na_rep="—",float_format=lambda x:f"{x:,.1f}")
     calibration_html = calibration[["batch_id","status","reason","live_control_replicates","dead_control_replicates"]].to_html(index=False,escape=True,na_rep="—")
     details = []
@@ -295,7 +298,7 @@ def write_html(out: Path, objects: pd.DataFrame, samples: pd.DataFrame, conditio
         omnibus_rows = "".join(
             f"<tr><td>{html.escape(str(feature))}</td><td>{html.escape(str(info['model']))}</td>"
             f"<td>{info['omnibus_p']:.4g}</td>"
-            f"<td>{'yes' if info.get('omnibus_p_small_sample_corrected') else 'no (asymptotic)'}</td></tr>"
+            f"<td>{html.escape(str(info.get('omnibus_note', 'asymptotic')))}</td></tr>"
             for feature, info in stats_omnibus.items()
         )
         pairwise_table_html = pairwise_table.to_html(index=False, escape=True, na_rep="—", float_format=lambda x: f"{x:,.4g}")
@@ -304,9 +307,11 @@ def write_html(out: Path, objects: pd.DataFrame, samples: pd.DataFrame, conditio
             '<p class="small">Exploratory significance tests, not a substitute for a predeclared experimental '
             "design (see docs/ALGORITHM_DECISIONS.md D11 and docs/SCIENTIFIC_SPEC.md). Each feature's omnibus p "
             "tests whether condition means differ at all; pairwise contrasts are Benjamini-Hochberg FDR-corrected "
-            'across conditions within a feature. "Small-sample corrected" pairwise p-values use a cluster-robust '
-            't(G-1) reference; an omnibus p marked "asymptotic" is not corrected and is a rough screen only.</p>'
-            f"<table><thead><tr><th>Feature</th><th>Model</th><th>Omnibus p</th><th>Small-sample corrected</th></tr></thead>"
+            'across conditions within a feature. Pairwise contrasts use REML with Satterthwaite degrees of freedom, '
+            "or CR2 cluster-robust errors with Satterthwaite degrees of freedom when the replicate variance is at "
+            "the boundary; each row states whether its design is inside the qualified coverage envelope. The "
+            "omnibus F is a screen.</p>"
+            f"<table><thead><tr><th>Feature</th><th>Model</th><th>Omnibus p</th><th>Reference</th></tr></thead>"
             f"<tbody>{omnibus_rows}</tbody></table>"
             f'<div class="scroll">{pairwise_table_html}</div></section>'
         )

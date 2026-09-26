@@ -48,6 +48,8 @@ DEFAULTS = {
         "high_gate": 0.60,
         "low_gate": 0.30,
     },
+    # bootstrap_iterations is retained so existing configuration files stay valid;
+    # the condition interval is a replicate-level t interval since 2026-09-26 (D-16).
     "report": {"bootstrap_iterations": 2000, "seed": 20260831,
                "save_meshes": True, "max_meshes_in_preview": 20},
     "stats": {"enabled": True, "features": ["volume_um3", "sphericity"],

@@ -6,6 +6,7 @@ import tifffile
 import yaml
 
 from organoid_analysis.config import load_config
+from organoid_analysis.statistics import small_sample
 from organoid_analysis.statistics.inference import (
     _pairwise_contrasts,
     condition_pairwise_tests,
@@ -92,61 +93,67 @@ def test_raw_scale_feature_reports_no_geometric_mean_ratio():
     assert np.isnan(row.geometric_mean_ratio)
 
 
-def test_lmm_pairwise_uses_small_cluster_t_reference_not_asymptotic_z():
-    """Regression test for the P1 anti-conservative-p-value audit finding.
-
-    statsmodels' MixedLM always reports Wald p-values against an asymptotic z
-    reference, which is anti-conservative (overstates significance) with few
-    replicate clusters. ``_pairwise_contrasts`` must instead use a t(G-1)
-    reference (G = number of replicate clusters) for the LMM branch, matching
-    the small-cluster correction statsmodels' own cluster-robust OLS fallback
-    applies automatically via ``use_t=True``.
-    """
-    rng = np.random.default_rng(7)
+def _nested(seed: int = 7, offset_sd: float = 25.0, conditions=("A", "B"), replicates: int = 3,
+            objects: int = 6) -> pd.DataFrame:
+    rng = np.random.default_rng(seed)
     rows = []
-    for condition in ("A", "B"):
-        base = 1000.0 if condition == "A" else 1015.0
-        for replicate in range(3):
-            cluster_offset = rng.normal(0, 25)  # genuine between-replicate variance
-            for _ in range(6):
+    for index, condition in enumerate(conditions):
+        for replicate in range(replicates):
+            cluster_offset = rng.normal(0, offset_sd)
+            for _ in range(objects):
                 rows.append({"condition": condition, "grp": f"{condition}::R{replicate}",
-                            "volume_um3": float(base + cluster_offset + rng.normal(0, 15))})
+                             "volume_um3": float(1000.0 + 15.0 * index + cluster_offset + rng.normal(0, 15))})
     d = pd.DataFrame(rows)
-    d["condition"] = pd.Categorical(d.condition, categories=["A", "B"])
+    d["condition"] = pd.Categorical(d.condition, categories=list(conditions))
+    return d
+
+
+def test_lmm_branch_uses_satterthwaite_df_not_asymptotic_z():
+    """D-9: the LMM contrast is referenced to t with Satterthwaite df, never to z.
+
+    For a balanced design with a condition that varies only between replicates,
+    the Satterthwaite df equals the between-within df G - K exactly.
+    """
+    d = _nested()
     fit, model_used = fit_model(d, "volume_um3", "grp")
-    assert model_used.startswith("LMM")  # this test only exercises the LMM branch
-    n_clusters = d["grp"].nunique()
-    _, _, _, p_values, dof = _pairwise_contrasts(fit, ["A", "B"], n_clusters)
-    assert dof == [n_clusters - 1]
-    t_stat = float(np.ravel(fit.t_test(np.array([[0, 1]])).tvalue)[0])
-    expected_t_p = float(2 * st.t.sf(abs(t_stat), n_clusters - 1))
-    z_p = float(2 * st.norm.sf(abs(t_stat)))
-    assert p_values[0] == pytest.approx(expected_t_p)
-    assert p_values[0] > z_p  # t(G-1) reference must be more conservative than z
+    assert model_used == small_sample.LMM_BRANCH
+    row = _pairwise_contrasts(fit, ["A", "B"])[0]
+    assert row["df_denom"] == pytest.approx(d["grp"].nunique() - 2, rel=1e-6)
+    t_stat = row["estimate"] / row["standard_error"]
+    assert row["p_raw"] == pytest.approx(2 * st.t.sf(abs(t_stat), row["df_denom"]))
+    assert row["p_raw"] > 2 * st.norm.sf(abs(t_stat))
 
 
-def test_ols_fallback_uses_cluster_robust_t_reference():
-    """OLS-fallback p-values must come from use_t=True's t(G-1) reference."""
-    rows = []
-    for condition in ("A", "B"):
-        for replicate in range(3):
-            rows.append({"condition": condition, "grp": f"{condition}::R{replicate}", "value": 10.0})
-    d = pd.DataFrame(rows)
-    d["condition"] = pd.Categorical(d.condition, categories=["A", "B"])
-    fit, model_used = fit_model(d, "value", "grp")
-    assert model_used == "OLS(clustered SE)"
-    assert fit.use_t is True
+def test_boundary_random_effect_switches_to_cr2_fallback():
+    d = _nested(offset_sd=0.0, seed=3)
+    # Replicate means exactly equal within a condition: the REML replicate variance is 0.
+    d["volume_um3"] = d.volume_um3 - d.groupby("grp", observed=True).volume_um3.transform("mean") \
+        + d.groupby("condition", observed=True).volume_um3.transform("mean")
+    fit, model_used = fit_model(d, "volume_um3", "grp")
+    assert model_used == small_sample.FALLBACK_BRANCH
+    row = _pairwise_contrasts(fit, ["A", "B"])[0]
+    assert row["branch"] == small_sample.FALLBACK_BRANCH
+    assert 0 < row["df_denom"] <= d["grp"].nunique() - 1
 
 
-def test_ols_fallback_on_degenerate_random_effect():
-    rows = []
-    for condition in ("A", "B"):
-        for replicate in range(3):
-            rows.append({"condition": condition, "grp": f"{condition}::R{replicate}", "value": 10.0})
-    d = pd.DataFrame(rows)
-    d["condition"] = pd.Categorical(d.condition, categories=["A", "B"])
-    _, model_used = fit_model(d, "value", "grp")
-    assert model_used == "OLS(clustered SE)"
+def test_constant_feature_is_not_estimable_and_skipped():
+    rows = [{"condition": c, "biological_replicate": f"R{r}", "morphology_eligible": True, "sphericity": 0.9}
+            for c in ("A", "B") for r in range(3)]
+    pairwise, omnibus = condition_pairwise_tests(pd.DataFrame(rows), features=("sphericity",))
+    assert pairwise.empty and omnibus == {}
+
+
+def test_designs_outside_the_qualified_envelope_are_labelled_provisional():
+    small = _nested(replicates=2)
+    fit, _ = fit_model(small, "volume_um3", "grp")
+    row = _pairwise_contrasts(fit, ["A", "B"])[0]
+    assert row["interval_qualification"] == "provisional - coverage unqualified"
+    many = _nested(conditions=("A", "B", "C", "D"), replicates=small_sample.QUALIFIED_MIN_REPLICATES)
+    fit, _ = fit_model(many, "volume_um3", "grp")
+    assert all(r["interval_qualification"] != "qualified" for r in _pairwise_contrasts(fit, ["A", "B", "C", "D"]))
+    inside = _nested(replicates=small_sample.QUALIFIED_MIN_REPLICATES)
+    fit, _ = fit_model(inside, "volume_um3", "grp")
+    assert _pairwise_contrasts(fit, ["A", "B"])[0]["interval_qualification"] == "qualified"
 
 
 def test_condition_with_too_few_replicates_is_excluded():
@@ -184,7 +191,9 @@ def test_pipeline_writes_pairwise_contrasts_end_to_end(tmp_path):
     for condition, scale in (("Vehicle", 1.0), ("Treated", 1.6)):
         for replicate in range(3):
             name = f"{condition}_{replicate}"
-            image_name = _write_field(tmp_path, name, scale)
+            # Replicates differ slightly: identical replicates carry no replicate-level
+            # variation, and the frozen method correctly declines to test them.
+            image_name = _write_field(tmp_path, name, scale * (1.0 - 0.04 * replicate))
             rows.append({"sample_id": name, "condition": condition,
                         "biological_replicate": f"R{replicate}", "image_path": image_name})
     manifest = tmp_path / "manifest.csv"

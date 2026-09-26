@@ -2,11 +2,11 @@
   "schema": "organoid-analysis/typecheck-debt-baseline/1",
   "command": "mypy src/organoid_analysis",
   "mypy_version": "2.3.1",
-  "total_errors": 110,
+  "total_errors": 103,
   "class_counts": {
-    "internal_typing_defect": 34,
-    "missing_third_party_stubs": 44,
-    "scientific_library_typing_boundary": 32
+    "internal_typing_defect": 32,
+    "missing_third_party_stubs": 42,
+    "scientific_library_typing_boundary": 29
   },
   "signatures": [
     {
@@ -320,44 +320,9 @@
       "class": "missing_third_party_stubs"
     },
     {
-      "signature": "src/organoid_analysis/statistics/inference.py | import-untyped | Library stubs not installed for \"scipy\"",
-      "count": 1,
-      "class": "missing_third_party_stubs"
-    },
-    {
-      "signature": "src/organoid_analysis/statistics/inference.py | import-untyped | Library stubs not installed for \"scipy.stats\"",
-      "count": 1,
-      "class": "missing_third_party_stubs"
-    },
-    {
-      "signature": "src/organoid_analysis/statistics/inference.py | import-untyped | Skipping analyzing \"statsmodels\": module is installed, but missing library stubs or py.typed marker",
-      "count": 1,
-      "class": "scientific_library_typing_boundary"
-    },
-    {
-      "signature": "src/organoid_analysis/statistics/inference.py | import-untyped | Skipping analyzing \"statsmodels.formula\": module is installed, but missing library stubs or py.typed marker",
-      "count": 1,
-      "class": "scientific_library_typing_boundary"
-    },
-    {
-      "signature": "src/organoid_analysis/statistics/inference.py | import-untyped | Skipping analyzing \"statsmodels.formula.api\": module is installed, but missing library stubs or py.typed marker",
-      "count": 1,
-      "class": "scientific_library_typing_boundary"
-    },
-    {
       "signature": "src/organoid_analysis/statistics/inference.py | import-untyped | Skipping analyzing \"statsmodels.stats.multitest\": module is installed, but missing library stubs or py.typed marker",
       "count": 1,
       "class": "scientific_library_typing_boundary"
-    },
-    {
-      "signature": "src/organoid_analysis/statistics/inference.py | no-untyped-def | Function is missing a return type annotation",
-      "count": 1,
-      "class": "internal_typing_defect"
-    },
-    {
-      "signature": "src/organoid_analysis/statistics/inference.py | no-untyped-def | Function is missing a type annotation for one or more parameters",
-      "count": 1,
-      "class": "internal_typing_defect"
     },
     {
       "signature": "src/organoid_analysis/validation/segmentation_metrics.py | import-untyped | Library stubs not installed for \"pandas\"",

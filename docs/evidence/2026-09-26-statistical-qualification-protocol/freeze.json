@@ -1,0 +1,11 @@
+{
+ "note": "SHA-256 of the SG-5 protocol, confirmation harness and reference files, written before the confirmation simulation was executed.",
+ "sha256": {
+  "docs/evidence/2026-09-26-statistical-qualification-protocol/PROTOCOL.md": "9605ad475c57082aec468f98e6ef92d398e951292a31b09389f20af5a100a30e",
+  "docs/evidence/2026-09-26-statistical-qualification-protocol/coverage_confirmation.py": "bef082b9905626627b63fe31f021225ae7362efc664728f59d81776532ea216c",
+  "docs/evidence/2026-09-26-statistical-qualification-protocol/reference/reference_datasets.csv": "da3cbb4fc35ef2a92c763d3068f953df6afbde526a3bc2eb5238d324f6724dcf",
+  "docs/evidence/2026-09-26-statistical-qualification-protocol/reference/reference_values.json": "e356b2044db4315c6d02a97cbb22fbbc8de7de3b7adbcb4cc442dc253041703a",
+  "docs/evidence/2026-09-26-statistical-qualification-protocol/reference/reference.R": "00095841067ea2b21936e3f3f88e4633ddf9f20c973f88c3c54fe6371358c8b3",
+  "docs/evidence/2026-09-26-statistical-qualification-protocol/reference/make_reference_datasets.py": "3236159b16bc3ef4ec84e965a13bfa508eb5f9f8349ea375298035533aae4711"
+ }
+}

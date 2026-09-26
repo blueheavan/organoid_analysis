@@ -60,3 +60,11 @@ def viability_copy(tmp_path: Path) -> tuple[Path, str]:
     from organoid_analysis.validation import viability_rule_evidence
 
     return _copy_record(tmp_path, viability_rule_evidence)
+
+
+@pytest.fixture
+def statistical_copy(tmp_path: Path) -> tuple[Path, str]:
+    """Byte-identical copy of the current SG-5 record and its inputs."""
+    from organoid_analysis.validation import statistical_qualification_evidence
+
+    return _copy_record(tmp_path, statistical_qualification_evidence)
