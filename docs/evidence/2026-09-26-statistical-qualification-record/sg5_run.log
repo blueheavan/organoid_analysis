@@ -1,0 +1,12 @@
+interval study: 9 cells
+144 cells x 20000 x 2 datasets
+   0/144      92s
+  20/144     502s
+  40/144     915s
+  60/144    1344s
+  80/144    1765s
+ 100/144    2175s
+ 120/144    2612s
+ 140/144    3116s
+done in 3116s
+exit=0

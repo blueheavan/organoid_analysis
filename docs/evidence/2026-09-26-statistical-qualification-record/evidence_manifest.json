@@ -1,0 +1,209 @@
+{
+  "schema_version": "organoid-analysis/evidence-manifest/1",
+  "contract_id": "statistical-qualification/1",
+  "validation_run_id": "2026-09-26-statistical-qualification-record",
+  "validation_scope": "SG-5 type-I error and 95% coverage of the frozen condition-contrast method and the condition-level interval inside the qualified design envelope, with engineering verification against lmerTest and clubSandwich",
+  "record_class": "canonical",
+  "generated_utc": "2026-09-26T10:00:53Z",
+  "source": {
+    "validated_source_commit": "90c0fec724ace41e89830fb4302187420c757337",
+    "validated_source_tree": "1432f5f652d5b78eb1e67156435b39d12e0acd5d",
+    "whole_tree_clean_at_execution": true,
+    "dirty_paths_at_execution": [],
+    "scope_clean_at_execution": true,
+    "record_storage": "This record is stored in a commit made after validated_source_commit. The storing commit is deliberately not named inside the record (a commit cannot contain its own hash); find it with `git log --format=%H -1 -- <manifest path>`. validated_source_commit identifies the source under validation, never the commit that stores this record."
+  },
+  "dependency_scope": {
+    "files": [
+      {
+        "path": "src/organoid_analysis/statistics/small_sample.py",
+        "sha256": "d384d8219649439f67ceb699290aaf3e3602b40925734221e1cfa446fcfb56ed",
+        "role": "method_core",
+        "rationale": "REML fit, Satterthwaite df, CR2 fallback, omnibus, qualified design envelope."
+      },
+      {
+        "path": "src/organoid_analysis/statistics/inference.py",
+        "sha256": "3a82c912fd678859a24337c0c581614d8a1c3a18a6d6c138e53ff673c7cbecf7",
+        "role": "method_route",
+        "rationale": "Object rows to replicate sufficient statistics, grouping key, log10 transform, labels."
+      },
+      {
+        "path": "src/organoid_analysis/statistics/aggregation.py",
+        "sha256": "73382d7d6d905efadd192c2953241e67224c8aafa7b6e995840ce87f31309677",
+        "role": "interval_core",
+        "rationale": "condition_interval(): replicate-level t interval, log scale for size metrics."
+      }
+    ]
+  },
+  "environment": {
+    "lockfile": {
+      "path": "pixi.lock",
+      "sha256": "fdba57d5d030dc0c72eaae1e3f1d950f4b58c44f1ab471aa54ce193308f9ae8c"
+    },
+    "python": "3.12.14",
+    "platform": "Linux-6.18.44-fc-v37-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "packages": {
+      "numpy": "2.5.2",
+      "scipy": "1.17.1",
+      "scikit-image": "0.26.0",
+      "pandas": "2.3.3"
+    }
+  },
+  "protocol": [
+    {
+      "path": "docs/evidence/2026-09-26-statistical-qualification-protocol/PROTOCOL.md",
+      "sha256": "9605ad475c57082aec468f98e6ef92d398e951292a31b09389f20af5a100a30e"
+    },
+    {
+      "path": "docs/evidence/2026-09-26-statistical-qualification-protocol/coverage_confirmation.py",
+      "sha256": "bef082b9905626627b63fe31f021225ae7362efc664728f59d81776532ea216c"
+    },
+    {
+      "path": "docs/evidence/2026-09-26-statistical-qualification-protocol/freeze.json",
+      "sha256": "38f0d7c9f996f9ced8a6acb533e5f364cb266bfc00f7f84043b85a561fc7a671"
+    },
+    {
+      "path": "docs/evidence/2026-09-26-statistical-qualification-protocol/reference/reference_datasets.csv",
+      "sha256": "da3cbb4fc35ef2a92c763d3068f953df6afbde526a3bc2eb5238d324f6724dcf"
+    },
+    {
+      "path": "docs/evidence/2026-09-26-statistical-qualification-protocol/reference/reference_values.json",
+      "sha256": "e356b2044db4315c6d02a97cbb22fbbc8de7de3b7adbcb4cc442dc253041703a"
+    },
+    {
+      "path": "docs/evidence/2026-09-26-statistical-qualification-protocol/reference/reference.R",
+      "sha256": "00095841067ea2b21936e3f3f88e4633ddf9f20c973f88c3c54fe6371358c8b3"
+    },
+    {
+      "path": "docs/evidence/2026-09-26-statistical-qualification-protocol/reference/make_reference_datasets.py",
+      "sha256": "3236159b16bc3ef4ec84e965a13bfa508eb5f9f8349ea375298035533aae4711"
+    }
+  ],
+  "vv_implementation": [
+    {
+      "path": "src/organoid_analysis/validation/statistical_qualification_evidence.py",
+      "sha256": "312ea0e91929d31df6258f2239051db7ec2d36437b721a6bd6a3abf1b7be7855"
+    },
+    {
+      "path": "src/organoid_analysis/validation/record_contract.py",
+      "sha256": "c822047ca6ef1318349a2ad509d9406455242738bc065e9cd1c86651082e0876"
+    },
+    {
+      "path": "src/organoid_analysis/validation/evidence_manifest.py",
+      "sha256": "7397f2f124fc84089b49e1a0f55696e735ec279df698bbdf4b640509da0de335"
+    },
+    {
+      "path": "scripts/record_qualification_evidence.py",
+      "sha256": "9019a7008881ea814beb8710c030b4ca77532ad47fe184a39489f08784a551e9"
+    }
+  ],
+  "raw_artifacts": [
+    {
+      "path": "docs/evidence/2026-09-26-statistical-qualification-record/sg5_contrast_coverage.csv",
+      "sha256": "bb9c32e3f60706379830eda2ea0ed129d1ad1779c5bac92911b88ea92275fd05"
+    },
+    {
+      "path": "docs/evidence/2026-09-26-statistical-qualification-record/sg5_condition_interval.csv",
+      "sha256": "a1e6fa54d37da06ce9689ff3da6d452f73214d46f038c02831b5472f3125ac1a"
+    },
+    {
+      "path": "docs/evidence/2026-09-26-statistical-qualification-record/sg5_run.log",
+      "sha256": "e7dfc24105558f253bc823debdacdd5a5a5fc456357bd03e4ac178c3553e7538"
+    }
+  ],
+  "derived_artifacts": [],
+  "commands": [
+    {
+      "command": "python docs/evidence/2026-09-26-statistical-qualification-protocol/coverage_confirmation.py --seed 20260928 --n-sim 20000 --processes 4",
+      "cwd": ".",
+      "exit_code": 0,
+      "started_utc": "2026-09-26T09:07:06Z",
+      "finished_utc": "2026-09-26T10:00:53Z"
+    }
+  ],
+  "invocation": "pixi run qualification-record --contract statistical --run-id 2026-09-26-statistical-qualification-record --processes 4",
+  "results": {
+    "SG-5": {
+      "status": "PASS",
+      "criterion": "every cell: type-I in [0.04, 0.06], 95% coverage in [0.94, 0.96]; condition interval coverage in [0.94, 0.96]",
+      "validity_problems": [],
+      "violations": [],
+      "n_violations": 0,
+      "contrast": {
+        "n_cells": 144,
+        "type1_range": [
+          0.0454,
+          0.05295
+        ],
+        "coverage_range": [
+          0.9468,
+          0.9555
+        ],
+        "max_fallback_fraction": 0.57135
+      },
+      "condition_interval": {
+        "n_cells": 9,
+        "coverage_range": [
+          0.9486,
+          0.9514
+        ]
+      },
+      "omnibus_screen_type1_range": [
+        0.0456,
+        0.0786
+      ],
+      "reference_verification": {
+        "passed": true,
+        "tolerance": {
+          "cr2": 1e-09,
+          "lmm_estimate_se": 1e-06,
+          "lmm_df": 1e-05,
+          "lmm_p_abs": 1e-06
+        },
+        "boundary_mismatch": [],
+        "versions": {
+          "R": "R version 4.4.3 (2025-02-28)",
+          "lme4": "2.0.6",
+          "lmerTest": "3.2.1",
+          "clubSandwich": "0.5.10",
+          "sandwich": "3.1.3"
+        },
+        "n_datasets": 10
+      },
+      "envelope": {
+        "method_id": "reml_satterthwaite_cr2_fallback/1",
+        "min_replicates": 6,
+        "max_replicates": 21,
+        "max_conditions": 3,
+        "mean_objects": [
+          5.0,
+          150.0
+        ],
+        "min_objects": 2
+      },
+      "claim_boundary": "method-level qualification inside the design envelope under approximately normal replicate effects on the analysis scale; does not establish that a given experiment is correctly designed or pre-registered"
+    }
+  },
+  "resulting_status": {
+    "SG-5": "PASS"
+  },
+  "reference_discrepancies": {
+    "cr2": 2.7755575615628914e-15,
+    "lmm_estimate_se": 5.335420760754772e-08,
+    "lmm_df": 1.5368329608911324e-07,
+    "lmm_p_abs": 2.735230417161283e-08
+  },
+  "reproduction": {
+    "cell": "K=3 G=6 m=5 unbalanced icc=0",
+    "keys": [
+      "null_reject",
+      "alt_cover",
+      "omnibus_reject",
+      "null_fallback",
+      "failures"
+    ],
+    "mismatches": 0
+  },
+  "manifest_content_sha256": "c8445fd79d38c9600a781a9b7cec8eeccc405c629b3d64dbaf8ea99fb1575b26"
+}
