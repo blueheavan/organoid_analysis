@@ -47,7 +47,7 @@ All scientific values/defaults are unchanged. Input-domain validation now reject
 | `viability.min_control_separation_snr` | `3.0` | dimensionless | HEURISTIC / HEURISTIC | Changes calibration availability or signal-state calls; no independent assay validates this default. | Yes | INSUFFICIENT EVIDENCE |
 | `viability.high_gate` | `0.6` | dimensionless | HEURISTIC / HEURISTIC | Changes calibration availability or signal-state calls; no independent assay validates this default. | Yes | INSUFFICIENT EVIDENCE |
 | `viability.low_gate` | `0.3` | dimensionless | HEURISTIC / HEURISTIC | Changes calibration availability or signal-state calls; no independent assay validates this default. | Yes | INSUFFICIENT EVIDENCE |
-| `report.bootstrap_iterations` | `2000` | resamples | HEURISTIC / HEURISTIC | Changes resampling precision/reproducibility or display/export scope. | Yes | INSUFFICIENT EVIDENCE |
+| `report.bootstrap_iterations` | `2000` | resamples | — | **Unused since 2026-09-26** (condition interval is a replicate-level t interval, D-16); kept so existing configuration files stay valid. | Yes | NOT APPLICABLE |
 | `report.seed` | `20260831` | dimensionless | ARBITRARY_OR_UNKNOWN / HEURISTIC | Changes resampling precision/reproducibility or display/export scope. | Yes | NOT APPLICABLE |
 | `report.save_meshes` | `true` | dimensionless | ARBITRARY_OR_UNKNOWN / HEURISTIC | Changes resampling precision/reproducibility or display/export scope. | Yes | NOT APPLICABLE |
 | `report.max_meshes_in_preview` | `20` | dimensionless | ARBITRARY_OR_UNKNOWN / HEURISTIC | Changes resampling precision/reproducibility or display/export scope. | Yes | NOT APPLICABLE |
@@ -102,8 +102,8 @@ All scientific values/defaults are unchanged. Input-domain validation now reject
 | `MAD_consistency` | `[1.4826, 0.67448975]` | normal scale | HEURISTIC / HEURISTIC | Gaussian scaling identity; does not justify biological cutoff | No unless API/config exposed | INSUFFICIENT EVIDENCE |
 | `MAD_zero` | `"finite values not isclose to median; NumPy default rtol=1e-5, atol=1e-8"` | volume units | HEURISTIC / HEURISTIC | Uncalibrated fallback outlier flags | No unless API/config exposed | INSUFFICIENT EVIDENCE |
 | `viability.noise_floor` | `1e-09` | intensity | HEURISTIC / HEURISTIC | Can make SNR arbitrarily large on constant controls; not instrument noise qualification | No unless API/config exposed | INSUFFICIENT EVIDENCE |
-| `bootstrap.minimum_N` | `3` | replicates | HEURISTIC / HEURISTIC | Legacy availability rule only; inferential reporting now requires demonstrated branch/cell-specific coverage | No unless API/config exposed | INSUFFICIENT EVIDENCE |
-| `bootstrap.quantiles` | `[0.025, 0.975]` | quantile | HEURISTIC / HEURISTIC | Nominal 95% interval; coverage NOT ASSESSED | No unless API/config exposed | INSUFFICIENT EVIDENCE |
+| `aggregation._MIN_REPLICATES_FOR_CI` | `3` | replicates | HEURISTIC / HEURISTIC | Computation floor only; intervals below `small_sample.QUALIFIED_MIN_REPLICATES = 6` are labelled provisional (D-10, D-16) | No | ESTABLISHED for the floor of 6 (SG-5 record) |
+| `aggregation.condition_interval` | Student t, 95 % | — | ESTABLISHED / FROZEN (D-16) | Replicate-level t interval; log scale for size metrics; coverage 0.949–0.951 at 6–20 replicates (SG-5 record) | No | PASS inside the SG-5 envelope |
 | `inference.log10_features` | `["volume_um3"]` | feature | HEURISTIC / HEURISTIC | Changes estimand to log10 volume | No unless API/config exposed | INSUFFICIENT EVIDENCE |
 | `inference.random_variance_ratio` | `1e-06` | ratio to residual variance | HEURISTIC / HEURISTIC | Switches LMM to clustered OLS | No unless API/config exposed | INSUFFICIENT EVIDENCE |
 | `inference.reml_optimizers` | `"True; lbfgs then cg"` | rule | HEURISTIC / HEURISTIC | Conditional fit/fallback policy | No unless API/config exposed | INSUFFICIENT EVIDENCE |

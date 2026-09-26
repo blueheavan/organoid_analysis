@@ -131,7 +131,7 @@ Classification: S3 (Inferential) for the pipeline as a whole, because `src/organ
 
 ### Statistical summaries
 - Well-level medians
-- Condition-level means and bootstrap CIs
+- Condition-level means and replicate-level t intervals (log scale for size metrics; D-16)
 - State fractions
 
 ## 8. Downstream Consequence

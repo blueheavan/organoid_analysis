@@ -1,5 +1,8 @@
 # Scientific review and gate update — 2026-09-26
 
+> Later the same day SG-5 was also qualified (gate 4/9); see
+> [VALIDATION_UPDATE_2026-09-26-sg5.md](VALIDATION_UPDATE_2026-09-26-sg5.md).
+
 ## Outcome
 
 | Item | Before | After | Basis |

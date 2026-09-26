@@ -1,5 +1,13 @@
 # Statistical inference audit — 2026-09-16
 
+> **Superseded 2026-09-26.** The sequence required in §3 was carried out: the
+> method was frozen and implemented (D-16), verified against lmerTest and
+> clubSandwich, and qualified by a one-time confirmation simulation. SG-5 now
+> PASSES inside a stated design envelope; see
+> [VALIDATION_UPDATE_2026-09-26-sg5.md](VALIDATION_UPDATE_2026-09-26-sg5.md).
+> Finding 2 (percentile bootstrap) was confirmed (75 % coverage at 3 replicates)
+> and the interval replaced. The text below describes the pre-2026-09-26 code.
+
 **Scope:** an audit of the inferential layer as implemented. It changes no
 algorithm, no threshold, no statistical method and no gate status. SG-5 remains
 `INSUFFICIENT EVIDENCE`. Nothing here qualifies an interval or selects a method.

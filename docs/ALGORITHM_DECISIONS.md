@@ -102,6 +102,14 @@ Classical organoid geometry fills enclosed holes; multilevel geometry uses raw l
 
 Volume is log10 transformed; contrasts have effects, SE, t-based CIs and within-feature BH correction. [statsmodels' test API](https://www.statsmodels.org/stable/generated/statsmodels.regression.mixed_linear_model.MixedLMResults.t_test.html) and [multiple-testing API](https://www.statsmodels.org/stable/generated/statsmodels.stats.multitest.multipletests.html) document mechanics. They do not establish that manually using t(G−1) for MixedLM provides calibrated small-sample coverage. LMM omnibus remains asymptotic. Origin `HEURISTIC` for these project choices, basis `CONTEXT_DEPENDENT`, evidence `INSUFFICIENT EVIDENCE` for inferential validity. No type-I-error/CI-coverage simulation, independent study design, or power/precision target is available. No replacement statistical method was selected.
 
+**2026-09-26 implementation (D-16).** `statistics/small_sample.py` implements
+the frozen method: REML random intercept with Satterthwaite df per contrast,
+CR2 + Satterthwaite df at the variance boundary, between-within omnibus screen,
+and a replicate-level t condition interval replacing the percentile bootstrap.
+Verified against lmerTest/clubSandwich and qualified for 6–21 replicates per
+compared condition (SG-5 PASS, `evidence/2026-09-26-statistical-qualification-record`).
+The paragraph above describes the superseded statsmodels path.
+
 **2026-09-13 governing decision.** The next inferential implementation is
 selected before qualification. The project first freezes one primary LMM
 small-sample method (Satterthwaite or between-within) and the clustered-OLS
