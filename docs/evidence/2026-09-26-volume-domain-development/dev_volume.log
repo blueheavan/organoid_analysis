@@ -1,0 +1,55 @@
+dense scan: 36030 rows
+  100/2304       6s
+  200/2304      19s
+  300/2304      51s
+  400/2304     112s
+  500/2304     118s
+  600/2304     134s
+  700/2304     172s
+  800/2304     226s
+  900/2304     233s
+ 1000/2304     251s
+ 1100/2304     293s
+ 1200/2304     359s
+ 1300/2304     368s
+ 1400/2304     389s
+ 1500/2304     442s
+ 1600/2304     475s
+ 1700/2304     486s
+ 1800/2304     510s
+ 1900/2304     563s
+ 2000/2304     593s
+ 2100/2304     605s
+ 2200/2304     631s
+ 2300/2304     682s
+Traceback (most recent call last):
+  File "/home/user/organoid_analysis/docs/evidence/2026-09-26-volume-domain-development/dev_volume.py", line 200, in <module>
+    (HERE / "volume_dev_selection.json").write_text(json.dumps(result, indent=1) + "\n")
+                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/env312/lib/python3.12/json/__init__.py", line 238, in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+  File "/tmp/claude-0/env312/lib/python3.12/json/encoder.py", line 202, in encode
+    chunks = list(chunks)
+             ^^^^^^^^^^^^
+  File "/tmp/claude-0/env312/lib/python3.12/json/encoder.py", line 432, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "/tmp/claude-0/env312/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/tmp/claude-0/env312/lib/python3.12/json/encoder.py", line 326, in _iterencode_list
+    yield from chunks
+  File "/tmp/claude-0/env312/lib/python3.12/json/encoder.py", line 406, in _iterencode_dict
+    yield from chunks
+  File "/tmp/claude-0/env312/lib/python3.12/json/encoder.py", line 439, in _iterencode
+    o = _default(o)
+        ^^^^^^^^^^^
+  File "/tmp/claude-0/env312/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type bool is not JSON serializable
+{
+ "rho_vol_min": 36,
+ "worst_in_D2_gate_by_pose_type": {
+  "symmetric": 0.021392642917061222,
+  "random": 0.004728984345473974
+ }
+}

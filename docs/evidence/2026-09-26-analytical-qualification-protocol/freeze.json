@@ -1,0 +1,7 @@
+{
+ "note": "SHA-256 of the SG-1a/SG-2a protocol and harness, written before the confirm3 grid was executed (see PROTOCOL.md section 8 for the three-case smoke test). The generator files are bound by docs/evidence/2026-09-12-surface-method-development/freeze_record_v3.json.",
+ "sha256": {
+  "docs/evidence/2026-09-26-analytical-qualification-protocol/PROTOCOL.md": "ba51ba79ccbe4ee4f4951cec81cf6ca6a5e8990c6d21c4fbf70d01ae6f04f6f3",
+  "docs/evidence/2026-09-26-analytical-qualification-protocol/qualification_harness.py": "321d2f6856fe727921bf032416d0fc22e7050f61607f7d1db263876419ee5e0e"
+ }
+}

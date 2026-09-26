@@ -14,22 +14,33 @@ META = ["condition", "biological_replicate", "unit_id", "batch_id", "control"]
 # from) stats.min_replicates_per_condition -- see docs/PARAMETERS.md.
 _MIN_REPLICATES_FOR_BOOTSTRAP_CI = 3
 
+# Versioned definition of the viability fractions (owner-frozen estimand,
+# docs/INTENDED_USE_AND_ESTIMANDS.md section 5.3; migrated 2026-09-13):
+# viable_like/mixed_signal/compromised_like divide by N_classifiable, and
+# indeterminate divides by N_morphology_QC_eligible. Exported with every summary
+# so fractions computed under the superseded all-eligible denominator can never
+# be mixed with these silently. Any change to a denominator must change this id.
+VIABILITY_FRACTION_DEFINITION = "classifiable-denominator/2"
+
 
 def _describe(objects: pd.DataFrame) -> dict:
     eligible = objects[objects.morphology_eligible.astype(bool)]
-    # Counts are int; medians, totals and fractions are float (nan when empty).
-    result: dict[str, int | float] = {"n_detected": len(objects), "n_included": len(eligible),
-                                      "n_excluded": len(objects) - len(eligible)}
+    # Counts are int; medians, totals and fractions are float (nan when empty);
+    # the fraction-definition id is str.
+    result: dict[str, int | float | str] = {"n_detected": len(objects), "n_included": len(eligible),
+                                            "n_excluded": len(objects) - len(eligible)}
     for metric in MORPHOLOGY:
         result[f"median_{metric}"] = float(eligible[metric].median()) if len(eligible) else np.nan
     result["total_volume_um3"] = float(eligible.volume_um3.sum())
     classifiable = eligible[eligible.viability_state != "indeterminate"]
     result["n_classifiable"] = len(classifiable)
     for state in STATES:
-        result[f"n_{state}"] = int((eligible.viability_state == state).sum())
+        count = int((eligible.viability_state == state).sum())
         denominator = len(eligible) if state == "indeterminate" else len(classifiable)
-        result[f"fraction_{state}"] = result[f"n_{state}"] / denominator if denominator else np.nan
+        result[f"n_{state}"] = count
+        result[f"fraction_{state}"] = count / denominator if denominator else np.nan
     result["fraction_indeterminate_denominator"] = len(eligible)
+    result["viability_fraction_definition"] = VIABILITY_FRACTION_DEFINITION
     return result
 
 

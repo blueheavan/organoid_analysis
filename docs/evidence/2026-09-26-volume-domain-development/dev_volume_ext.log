@@ -1,0 +1,42 @@
+  100/384     185s
+  200/384     366s
+  300/384     549s
+{
+ "n": 384,
+ "by_level": {
+  "36": {
+   "n": 328,
+   "worst_abs": 0.0045274589001782495,
+   "worst_case": "voldev-0289",
+   "worst_shape": "torus",
+   "worst_spacing": "4x1x1",
+   "worst_pose": "sym-corner"
+  },
+  "40": {
+   "n": 235,
+   "worst_abs": 0.0045274589001782495,
+   "worst_case": "voldev-0289",
+   "worst_shape": "torus",
+   "worst_spacing": "4x1x1",
+   "worst_pose": "sym-corner"
+  },
+  "44": {
+   "n": 133,
+   "worst_abs": 0.0030868457326299614,
+   "worst_case": "voldev-0369",
+   "worst_shape": "torus",
+   "worst_spacing": "2.5x0.8x0.8",
+   "worst_pose": "sym-corner"
+  },
+  "48": {
+   "n": 34,
+   "worst_abs": 0.0027277246485594153,
+   "worst_case": "voldev-0056",
+   "worst_shape": "capsule",
+   "worst_spacing": "1x1x1",
+   "worst_pose": "sym-centre"
+  }
+ },
+ "max_abs_all": 0.0045274589001782495,
+ "within_margin": true
+}

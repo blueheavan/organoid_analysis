@@ -9,7 +9,15 @@ claims are supported. This gate reports the scientific acceptance items and
 exits 0 only when every item is PASS backed by a verified, canonical
 validation record.
 
-SG-1/SG-2 take their status from the analytical-geometry validation record
+Qualification items read item-keyed records (owner decision D-14):
+SG-1a/SG-2a from the analytical-qualification record
+(docs/evidence/analytical_qualification_current_record.json) and SG-4A from the
+viability-rule record (docs/evidence/viability_rule_current_record.json). Each
+is PASS only when its record verifies (hashes, frozen protocol, Git provenance,
+re-derivation from raw results and re-execution of production code), is
+canonical, and reports PASS for that item.
+
+The characterization items SG-1b/SG-2b take their numbers from the analytical-geometry validation record
 named in docs/evidence/analytical_geometry_current_record.json, and only after
 that record verifies (analytical_geometry_evidence.verify_record): every file
 of the declared dependency scope, the frozen plan and harness, pixi.lock,
@@ -26,9 +34,13 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import Any
 
 from organoid_analysis.validation import analytical_geometry_evidence as analytical
-from organoid_analysis.validation.evidence_manifest import EvidenceError
+from organoid_analysis.validation import analytical_qualification_evidence as qualification
+from organoid_analysis.validation import viability_rule_evidence as viability
+from organoid_analysis.validation.evidence_manifest import EvidenceError, load_manifest
+from organoid_analysis.validation.record_contract import current_manifest_relpath
 
 ROOT = Path(__file__).resolve().parents[1]
 VALID_STATUSES = {"PASS", "PARTIAL", "FAIL", "NOT ASSESSED", "INSUFFICIENT EVIDENCE", "NOT APPLICABLE"}
@@ -50,12 +62,23 @@ class GateItem:
     counts_toward_gate: bool = True
 
 
-Reports = dict[str, analytical.VerificationReport]
+Reports = dict[str, "analytical.VerificationReport | qualification.VerificationReport"]
 
 
-def _verify(root: Path, manifest: str, reports: Reports, check_git: bool, reproduce: bool) -> analytical.VerificationReport:
+def _contract_of(root: Path, manifest: str) -> str | None:
+    try:
+        return load_manifest(root / manifest).get("contract_id")
+    except EvidenceError:
+        return None
+
+
+def _verify(root: Path, manifest: str, reports: Reports, check_git: bool, reproduce: bool) -> Any:
+    """Verify a record with the verifier of the contract it declares (never a looser one)."""
     if manifest not in reports:
-        reports[manifest] = analytical.verify_record(root, manifest, check_git=check_git, reproduce=reproduce)
+        contract = _contract_of(root, manifest)
+        verifier = {qualification.CONTRACT_ID: qualification.verify_record,
+                    viability.CONTRACT_ID: viability.verify_record}.get(contract or "", analytical.verify_record)
+        reports[manifest] = verifier(root, manifest, check_git=check_git, reproduce=reproduce)
     return reports[manifest]
 
 
@@ -63,14 +86,11 @@ def _percent(value: float | None, signed: bool = False) -> str:
     return "non-estimable" if value is None else f"{100 * value:{'+' if signed else ''}.2f}%"
 
 
-def _analytical_items(root: Path, reports: Reports, check_git: bool, reproduce: bool) -> list[GateItem]:
+def _characterization_items(root: Path, reports: Reports, check_git: bool, reproduce: bool) -> list[GateItem]:
+    """SG-1b/SG-2b: unrestricted characterization; never PASS/FAIL and never counted."""
     def rejected(reason: str, evidence: tuple[str, ...] = ()) -> list[GateItem]:
-        return [GateItem("SG-1a", "Surface analytical qualification", SURFACE_CRITERION_TEXT,
-                         "FAIL", reason, evidence),
-                GateItem("SG-1b", "Surface unrestricted characterization", "descriptive only",
+        return [GateItem("SG-1b", "Surface unrestricted characterization", "descriptive only",
                          "NOT APPLICABLE", reason, evidence, counts_toward_gate=False),
-                GateItem("SG-2a", "Volume analytical qualification", VOLUME_CRITERION_TEXT,
-                         "FAIL", reason, evidence),
                 GateItem("SG-2b", "Volume unrestricted characterization", "descriptive only",
                          "NOT APPLICABLE", reason, evidence, counts_toward_gate=False)]
 
@@ -82,8 +102,7 @@ def _analytical_items(root: Path, reports: Reports, check_git: bool, reproduce: 
     evidence = (manifest_path, f"{run_dir}/{analytical.DERIVED_NAMES[1]}", analytical.PLAN_PATH)
     report = _verify(root, manifest_path, reports, check_git, reproduce)
     if not report.valid or report.manifest is None:
-        shown = "; ".join(report.problems[:4]) + (f"; ... {len(report.problems) - 4} more" if len(report.problems) > 4 else "")
-        return rejected(f"EVIDENCE REJECTED ({len(report.problems)} problems): {shown}. "
+        return rejected(f"EVIDENCE REJECTED ({len(report.problems)} problems): {_shown(report.problems)}. "
                         "Repeat the analytical V&V (pixi run validation-record).", evidence)
 
     manifest = report.manifest
@@ -93,23 +112,87 @@ def _analytical_items(root: Path, reports: Reports, check_git: bool, reproduce: 
     area_basis = (f"{sg1['n_cases']} cases; max |error| {_percent(sg1['max_abs_rel_error'])} ({sg1['worst_case']}), "
                   f"median signed {_percent(sg1['median_signed_rel_error'], signed=True)}, "
                   f"non-estimable {sg1['n_nonestimable']}")
-    failing = [f"{row['rho_stratum']} max {_percent(row['max_abs_rel_error'])}"
-               for row in sg2["by_rho_stratum"] if row["status"] != "PASS"]
-    volume_basis = f"fails for {', '.join(failing)}" if failing else "all strata < 1%"
+    strata = [f"{row['rho_stratum']} max {_percent(row['max_abs_rel_error'])}" for row in sg2["by_rho_stratum"]]
+    volume_basis = "per rho_in stratum: " + ", ".join(strata)
     return [
-        GateItem("SG-1a", "Surface analytical qualification", SURFACE_CRITERION_TEXT,
-                 "INSUFFICIENT EVIDENCE",
-                 "no domain-restricted canonical qualification record; unrestricted record is characterization only",
-                 evidence),
         GateItem("SG-1b", "Surface unrestricted characterization", "descriptive only",
                  "NOT APPLICABLE", area_basis + record, evidence, manifest_path, counts_toward_gate=False),
-        GateItem("SG-2a", "Volume analytical qualification", VOLUME_CRITERION_TEXT,
-                 "INSUFFICIENT EVIDENCE",
-                 "no volume-specific domain or canonical qualification record; unrestricted record is characterization only",
-                 evidence),
         GateItem("SG-2b", "Volume unrestricted characterization", "descriptive only",
                  "NOT APPLICABLE", volume_basis + record, evidence, manifest_path, counts_toward_gate=False),
     ]
+
+
+def _shown(problems: tuple[str, ...]) -> str:
+    return "; ".join(problems[:4]) + (f"; ... {len(problems) - 4} more" if len(problems) > 4 else "")
+
+
+@dataclass(frozen=True)
+class QualifiedItem:
+    item_id: str
+    requirement: str
+    criterion: str
+    no_record_status: str
+    no_record_basis: str
+
+
+def _qualification_basis(item_id: str, result: dict[str, Any]) -> str:
+    if item_id == "SG-1a":
+        parts = [f"{grid}: n={row['n']}, max |error| {_percent(row['max_abs_rel_error'])} ({row['worst_case']})"
+                 for grid, row in result["by_grid"].items()]
+        return "; ".join(parts) + f"; domain rho_in>={result['domain']['rho_in_min']}, aniso<={result['domain']['anisotropy_max']}, smooth"
+    if item_id == "SG-2a":
+        row = result["confirm3"]
+        return (f"confirm3: n={row['n']}, max |error| {_percent(row['max_abs_rel_error'])} ({row['worst_case']}); "
+                f"domain rho_vol>={result['domain']['rho_vol_min']}, rho_in>={result['domain']['rho_in_min']}, "
+                f"aniso<={result['domain']['anisotropy_max']}, smooth")
+    return (f"{result['n_cases']} known-rule cases, {result['n_comparisons']} comparisons, "
+            f"{result['n_mismatched_cases']} mismatched; denominator {result['fraction_definition']}; "
+            f"{result['claim_boundary']}")
+
+
+def _qualified_items(root: Path, module: Any, definitions: list[QualifiedItem], reports: Reports,
+                     check_git: bool, reproduce: bool) -> list[GateItem]:
+    """Items read from a qualification record: PASS only if it verifies, is canonical and reports PASS."""
+    try:
+        manifest_path = current_manifest_relpath(root, module.SPEC)
+    except EvidenceError as error:
+        return [GateItem(d.item_id, d.requirement, d.criterion, d.no_record_status, f"{d.no_record_basis} ({error})", ())
+                for d in definitions]
+    report = _verify(root, manifest_path, reports, check_git, reproduce)
+    if not report.valid or report.manifest is None:
+        reason = f"EVIDENCE REJECTED ({len(report.problems)} problems): {_shown(report.problems)}"
+        return [GateItem(d.item_id, d.requirement, d.criterion, "FAIL", reason, (manifest_path,)) for d in definitions]
+    manifest = report.manifest
+    items = []
+    for d in definitions:
+        result = manifest["results"][d.item_id]
+        record = (f" [record {manifest['validation_run_id']}, {manifest['record_class']}, "
+                  f"source {manifest['source']['validated_source_commit'][:12]}]")
+        basis = _qualification_basis(d.item_id, result) + record
+        if result["status"] == "PASS" and manifest["record_class"] == "canonical":
+            items.append(GateItem(d.item_id, d.requirement, d.criterion, "PASS", basis, (manifest_path,), manifest_path))
+        elif result["status"] == "PASS":
+            items.append(GateItem(d.item_id, d.requirement, d.criterion, "INSUFFICIENT EVIDENCE",
+                                  "record is not canonical; " + basis, (manifest_path,)))
+        elif result["status"] == "VOID":
+            items.append(GateItem(d.item_id, d.requirement, d.criterion, "INSUFFICIENT EVIDENCE",
+                                  f"confirmation run VOID: {result.get('validity_problems')}; " + basis, (manifest_path,)))
+        else:
+            items.append(GateItem(d.item_id, d.requirement, d.criterion, "FAIL", basis, (manifest_path,)))
+    return items
+
+
+ANALYTICAL_QUALIFICATION = [
+    QualifiedItem("SG-1a", "Surface analytical qualification (declared domain)", SURFACE_CRITERION_TEXT,
+                  "INSUFFICIENT EVIDENCE", "no domain-restricted canonical qualification record"),
+    QualifiedItem("SG-2a", "Volume analytical qualification (declared volume domain)", VOLUME_CRITERION_TEXT,
+                  "INSUFFICIENT EVIDENCE", "no volume-domain canonical qualification record"),
+]
+VIABILITY_QUALIFICATION = [
+    QualifiedItem("SG-4A", "Calcein/PI four-state analytical classification",
+                  "known-rule state and refusal contract with versioned denominator", "PARTIAL",
+                  "state logic and denominator contract are unit-tested; no canonical analytical record"),
+]
 
 
 # Items with no computable oracle in this repository. They carry no validation
@@ -121,8 +204,6 @@ STATIC_ITEMS = [
     GateItem("SG-3B", "Membrane-fluorescence segmentation accuracy against independent annotation (detection, mask, downstream "
              "measurement bias)", "predeclared per docs/evidence/2026-09-11-measurement-vv/SEGMENTATION_VALIDATION_PROTOCOL.md",
              "INSUFFICIENT EVIDENCE", "no qualified independent 3D annotation set exists", ()),
-    GateItem("SG-4A", "Calcein/PI four-state analytical classification", "known-rule state and refusal contract with versioned denominator",
-             "PARTIAL", "state logic and classifiable-denominator contract are unit-tested; biological identity remains unvalidated", ()),
     GateItem("SG-4B", "Calcein/PI biological validity", "orthogonal object-level reference; control-based calibration "
              "evaluated on held-out batches", "NOT ASSESSED", "no orthogonal assay or held-out control data", ()),
     GateItem("SG-5", "Statistical and study-design validity", "predeclared design with an independent experimental "
@@ -154,7 +235,12 @@ def _require_qualifying_record(root: Path, item: GateItem, reports: Reports, che
 
 def evaluate(root: Path = ROOT, *, check_git: bool = True, reproduce: bool = True) -> list[GateItem]:
     reports: Reports = {}
-    items = _analytical_items(root, reports, check_git, reproduce) + STATIC_ITEMS
+    items = (_qualified_items(root, qualification, ANALYTICAL_QUALIFICATION, reports, check_git, reproduce)
+             + _characterization_items(root, reports, check_git, reproduce)
+             + _qualified_items(root, viability, VIABILITY_QUALIFICATION, reports, check_git, reproduce)
+             + STATIC_ITEMS)
+    order = ["SG-1a", "SG-1b", "SG-2a", "SG-2b", "SG-3A", "SG-3B", "SG-4A", "SG-4B", "SG-5", "SG-6A", "SG-6B"]
+    items.sort(key=lambda item: order.index(item.item_id) if item.item_id in order else len(order))
     for item in items:
         if item.status not in VALID_STATUSES:
             raise ValueError(f"{item.item_id}: unknown evidence status {item.status!r}")

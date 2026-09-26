@@ -1,0 +1,166 @@
+{
+ "rule": "smallest ladder value with every in-gate dev case and the dense symmetric sphere scan <= 0.5%",
+ "rho_vol_min": 36,
+ "per_level": [
+  {
+   "rho_vol_min": 10,
+   "n_grid_cases": 1464,
+   "grid_worst_abs": 0.021392642917061222,
+   "grid_worst_case": "voldev-0048",
+   "scan_worst_abs": 0.026853163107894762,
+   "scan_worst_at": {
+    "spacing": "1x1x1",
+    "rho_vol": 10.25,
+    "placement": "corner"
+   },
+   "satisfies_rule": false
+  },
+  {
+   "rho_vol_min": 12,
+   "n_grid_cases": 1436,
+   "grid_worst_abs": 0.021392642917061222,
+   "grid_worst_case": "voldev-0048",
+   "scan_worst_abs": 0.01792566719169586,
+   "scan_worst_at": {
+    "spacing": "1x1x1",
+    "rho_vol": 12.025,
+    "placement": "centre"
+   },
+   "satisfies_rule": false
+  },
+  {
+   "rho_vol_min": 14,
+   "n_grid_cases": 1384,
+   "grid_worst_abs": 0.00912756448901808,
+   "grid_worst_case": "voldev-0088",
+   "scan_worst_abs": 0.013498677609175225,
+   "scan_worst_at": {
+    "spacing": "1x1x1",
+    "rho_vol": 15.0,
+    "placement": "corner"
+   },
+   "satisfies_rule": false
+  },
+  {
+   "rho_vol_min": 16,
+   "n_grid_cases": 1308,
+   "grid_worst_abs": 0.008728788573364232,
+   "grid_worst_case": "voldev-1436",
+   "scan_worst_abs": 0.013274764787581383,
+   "scan_worst_at": {
+    "spacing": "4x1x1",
+    "rho_vol": 16.375,
+    "placement": "zcorner"
+   },
+   "satisfies_rule": false
+  },
+  {
+   "rho_vol_min": 18,
+   "n_grid_cases": 1212,
+   "grid_worst_abs": 0.008728788573364232,
+   "grid_worst_case": "voldev-1436",
+   "scan_worst_abs": 0.008778249254513426,
+   "scan_worst_at": {
+    "spacing": "4x1x1",
+    "rho_vol": 21.425,
+    "placement": "zcorner"
+   },
+   "satisfies_rule": false
+  },
+  {
+   "rho_vol_min": 20,
+   "n_grid_cases": 1118,
+   "grid_worst_abs": 0.008728788573364232,
+   "grid_worst_case": "voldev-1436",
+   "scan_worst_abs": 0.008778249254513426,
+   "scan_worst_at": {
+    "spacing": "4x1x1",
+    "rho_vol": 21.425,
+    "placement": "zcorner"
+   },
+   "satisfies_rule": false
+  },
+  {
+   "rho_vol_min": 22,
+   "n_grid_cases": 989,
+   "grid_worst_abs": 0.008728788573364232,
+   "grid_worst_case": "voldev-1436",
+   "scan_worst_abs": 0.007193021927450971,
+   "scan_worst_at": {
+    "spacing": "1x1x1",
+    "rho_vol": 22.25,
+    "placement": "corner"
+   },
+   "satisfies_rule": false
+  },
+  {
+   "rho_vol_min": 24,
+   "n_grid_cases": 823,
+   "grid_worst_abs": 0.008728788573364232,
+   "grid_worst_case": "voldev-1436",
+   "scan_worst_abs": 0.005724389873776103,
+   "scan_worst_at": {
+    "spacing": "1x1x1",
+    "rho_vol": 24.55,
+    "placement": "corner"
+   },
+   "satisfies_rule": false
+  },
+  {
+   "rho_vol_min": 26,
+   "n_grid_cases": 647,
+   "grid_worst_abs": 0.006561302731312724,
+   "grid_worst_case": "voldev-1468",
+   "scan_worst_abs": 0.004704933740941164,
+   "scan_worst_at": {
+    "spacing": "2x1x1",
+    "rho_vol": 26.95,
+    "placement": "centre"
+   },
+   "satisfies_rule": false
+  },
+  {
+   "rho_vol_min": 28,
+   "n_grid_cases": 462,
+   "grid_worst_abs": 0.005897200286511639,
+   "grid_worst_case": "voldev-2264",
+   "scan_worst_abs": 0.00444304571001386,
+   "scan_worst_at": {
+    "spacing": "1x1x1",
+    "rho_vol": 28.5,
+    "placement": "corner"
+   },
+   "satisfies_rule": false
+  },
+  {
+   "rho_vol_min": 32,
+   "n_grid_cases": 264,
+   "grid_worst_abs": 0.005897200286511639,
+   "grid_worst_case": "voldev-2264",
+   "scan_worst_abs": 0.0033673261828472967,
+   "scan_worst_at": {
+    "spacing": "1x1x1",
+    "rho_vol": 33.95,
+    "placement": "centre"
+   },
+   "satisfies_rule": false
+  },
+  {
+   "rho_vol_min": 36,
+   "n_grid_cases": 78,
+   "grid_worst_abs": 0.0034033229209390337,
+   "grid_worst_case": "voldev-0368",
+   "scan_worst_abs": 0.0027381666570753804,
+   "scan_worst_at": {
+    "spacing": "1x1x1",
+    "rho_vol": 39.6,
+    "placement": "corner"
+   },
+   "satisfies_rule": true
+  }
+ ],
+ "worst_in_D2_gate_by_pose_type": {
+  "symmetric": 0.021392642917061222,
+  "random": 0.004728984345473974
+ }
+}

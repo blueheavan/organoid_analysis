@@ -147,3 +147,12 @@ def test_incomplete_wells_are_not_silently_included_in_replicate_summaries():
     r1=reps[reps.biological_replicate=='R1'].iloc[0]
     assert r1.n_complete_units==2
     assert r1.median_of_unit_medians_volume_um3==2575.
+
+
+def test_viability_fraction_definition_is_exported_with_every_summary():
+    from organoid_analysis.statistics.aggregation import VIABILITY_FRACTION_DEFINITION, _describe
+
+    objects = pd.DataFrame([{"morphology_eligible": True, "viability_state": "viable_like", "volume_um3": 1.,
+                             "surface_area_um2": 1., "sphericity": 1., "equivalent_diameter_um": 1.}])
+    assert _describe(objects)["viability_fraction_definition"] == VIABILITY_FRACTION_DEFINITION
+    assert VIABILITY_FRACTION_DEFINITION == "classifiable-denominator/2"

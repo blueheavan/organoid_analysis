@@ -41,21 +41,24 @@ def test_gate_exits_nonzero_while_scientific_items_lack_pass_evidence():
 def test_current_analytical_evidence_is_accepted_and_backs_the_items():
     gate = _load_gate()
     items = gate.evaluate()
-    # The record the pointer names verifies, so the estimator's unrestricted
-    # characterization is readable from it. Qualification is still out of reach:
-    # SG-1a/SG-2a have no domain-restricted qualification record to cite, so they
-    # stay non-PASS, while the characterization items are backed by the record and
-    # never count toward the gate.
-    for item_id in ("SG-1a", "SG-2a"):
-        item = _item(items, item_id)
-        assert item.status == "INSUFFICIENT EVIDENCE"
-        assert item.record is None
-        assert item.counts_toward_gate
+    # Characterization never counts and never passes; it is backed by its record.
     for item_id in ("SG-1b", "SG-2b"):
         item = _item(items, item_id)
         assert item.status == "NOT APPLICABLE"
         assert item.record is not None
         assert not item.counts_toward_gate
+    # Qualification items are PASS only with a verified canonical record that reports PASS.
+    for item_id in ("SG-1a", "SG-2a", "SG-4A"):
+        item = _item(items, item_id)
+        assert item.counts_toward_gate
+        if item.status == "PASS":
+            assert item.record is not None
+            assert load_manifest(PROJECT_ROOT / item.record)["record_class"] == "canonical"
+        else:
+            assert item.record is None
+    # Items that need specimens, annotation or instrument data cannot pass from software alone.
+    for item_id in ("SG-3A", "SG-3B", "SG-4B", "SG-5", "SG-6A", "SG-6B"):
+        assert _item(items, item_id).status != "PASS"
 
 
 def test_tampered_evidence_turns_the_analytical_items_into_rejections(evidence_copy):
@@ -63,24 +66,28 @@ def test_tampered_evidence_turns_the_analytical_items_into_rejections(evidence_c
     with (root / "src/organoid_analysis/quantification/features.py").open("a", encoding="utf-8") as handle:
         handle.write("\n# edit\n")
     items = _load_gate().evaluate(root, check_git=False, reproduce=False)
-    for item_id in ("SG-1a", "SG-2a"):
-        assert _item(items, item_id).status == "FAIL"
+    for item_id in ("SG-1b", "SG-2b"):
+        assert _item(items, item_id).status == "NOT APPLICABLE"
         assert _item(items, item_id).basis.startswith("EVIDENCE REJECTED")
         assert _item(items, item_id).record is None
+    # The copy carries no qualification record, so qualification cannot pass.
+    for item_id in ("SG-1a", "SG-2a"):
+        assert _item(items, item_id).status != "PASS"
 
 
 def test_missing_record_is_a_failure_not_a_pass(evidence_copy):
     root, _ = evidence_copy
     (root / contract.CURRENT_RECORD_POINTER).unlink()
     items = _load_gate().evaluate(root, check_git=False, reproduce=False)
-    assert _item(items, "SG-1a").status == "FAIL" and "no analytical-geometry validation record" in _item(items, "SG-1a").basis
+    assert "no analytical-geometry validation record" in _item(items, "SG-1b").basis
+    assert _item(items, "SG-1a").status == "INSUFFICIENT EVIDENCE"
 
 
 def test_pass_without_any_evidence_is_rejected(monkeypatch):
     gate = _load_gate()
     monkeypatch.setattr(gate, "STATIC_ITEMS", [gate.GateItem("SG-X", "claim", "criterion", "PASS", "no data", ())])
     with pytest.raises(ValueError, match="PASS requires a verified validation record"):
-        gate.evaluate()
+        gate.evaluate(reproduce=False)
 
 
 def test_pass_citing_existing_files_but_no_record_is_rejected(monkeypatch):
@@ -88,7 +95,7 @@ def test_pass_citing_existing_files_but_no_record_is_rejected(monkeypatch):
     fabricated = gate.GateItem("SG-3", "claim", "criterion", "PASS", "looks fine", ("README.md",))
     monkeypatch.setattr(gate, "STATIC_ITEMS", [fabricated])
     with pytest.raises(ValueError, match="PASS requires a verified validation record"):
-        gate.evaluate()
+        gate.evaluate(reproduce=False)
 
 
 def test_pass_borrowing_a_record_that_does_not_report_it_is_rejected(evidence_copy, monkeypatch):
@@ -120,7 +127,7 @@ def test_gate_can_pass_an_item_backed_by_a_qualifying_canonical_record(monkeypat
     fabricated = gate.GateItem("SG-1", "claim", "criterion", "PASS", "see record", (contract.CURRENT_RECORD_POINTER,),
                                contract.current_manifest_relpath(PROJECT_ROOT))
     monkeypatch.setattr(gate, "STATIC_ITEMS", [fabricated])
-    assert _item(gate.evaluate(), "SG-1").status == "PASS"
+    assert _item(gate.evaluate(reproduce=False), "SG-1").status == "PASS"
 
 
 def test_pass_from_a_non_canonical_record_is_refused(monkeypatch):
@@ -131,4 +138,4 @@ def test_pass_from_a_non_canonical_record_is_refused(monkeypatch):
                                contract.current_manifest_relpath(PROJECT_ROOT))
     monkeypatch.setattr(gate, "STATIC_ITEMS", [fabricated])
     with pytest.raises(ValueError, match="PASS requires a canonical record"):
-        gate.evaluate()
+        gate.evaluate(reproduce=False)

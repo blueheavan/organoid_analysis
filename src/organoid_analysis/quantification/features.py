@@ -58,6 +58,17 @@ SURFACE_AREA_METHOD: dict[str, str | int | float] = {
     "implementation_evidence": "docs/evidence/2026-09-13-morphology-architecture/revalidation.json",
 }
 
+VOLUME_METHOD: dict[str, str | int | float] = {
+    "estimator": "voxel_count",
+    "method_version": "voxel_count_v1",
+    "definition": "number of support voxels x product of ZYX spacing (filled envelope by default)",
+    "domain": (f"rho_vol >= {surface_crofton.DOMAIN_RHO_VOL_MIN} (inscribed radius / cbrt(voxel volume)), "
+               f"rho_in >= {surface_crofton.DOMAIN_RHO_IN_MIN}, anisotropy <= {surface_crofton.DOMAIN_ANISO_MAX}, "
+               f"{surface_crofton.DOMAIN_SCOPE}"),
+    "evidence": "docs/evidence/2026-09-26-volume-domain-development (development); "
+                "docs/evidence/2026-09-26-analytical-qualification-protocol (frozen confirmation)",
+}
+
 # The superseded estimator, preserved under its own identity together with the
 # evidence that it FAILS the section 9 criterion: it errs by a median of 12.5%
 # and a worst of 21.9% on the very cases the qualified estimator handles to
@@ -91,6 +102,9 @@ SURFACE_METADATA_COLUMNS = [
     "surface_estimator", "surface_method_version", "surface_implementation_version",
     "surface_weights_origin", "surface_weights_evidence_bearing", "surface_evidence", "surface_implementation_evidence", "surface_qualification_scope",
     "sphericity_in_qualified_domain", "surface_to_volume_in_qualified_domain",
+    # Volume domain (qualification item SG-2a). Kept in this shared contract so
+    # every adapter carries it next to the surface domain it extends.
+    "volume_rho_vol", "volume_in_qualified_domain", "volume_domain_flags", "volume_method",
 ]
 TOPOLOGY_COLUMNS = ["filled_void_voxels", "filled_void_components", "open_cavity_suspected", "topology_flags"]
 DERIVED_GEOMETRY_COLUMNS = ["elongation", "prolate_ratio", "oblate_ratio", "surface_to_volume_ratio_um_inv"]
@@ -200,6 +214,7 @@ def geometry(
     surface = surface_crofton.measure(envelope, tuple(spacing_arr))
     area = float(surface["surface_area"])
     qualified, domain_flags = surface_crofton.in_domain(surface)
+    volume_qualified, volume_flags = surface_crofton.in_volume_domain(surface)
     sphericity = float(np.cbrt(np.pi) * (6.0 * volume) ** (2 / 3) / area)
     points = np.argwhere(envelope)
     center = (points.mean(axis=0) + origin_zyx) * spacing_arr
@@ -246,7 +261,11 @@ def geometry(
               "surface_implementation_evidence": SURFACE_AREA_METHOD["implementation_evidence"],
               "surface_qualification_scope": "numerical_resolution_and_anisotropy_only",
               "sphericity_in_qualified_domain": bool(qualified),
-              "surface_to_volume_in_qualified_domain": bool(qualified)}
+              "surface_to_volume_in_qualified_domain": bool(qualified),
+              "volume_rho_vol": float(surface["rho_vol"]),
+              "volume_in_qualified_domain": bool(volume_qualified),
+              "volume_domain_flags": ";".join(volume_flags),
+              "volume_method": VOLUME_METHOD["method_version"]}
     for axis, value, width in zip("zyx", center, extent):
         values[f"centroid_{axis}_um"] = float(value)
         values[f"extent_{axis}_um"] = float(width)

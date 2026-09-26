@@ -47,7 +47,8 @@ from organoid_analysis.quantification.labels import (
 
 # 2.3: explicit filled-void and open-cavity provenance.
 # 2.4: evidence-bearing status for the exact packaged Crofton vector.
-FEATURE_SCHEMA_VERSION = "2.4"
+# 2.5: volume-specific qualified domain (volume_rho_vol, volume_in_qualified_domain).
+FEATURE_SCHEMA_VERSION = "2.5"
 FEATURE_COLUMNS = [
     "volume_um3", "surface_area_um2", *SURFACE_METADATA_COLUMNS, *TOPOLOGY_COLUMNS,
     "equivalent_disk_um", "equivalent_sphere_diameter_um", "equivalent_diameter_um",

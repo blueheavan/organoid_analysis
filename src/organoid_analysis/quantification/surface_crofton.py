@@ -108,6 +108,26 @@ DOMAIN_ANISO_MAX = 4.0          # max(spacing) / min(spacing)
 # counterexample can pass this gate while failing the volume criterion.
 DOMAIN_RHO_IN_MIN_VOLUME = 10.0
 
+# VOLUME-SPECIFIC DOMAIN (2026-09-26, docs/evidence/2026-09-26-volume-domain-development).
+# Voxel-count volume stays the estimator: under a uniformly random sub-voxel
+# translation it is design-unbiased for any shape (Cavalieri point counting),
+# and no mask-only estimator can resolve the lattice-centred counterexample.
+# What the counterexample showed is that the surface gate does not bound its
+# dispersion: lattice-symmetric placements reach 2.7 % at rho_in ~ 10 on an
+# isotropic grid. The volume domain therefore adds a resolution gate on
+# rho_vol = r_in / cbrt(sz * sy * sx) -- the inscribed radius in geometric-mean
+# voxel edges, which unifies the lattice error across anisotropies where
+# rho_in (normalised by the coarsest axis) does not. The threshold is the
+# smallest development ladder value at which every development case, including
+# the lattice-symmetric placements, stays within 0.5 % (2x margin to the 1 %
+# criterion): 36. The binding class is the axis-aligned, lattice-centred torus
+# (0.59 % at rho_vol 32); random placements never exceeded 0.47 % anywhere in
+# the surface gate. An extension to rho_vol 48 (328 cases >= 36, worst 0.45 %)
+# keeps the threshold inside measured evidence. The surface gate (rho_in,
+# anisotropy) and the smooth-closed scope still apply. Changing this constant
+# requires a new development study and confirmation record.
+DOMAIN_RHO_VOL_MIN = 36.0
+
 # SCOPE OF INTENDED USE -- not machine-checkable.
 #
 # The domain covers SMOOTH closed surfaces: surfaces without dihedral creases.
@@ -448,7 +468,7 @@ def measure(mask: np.ndarray, spacing: tuple[float, float, float], *, force_m: i
     n_voxels = int(np.count_nonzero(binary))
     if n_voxels == 0:
         return {"method": METHOD_NAME, "surface_area": 0.0, "volume": 0.0,
-                "r_in": 0.0, "rho_in": 0.0, "anisotropy": max(values) / min(values),
+                "r_in": 0.0, "rho_in": 0.0, "rho_vol": 0.0, "anisotropy": max(values) / min(values),
                 "stencil_m": None, "apriori_bound": None}
 
     volume = n_voxels * float(np.prod(values))
@@ -461,7 +481,7 @@ def measure(mask: np.ndarray, spacing: tuple[float, float, float], *, force_m: i
     area = float(np.dot(transition_counts(binary, directions), weights))
 
     return {"method": METHOD_NAME, "surface_area": area, "volume": volume,
-            "r_in": r_in, "rho_in": r_in / max(values),
+            "r_in": r_in, "rho_in": r_in / max(values), "rho_vol": volume_resolution(r_in, values),
             "anisotropy": max(values) / min(values),
             "stencil_m": m, "n_directions": diagnostics["n_directions"],
             "n_orbits": diagnostics["n_orbits"],
@@ -483,6 +503,24 @@ def in_domain(measurement: dict[str, Any]) -> tuple[bool, tuple[str, ...]]:
     if measurement["anisotropy"] > DOMAIN_ANISO_MAX:
         reasons.append(f"anisotropy {measurement['anisotropy']:.2f} > {DOMAIN_ANISO_MAX}")
     return (not reasons), tuple(reasons)
+
+
+def volume_resolution(r_in: float, spacing: ArrayLike) -> float:
+    """Inscribed radius in geometric-mean voxel edges (the volume-domain variable)."""
+    return float(r_in / np.prod(np.asarray(spacing, float)) ** (1 / 3))
+
+
+def in_volume_domain(measurement: dict[str, Any]) -> tuple[bool, tuple[str, ...]]:
+    """Machine-checkable volume domain: the surface gate plus ``rho_vol >= DOMAIN_RHO_VOL_MIN``.
+
+    Like ``in_domain()`` it cannot check smoothness, and it says nothing about
+    whether the mask is a correct segmentation of the object.
+    """
+    _, reasons = in_domain(measurement)
+    flags = list(reasons)
+    if measurement["rho_vol"] < DOMAIN_RHO_VOL_MIN:
+        flags.append(f"rho_vol {measurement['rho_vol']:.2f} < {DOMAIN_RHO_VOL_MIN}")
+    return (not flags), tuple(flags)
 
 
 def sphericity(volume: float, area: float) -> float:

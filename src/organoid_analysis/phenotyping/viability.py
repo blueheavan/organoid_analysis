@@ -114,8 +114,11 @@ def classify(objects: pd.DataFrame, calibration: pd.DataFrame, cfg: dict) -> pd.
         result.at[index, "pi_control_scaled"] = p
         result.at[index, "viability_method"] = "batch_control_scaled_rules"
         if not np.isfinite([c, p]).all():
+            # A non-finite scaled value is unusable, not "outside the control
+            # range": the refusal carries its own reason and no range flag.
             result.at[index, "viability_reason"] = "nonfinite_scaled_signal"
-        elif c < cfg["low_gate"] and p < cfg["low_gate"]:
+            continue
+        if c < cfg["low_gate"] and p < cfg["low_gate"]:
             result.at[index, "viability_reason"] = "both_markers_low"
         elif c >= cfg["high_gate"] and p <= cfg["low_gate"]:
             result.at[index, "viability_state"] = "viable_like"

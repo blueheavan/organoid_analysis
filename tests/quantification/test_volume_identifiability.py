@@ -31,3 +31,27 @@ def test_two_in_domain_spheres_have_identical_masks_but_disjoint_one_percent_int
     estimate = measured["volume_um3"]
     assert np.isfinite(estimate)
     assert max(abs(estimate / small_truth - 1), abs(estimate / large_truth - 1)) > 0.01
+    # The volume-specific domain (SG-2a) excludes this pair: the counterexample
+    # sits where the surface gate holds but volume resolution does not.
+    assert measured["volume_in_qualified_domain"] is False
+    assert "rho_vol" in measured["volume_domain_flags"]
+
+
+def test_identical_mask_ambiguity_shrinks_below_the_criterion_inside_the_volume_domain():
+    """At the volume-domain resolution the same construction no longer defeats a 1% claim.
+
+    For a lattice-centred sphere the mask only identifies R^2 up to the gap
+    between consecutive sums of three squares (at most 3 lattice units). The
+    relative volume ambiguity 1.5 * gap / R^2 must fit inside the 2% width of the
+    two 1% intervals at the domain threshold.
+    """
+    from organoid_analysis.quantification.surface_crofton import DOMAIN_RHO_VOL_MIN
+
+    radius = DOMAIN_RHO_VOL_MIN  # isotropic unit voxels: rho_vol == radius
+    limit = int((radius + 5) ** 2)
+    k = np.arange(int(np.sqrt(limit)) + 1)
+    sums = np.unique((k[:, None, None] ** 2 + k[None, :, None] ** 2 + k[None, None, :] ** 2).ravel())
+    sums = sums[sums <= limit]
+    worst_gap = int(np.diff(sums).max())
+    assert worst_gap <= 3  # Legendre: only 4^a(8b+7) is excluded, never three in a row
+    assert 1.5 * worst_gap / radius**2 < 0.02
