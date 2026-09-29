@@ -1,0 +1,14 @@
+OpenSeadragon 6.1.1 (BSD-3-Clause; see openseadragon.js.LICENSE.txt)
+
+Source:   npm registry, package "openseadragon" version 6.1.1
+          https://registry.npmjs.org/openseadragon/-/openseadragon-6.1.1.tgz
+Tarball:  npm shasum (SHA-1) fcdb1a106b4e2440ed4336b5eff4a79c0a3390e6, matching the registry metadata
+File:     package/build/openseadragon/openseadragon.min.js, copied unmodified
+SHA-256:  14d587cd3ee7c4861f1a41077ce642029364a21029956ba635bd8fb1202cf9ad
+Header:   "openseadragon 6.1.1 / Built on 2026-09-09 / Git commit: v6.1.1-0-201d4783"
+Upstream: https://github.com/openseadragon/openseadragon
+
+The bundle is inlined into the generated viewer HTML at render time (no CDN
+request); its trailing sourceMappingURL comment is dropped when inlining.
+Button images are not vendored: the viewer disables OpenSeadragon's built-in
+navigation controls and draws its own.

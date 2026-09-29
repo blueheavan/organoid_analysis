@@ -18,6 +18,7 @@ from organoid_analysis.config import load_config
 from organoid_analysis.microscopy_io.tiff_contract import (
     META_FIELDS,
     PATH_FIELDS,
+    Sample,
     git_commit_hash,
     load_sample,
     load_truth_labels,
@@ -33,6 +34,17 @@ from organoid_analysis.quantification.features import (
     SURFACE_AREA_METHOD,
     measure_instances,
 )
+from organoid_analysis.quantification.focus_qc import (
+    STACK_QC_COLUMNS,
+    Z_QC_COLUMNS,
+    object_z_coverage,
+    stack_z_coverage,
+)
+from organoid_analysis.quantification.mask_provenance import (
+    PROVENANCE_COLUMNS,
+    MaskProvenance,
+    stratification_note,
+)
 from organoid_analysis.quantification.measurement_policy import measurement_policy
 from organoid_analysis.result_export.report import (
     plot_morphology_viability,
@@ -42,6 +54,7 @@ from organoid_analysis.result_export.report import (
 )
 from organoid_analysis.segmentation.watershed_instances import (
     QC_COLUMNS,
+    SegmentationResult,
     compare_instance_qc,
     instance_qc_summary,
     segment,
@@ -115,6 +128,34 @@ def _segment_with_qc(sample, cfg: dict) -> tuple:
     return primary, qc
 
 
+def _mask_provenance(row: dict, sample: Sample, segmentation: SegmentationResult, cfg: dict) -> MaskProvenance:
+    """Manual-edit provenance of this field's masks (never changes a measurement).
+
+    Imported labels take the optional manifest columns ``labels_manual_edit``
+    (``none`` | ``edited`` | ``manual``) and ``labels_edited_ids`` (original
+    label IDs, ``;``-separated); masks segmented in this run are automatic.
+    """
+    declaration = row.get("labels_manual_edit", "")
+    edited_ids = row.get("labels_edited_ids", "")
+    if cfg["segmentation"]["method"] != "labels":
+        if declaration or edited_ids:
+            raise ValueError("labels_manual_edit / labels_edited_ids apply only to imported labels (segmentation method 'labels')")
+        return MaskProvenance.pipeline(segmentation.labels)
+    if sample.imported_labels is None:  # load_sample guarantees labels in labels mode
+        raise ValueError("labels mode requires imported labels")
+    return MaskProvenance.imported(sample.imported_labels, declaration, edited_ids or None)
+
+
+def _review_columns(features: list[dict], sample: Sample, segmentation: SegmentationResult,
+                    mask_provenance: MaskProvenance) -> dict:
+    """Attach per-object Z-coverage QC and mask provenance; return the field-level Z-coverage QC."""
+    coverage = object_z_coverage(sample.structure, segmentation.labels)
+    for feature in features:
+        feature.update(coverage[feature["organoid_id"]])
+        feature.update(mask_provenance.columns(feature["original_label_id"]))
+    return stack_z_coverage(sample.structure, segmentation.labels)
+
+
 def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = None,
             keep_going: bool = False, synthetic: bool = False) -> dict:
     start = time.perf_counter()
@@ -150,6 +191,8 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
         input_files.append({"path": path, "sha256": sha256(path), "size_bytes": Path(path).stat().st_size})
     rows, sample_rows, failures, qc_rows = [], [], [], []
     validation_matches, validation_metrics = [], []
+    mask_provenance_by_sample: dict[str, dict] = {}
+    provenance["mask_provenance"] = mask_provenance_by_sample
     for position, row in enumerate(design.to_dict("records"), start=1):
         meta = {key: row[key] for key in META_FIELDS}
         meta["data_origin"] = origin
@@ -158,6 +201,10 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
             segmentation, segmentation_qc = _segment_with_qc(sample, cfg)
             mesh_dir = out / "meshes" / row["sample_id"] if cfg["report"]["save_meshes"] else None
             features, preview_meshes = measure_instances(sample, segmentation, cfg, mesh_dir)
+            mask_provenance = _mask_provenance(row, sample, segmentation, cfg)
+            field_z_qc = _review_columns(features, sample, segmentation, mask_provenance)
+            mask_provenance_by_sample[row["sample_id"]] = mask_provenance.summary(
+                feature["original_label_id"] for feature in features)
             write_labels(out / "labels" / f'{row["sample_id"]}.labels.ome.tif', segmentation.labels, sample.spacing)
             truth = load_truth_labels(row, segmentation.labels.shape, sample.spacing)
             if truth is not None:
@@ -173,7 +220,9 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
                                 "removed_small_instances": segmentation.removed_small_instances,
                                 "segmentation_qc_reference": segmentation_qc["reference_method"],
                                 "segmentation_qc_flags": segmentation_qc["qc_flags"],
-                                "spacing_z_um": sample.spacing[0], "spacing_y_um": sample.spacing[1], "spacing_x_um": sample.spacing[2]})
+                                "spacing_z_um": sample.spacing[0], "spacing_y_um": sample.spacing[1], "spacing_x_um": sample.spacing[2],
+                                "mask_origin": mask_provenance.origin, "mask_edit_declaration": mask_provenance.declaration,
+                                "labels_sha256": mask_provenance.sha256, **field_z_qc})
             sample_metadata[row["sample_id"]] = sample.metadata
             print(f'[{position}/{len(design)}] {row["sample_id"]}: {len(features)} objects; {sum(f["morphology_eligible"] for f in features)} pass geometry QC',flush=True)
         except Exception as error:
@@ -184,16 +233,19 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
                                  "foreground_fraction": np.nan, "segmentation_threshold": np.nan,
                                  "removed_small_instances": np.nan,
                                  "segmentation_qc_reference": "", "segmentation_qc_flags": "",
-                                 "spacing_z_um": np.nan, "spacing_y_um": np.nan, "spacing_x_um": np.nan})
+                                 "spacing_z_um": np.nan, "spacing_y_um": np.nan, "spacing_x_um": np.nan,
+                                 "mask_origin": "", "mask_edit_declaration": "", "labels_sha256": "",
+                                 **dict.fromkeys(STACK_QC_COLUMNS, np.nan)})
             if not keep_going:
                 provenance["failures"] = failures
                 (out / "provenance.json").write_text(json.dumps(provenance, indent=2), encoding="utf-8")
                 raise
             print(f'[{position}/{len(design)}] FAILED {row["sample_id"]}: {error}',file=sys.stderr,flush=True)
-    columns = META_FIELDS + ["data_origin"] + GEOMETRY_COLUMNS + MARKER_COLUMNS
+    columns = META_FIELDS + ["data_origin"] + GEOMETRY_COLUMNS + MARKER_COLUMNS + Z_QC_COLUMNS + PROVENANCE_COLUMNS
     objects = pd.DataFrame(rows, columns=columns)
     # Dtypes matter when all fields are empty: keep a consistent machine-readable schema.
-    for column in ["morphology_eligible", "viability_measurement_eligible", "touches_border"]:
+    for column in ["morphology_eligible", "viability_measurement_eligible", "touches_border",
+                   "z_focus_peak_at_edge", "z_signal_at_edge", "z_coverage_suspect"]:
         objects[column] = objects[column].astype(bool)
     failed_units = {(r["batch_id"],r["unit_id"]) for r in sample_rows if r["status"] != "ok"}
     calibration_input = objects[np.array([(r.batch_id,r.unit_id) not in failed_units for r in objects.itertuples()],dtype=bool)]
@@ -220,6 +272,8 @@ def analyze(manifest: str | Path, out: str | Path, config: str | Path | None = N
     plot_size_comparison(objects, units, replicates, condition_table, out, synthetic)
     plot_morphology_viability(objects, units, replicates, condition_table, out, synthetic)
     write_html(out, objects, sample_table, condition_table, calibration, synthetic, failures, cfg)
+    provenance["mask_edit_note"] = stratification_note(objects.mask_manually_edited)
+    provenance["z_coverage_suspect_objects"] = int(objects.z_coverage_suspect.sum())
     provenance.update(status="partial" if failures else "complete", failures=failures,
                       completed_utc=datetime.now(UTC).isoformat(), elapsed_seconds=time.perf_counter()-start,
                        n_detected_organoids=len(objects), n_geometry_eligible_organoids=int(objects.morphology_eligible.sum()),

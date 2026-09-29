@@ -8,6 +8,11 @@ import numpy as np
 import pandas as pd
 
 from organoid_analysis.quantification.features import SURFACE_AREA_METHOD
+from organoid_analysis.quantification.mask_provenance import (
+    LEVELS,
+    MaskProvenance,
+    stratification_note,
+)
 from organoid_analysis.quantification.measurement_policy import measurement_policy
 from organoid_analysis.quantification.multilevel_relationships.config import Multilevel3DConfig
 from organoid_analysis.quantification.multilevel_relationships.hierarchy import (
@@ -172,16 +177,28 @@ def analyze_multilevel_3d(
     config: Multilevel3DConfig | None = None,
     metadata: dict[str, str] | None = None,
     nucleus_intensity: np.ndarray | None = None,
+    mask_edits: dict[str, dict] | None = None,
 ) -> Multilevel3DResult:
     """Analyze a registered organoid → cell → nucleus instance hierarchy.
 
     Parent assignment is maximum voxel overlap.  All scalar morphology,
     topology contact areas, and distances use the supplied physical spacing.
+
+    ``mask_edits`` declares, per level, whether the imported masks were edited
+    by hand (``{"cell": {"declaration": "edited", "edited_ids": [4, 9]}}``; see
+    :mod:`organoid_analysis.quantification.mask_provenance`). Undeclared levels
+    are of unknown origin. It adds provenance columns, never changes a value.
     """
     started = time.perf_counter()
     cfg = config or Multilevel3DConfig()
     cfg.validate()
     spacing = validate_inputs(organoid_labels, cell_labels, nucleus_labels, spacing_zyx_um, nucleus_intensity)
+    edits = mask_edits or {}
+    if not set(edits) <= set(LEVELS):
+        raise ValueError(f"mask_edits must be keyed by {LEVELS}, got {sorted(edits)}")
+    mask_provenance = {level: MaskProvenance.imported(labels, edits.get(level, {}).get("declaration", ""),
+                                                      edits.get(level, {}).get("edited_ids"))
+                       for level, labels in zip(LEVELS, (organoid_labels, cell_labels, nucleus_labels), strict=True)}
     organoids = measure_instances(organoid_labels, spacing, object_type="organoid")
     cells = measure_instances(cell_labels, spacing, object_type="cell")
     nuclei = measure_instances(nucleus_labels, spacing, object_type="nucleus")
@@ -228,6 +245,12 @@ def analyze_multilevel_3d(
     cells, cell_qc = add_qc_flags(cells, object_type="cell", config=cfg)
     nuclei, nucleus_qc = add_qc_flags(nuclei, object_type="nucleus", config=cfg)
     qc_flags = pd.concat([organoid_qc, cell_qc, nucleus_qc], ignore_index=True)
+    for level, frame in zip(LEVELS, (organoids, cells, nuclei), strict=True):
+        provenance = mask_provenance[level]
+        frame["mask_origin"] = provenance.origin
+        frame["mask_edit_declaration"] = provenance.declaration
+        frame["mask_manually_edited"] = frame[f"{level}_id"].map(provenance.state)
+        frame["labels_sha256"] = provenance.sha256
     organoids, cells, nuclei, edges, qc_flags = (_add_metadata(frame, metadata)
                                                   for frame in (organoids, cells, nuclei, edges, qc_flags))
     elapsed = time.perf_counter() - started
@@ -236,7 +259,11 @@ def analyze_multilevel_3d(
                "topology_edge_count": int(len(edges)), "runtime_seconds": elapsed, "config": cfg.as_dict(),
                "surface_area_method": dict(SURFACE_AREA_METHOD),
                "measurement_policies": {level: measurement_policy(level, "raw_label")
-                                        for level in ("organoid", "cell", "nucleus")}}
+                                        for level in ("organoid", "cell", "nucleus")},
+               "mask_provenance": {level: mask_provenance[level].summary(frame[f"{level}_id"])
+                                   for level, frame in zip(LEVELS, (organoids, cells, nuclei), strict=True)},
+               "mask_edit_note": stratification_note(pd.concat(
+                   [organoids.mask_manually_edited, cells.mask_manually_edited, nuclei.mask_manually_edited]))}
     if metadata:
         summary["metadata"] = {key: value for key, value in metadata.items() if value not in (None, "")}
     return Multilevel3DResult(organoids, cells, nuclei, edges, qc_flags, summary)

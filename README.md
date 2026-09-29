@@ -71,6 +71,8 @@ results/segmentation_output/run-*/
 
 **Download feature CSV + provenance** 导出 `features.csv` 和 `measurement_provenance.json`，保留对象 ID、完整数值精度、QC、体素间距及其来源、选中掩膜的哈希与可用的分割运行信息。`qc_status=not_flagged` 仅表示未触发当前规则，汇总仍包含有 QC 标记的对象。采用默认体素间距时会显示警告，导出会标记 `assumed_or_unknown`；发表前须核实采集标定与实验重复结构。
 
+**Full-resolution plane review (deep zoom)**（结果页折叠面板，需勾选加载）用 OpenSeadragon 按原始像素逐层显示 Z 平面与对象轮廓：鼠标缩放/平移，Z 滑块或 `[`/`]` 切换已加载平面，读数显示指针下体素 `(z, y, x)` 及其体素中心的 µm 坐标，可显示对象 ID 与比例尺。受浏览器负载预算限制，一次只加载中心平面附近的若干层；仅供显示与质控复核，不参与测量，也不能用作分割验证（SG-3）的标注工具。
+
 预览缩小时保持实际体素中心坐标范围，原始数组继续用于定量。Cellpose 降采样按实际网格调整直径与 Z/XY 比例；若非方形图像取整后产生不一致的 X/Y 尺度，会提示改用 **Full resolution**。加速分割与全分辨率分割的生物学等价性尚未验证。
 
 刷新页面或关闭浏览器后，可在 **3D Analysis results** 使用 **Restore saved Cellpose segmentation** 恢复 nuclei/cell masks。没有 cell mask 的历史分割不能用于多层级分析，因为不能由 nucleus、MIP 或投影图推断 cell labels。
@@ -117,6 +119,7 @@ pixi run python -m organoid_analysis analyze-3d \
 - 显式 spacing 与 OME metadata 不一致时，命令会报错。
 - `--out` 必须是不存在或空目录。
 - TIFF axes metadata 缺失或错误、但文件已人工确认时，可使用 `--axes ZYX`。
+- 导入的 mask 若经人工修改，用 `--label-edit-log edits.json` 声明（见下文“人工编辑溯源”）；未声明的层级记为来源未知（`mask_manually_edited=unknown`）。
 
 查看全部选项：
 
@@ -200,6 +203,35 @@ pixi run analysis-analyze \
 | `brightfield_probability.yaml` | brightfield + 已配准 foreground probability map |
 | `imported_instances.yaml` | 导入已验证的 3D instance labels |
 | `brightfield_exploratory.yaml` | 明场 threshold/watershed 的探索性起点 |
+
+manifest 可选列（仅 `segmentation.method: labels` 导入标签时有效）：
+
+| 列 | 取值 | 含义 |
+|---|---|---|
+| `labels_manual_edit` | `none` / `edited` / `manual` / 空 | 导入 mask 是否经人工修改；空 = 未声明 |
+| `labels_edited_ids` | 如 `3;7;12` | 仅与 `edited` 同用；原始 label ID，只标记这些对象，缺省则全部标记 |
+
+#### 人工编辑溯源与 Z 覆盖 QC（仅复核，不改变任何测量值）
+
+`organoids.csv`（以及 `analyze-3d` 的 organoid/cell/nucleus 特征表）新增：
+
+| 列 | 含义 |
+|---|---|
+| `mask_origin` | `pipeline_segmentation`（本次运行分割）或 `imported_labels` |
+| `mask_edit_declaration` | `none` / `edited` / `manual` / `not_declared` / `not_applicable` |
+| `mask_manually_edited` | `no` / `yes` / `unknown`，按原始 label ID 判定；用于分层或“去除人工对象”的敏感性分析 |
+| `labels_sha256` | 该视野 label 数组内容哈希（dtype、shape、字节），与文件格式无关 |
+
+`organoids.csv` 另有 Z 覆盖 QC（结构通道，按对象 XY 足迹逐层计算，其他对象在 XY 膨胀后逐层排除，以免同一 XY 位置上下堆叠的类器官互相污染）：
+
+| 列 | 含义 |
+|---|---|
+| `z_focus_peak_plane` | LoG（σ = 1.5 px）方差最大的平面 |
+| `z_focus_peak_at_edge` | 最清晰平面位于首/末平面 |
+| `z_edge_signal_ratio`, `z_signal_at_edge` | 首/末平面背景校正中位信号 / 峰值；≥ 0.5 记为 True（启发式阈值） |
+| `z_coverage_suspect`, `z_coverage_flags` | 以上任一成立，或 mask 触及首/末平面；少于 3 个平面记 `too_few_planes` |
+
+`sample_summary.csv` 增加视野级 `stack_focus_peak_plane`、`stack_focus_peak_at_edge`、`stack_edge_signal_ratio`、`stack_z_coverage_suspect` 以及 `mask_origin`、`labels_sha256`；`provenance.json` 增加每个视野的编辑计数（`mask_provenance`）、分层提示（`mask_edit_note`）和 `z_coverage_suspect_objects`。这些标记不改变 `morphology_eligible` 或任何测量值。
 
 ### 已注册 cell–nucleus 配对
 

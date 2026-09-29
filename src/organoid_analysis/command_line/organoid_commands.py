@@ -42,6 +42,10 @@ def main(argv=None) -> int:
     multilevel.add_argument("--cell-labels", required=True, help="3D ZYX cell instance-label TIFF")
     multilevel.add_argument("--nucleus-labels", required=True, help="3D ZYX nucleus instance-label TIFF")
     multilevel.add_argument("--nucleus-intensity", help="Optional registered raw nucleus-intensity TIFF")
+    multilevel.add_argument("--label-edit-log",
+                            help='Optional JSON declaring manual mask edits per level, e.g. '
+                                 '{"cell": {"declaration": "edited", "edited_ids": [4, 9]}}; '
+                                 'undeclared levels are reported as of unknown origin')
     multilevel.add_argument("--axes", default="", help="Axes override for all supplied TIFFs, for example ZYX")
     multilevel.add_argument("--spacing-z-um", type=float)
     multilevel.add_argument("--spacing-y-um", type=float)
@@ -170,6 +174,7 @@ def _run_multilevel(arguments) -> dict:
         sha256,
         source_code_hashes,
     )
+    from organoid_analysis.quantification.mask_provenance import load_edit_log
     from organoid_analysis.quantification.multilevel_relationships import Multilevel3DConfig
     from organoid_analysis.result_export.measurement_tables import export_results
     from organoid_analysis.workflows.multilevel_measurement_workflow import analyze_multilevel_3d
@@ -208,8 +213,9 @@ def _run_multilevel(arguments) -> dict:
     )
     metadata = {key: getattr(arguments, key) for key in
                 ("sample_id", "well_id", "field_id", "batch_id", "condition", "treatment", "dose", "timepoint")}
+    mask_edits = load_edit_log(arguments.label_edit_log) if arguments.label_edit_log else None
     result = analyze_multilevel_3d(organoids, cells, nuclei, spacing, config=config, metadata=metadata,
-                                   nucleus_intensity=intensity)
+                                   nucleus_intensity=intensity, mask_edits=mask_edits)
     # Provenance capture belongs at this orchestration layer, not inside
     # analyze_multilevel_3d (deliberately headless/pure per multilevel3d's
     # module docstring). Mirrors the classical analyze() pipeline's provenance.
@@ -221,7 +227,8 @@ def _run_multilevel(arguments) -> dict:
         "source_code_sha256": source_code_hashes(),
         "input_files": {role: {"path": str(Path(path).resolve()), "sha256": sha256(path)}
                         for role, path in (("organoid", arguments.organoid_labels), ("cell", arguments.cell_labels),
-                                           ("nucleus", arguments.nucleus_labels), ("nucleus_intensity", arguments.nucleus_intensity))
+                                           ("nucleus", arguments.nucleus_labels), ("nucleus_intensity", arguments.nucleus_intensity),
+                                           ("label_edit_log", arguments.label_edit_log))
                         if path},
         "packages": {package: importlib.metadata.version(package) for package in
                     ["numpy", "scipy", "scikit-image", "tifffile", "pandas"]},

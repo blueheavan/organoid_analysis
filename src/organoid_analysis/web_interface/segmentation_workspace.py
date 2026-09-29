@@ -67,6 +67,7 @@ from organoid_analysis.segmentation.cellpose_inference import (  # noqa: E402
 from organoid_analysis.segmentation.parameter_estimation import (
     estimate_diameter_from_stack,  # noqa: E402
 )
+from organoid_analysis.visualization.deepzoom_viewer import st_deepzoom_viewer
 from organoid_analysis.visualization.volume_viewer import (  # noqa: E402
     ChannelConfig,
     st_volume_viewer,
@@ -553,6 +554,39 @@ def _run_segmentation(
     st.toast("Segmentation Done", icon="✅")
 
 
+def render_deepzoom_review(intensity: np.ndarray | None, masks: np.ndarray,
+                           spacing_xyz: tuple[float, float, float], key: str = "deepzoom") -> None:
+    """Native-resolution plane review with contours (OpenSeadragon); display only.
+
+    The 3D preview is downsampled to fit the browser; this view tiles the
+    original pixels of a window of Z planes around a chosen centre plane.
+    """
+    st.caption(
+        "Native pixels, one Z plane at a time, with the measured object contours. "
+        "Zoom/pan with the mouse; move through the loaded planes with the Z slider "
+        "(or `[` / `]`). Display only: it does not change any measurement and is not "
+        "an annotation tool for segmentation validation."
+    )
+    if not st.checkbox("Load deep-zoom viewer", value=False, key=f"{key}_enabled"):
+        return
+    image = intensity if intensity is not None and intensity.shape == masks.shape else masks.astype(np.float32)
+    n_planes = int(masks.shape[0]) if masks.ndim == 3 else 1
+    centre = st.slider("Centre plane", 0, n_planes - 1, n_planes // 2, key=f"{key}_centre") if n_planes > 1 else 0
+    spacing_zyx = (spacing_xyz[2], spacing_xyz[1], spacing_xyz[0])
+    try:
+        spec = st_deepzoom_viewer(image, masks, spacing_zyx, centre_plane=centre, height=640)
+    except ValueError as error:
+        st.warning(f"Deep-zoom viewer unavailable: {error}")
+        return
+    planes = spec.plane_indices
+    if len(planes) < spec.n_planes:
+        st.caption(
+            f"Loaded planes {planes[0]}–{planes[-1]} of 0–{spec.n_planes - 1} "
+            f"({spec.payload_bytes / 2**20:.1f} MB of a {spec.budget_bytes / 2**20:.0f} MB browser budget); "
+            "move the centre plane to review others."
+        )
+
+
 def render_results_tab(config: SegmentationConfig) -> None:
     nuclei_masks = st.session_state.get("nuclei_masks")
     if nuclei_masks is None:
@@ -640,6 +674,10 @@ def render_results_tab(config: SegmentationConfig) -> None:
             "set at full XY resolution before exporting measurements. For whole-organoid morphology, use "
             "a mask that outlines the organoid boundary; a nuclei mask measures nuclei, not organoid size."
         )
+
+    with st.expander("Full-resolution plane review (deep zoom)", expanded=False):
+        review_intensity = orig_cells if layer == "Cells" and orig_cells is not None else orig_nuclei
+        render_deepzoom_review(review_intensity, selected_masks, spacing)
 
     with st.expander("Per-object features (measured from the mask)", expanded=True):
         feature_key = (

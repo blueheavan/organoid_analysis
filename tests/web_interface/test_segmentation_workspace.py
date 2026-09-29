@@ -153,3 +153,31 @@ render_results_tab(SegmentationConfig(xy_spacing_um=1., anisotropy=2.))
     captions = " ".join(element.value for element in app.caption)
     assert "numerical resolution and anisotropy only" in captions
     assert "does not validate segmentation boundaries" in captions
+
+
+def test_deepzoom_review_is_opt_in_and_passes_zyx_spacing(monkeypatch):
+    from streamlit.testing.v1 import AppTest
+
+    from organoid_analysis.visualization.deepzoom_viewer import build_deepzoom_payload
+    from organoid_analysis.web_interface import segmentation_workspace as workspace
+
+    calls = []
+
+    def fake_viewer(image, masks, spacing_zyx, **kwargs):
+        calls.append((image.shape, masks.shape, tuple(spacing_zyx), kwargs["centre_plane"]))
+        return build_deepzoom_payload(image, masks, spacing_zyx, centre_plane=kwargs["centre_plane"], max_planes=2)
+
+    monkeypatch.setattr(workspace, "st_deepzoom_viewer", fake_viewer)
+    app = AppTest.from_string('''
+import numpy as np
+from organoid_analysis.web_interface.segmentation_workspace import render_deepzoom_review
+masks = np.zeros((5, 12, 14), np.uint32)
+masks[1:4, 3:8, 3:9] = 4
+render_deepzoom_review(np.ones((5, 12, 14), np.float32), masks, (0.5, 0.5, 2.0))
+''')
+    app.run()
+    assert not app.exception and calls == []
+    app.checkbox(key="deepzoom_enabled").check().run()
+    assert not app.exception
+    assert calls[-1] == ((5, 12, 14), (5, 12, 14), (2.0, 0.5, 0.5), 2)
+    assert any("Loaded planes" in caption.value for caption in app.caption)

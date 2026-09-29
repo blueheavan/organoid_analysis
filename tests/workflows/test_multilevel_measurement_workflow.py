@@ -285,3 +285,43 @@ def test_multilevel_determinism_two_run_identical():
     s1 = {k: v for k, v in r1.summary.items() if k != "runtime_seconds"}
     s2 = {k: v for k, v in r2.summary.items() if k != "runtime_seconds"}
     assert s1 == s2
+
+
+def test_mask_edit_declarations_label_objects_without_changing_measurements():
+    organoids, cells, nuclei = synthetic_labels()
+    plain = analyze_multilevel_3d(organoids, cells, nuclei, (2, .65, .65))
+    edited = analyze_multilevel_3d(organoids, cells, nuclei, (2, .65, .65),
+                                   mask_edits={"cell": {"declaration": "edited", "edited_ids": [102]},
+                                               "organoid": {"declaration": "none"}})
+    state = edited.cell_features.set_index("cell_id").mask_manually_edited
+    assert state.loc[102] == "yes" and state.loc[101] == "no"
+    assert set(edited.organoid_features.mask_manually_edited) == {"no"}
+    assert set(edited.nucleus_features.mask_manually_edited) == {"unknown"}   # undeclared level
+    assert set(plain.cell_features.mask_manually_edited) == {"unknown"}
+    assert edited.summary["mask_provenance"]["cell"]["edited_ids"] == [102]
+    assert "1 object(s) have manually edited" in edited.summary["mask_edit_note"]
+    provenance_columns = ["mask_origin", "mask_edit_declaration", "mask_manually_edited", "labels_sha256"]
+    for before, after in ((plain.cell_features, edited.cell_features), (plain.organoid_features, edited.organoid_features)):
+        pd.testing.assert_frame_equal(before.drop(columns=provenance_columns), after.drop(columns=provenance_columns))
+    with pytest.raises(ValueError, match="keyed by"):
+        analyze_multilevel_3d(organoids, cells, nuclei, (2, .65, .65), mask_edits={"tissue": {}})
+
+
+def test_cli_label_edit_log_is_applied_and_hashed(tmp_path):
+    organoids, cells, nuclei = synthetic_labels()
+    paths = []
+    for name, labels in (("organoids", organoids), ("cells", cells), ("nuclei", nuclei)):
+        path = tmp_path / f"{name}.ome.tif"
+        write_labels(path, labels, (2, .65, .65))
+        paths.append(str(path))
+    log = tmp_path / "edits.json"
+    log.write_text(json.dumps({"organoid": {"declaration": "manual"}, "cell": {"declaration": "none"},
+                               "nucleus": {"declaration": "none"}}))
+    out = tmp_path / "cli_result"
+    assert main(["analyze-3d", "--organoid-labels", paths[0], "--cell-labels", paths[1], "--nucleus-labels", paths[2],
+                 "--label-edit-log", str(log), "--out", str(out)]) == 0
+    features = pd.read_parquet(out / "features" / "organoid_features.parquet")
+    assert set(features.mask_manually_edited) == {"yes"}
+    summary = json.loads((out / "summary" / "analysis_summary.json").read_text())
+    assert len(summary["provenance"]["input_files"]["label_edit_log"]["sha256"]) == 64
+    assert summary["mask_provenance"]["cell"]["n_edited_no"] == 5
